@@ -13,7 +13,7 @@ pub struct FolderSource {
 impl GdtfSource for FolderSource {
     fn load(&self) -> Gdtf {
         let description = quick_xml::de::from_reader(BufReader::new(
-            File::open(dbg!(self.path.join(DESCRIPTION_FILE_NAME))).unwrap(),
+            File::open(self.path.join(DESCRIPTION_FILE_NAME)).unwrap(),
         ))
         .unwrap();
 

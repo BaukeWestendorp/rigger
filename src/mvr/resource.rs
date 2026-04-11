@@ -121,7 +121,6 @@ impl GdtfResource {
     }
 
     pub fn check_path(path: &Path) -> bool {
-        dbg!(path);
         path.extension().and_then(|ext| ext.to_str()).is_some_and(|ext| matches!(ext, "gdtf"))
     }
 }

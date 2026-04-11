@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, fs::File, io::BufReader, path::PathBuf};
 
 use crate::{
     gdtf::Gdtf,

@@ -1,24 +1,23 @@
 use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ActivationGroup {
     #[serde(rename = "@Name")]
     pub name: String,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ActivationGroups {
     #[serde(default, rename = "ActivationGroup")]
-    pub activation_group: Vec<ActivationGroup>,
+    pub activation_groups: Vec<ActivationGroup>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AdditionalColorSpaces {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<AdditionalColorSpacesContent>,
+    #[serde(default, rename = "ColorSpace")]
+    pub color_spaces: Vec<ColorSpace>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct AdditionalColorSpacesContent {
-    #[serde(rename = "ColorSpace")]
-    pub color_space: ColorSpace,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AnimationSystem {
     #[serde(rename = "@P1")]
@@ -30,11 +29,13 @@ pub struct AnimationSystem {
     #[serde(rename = "@Radius")]
     pub radius: f32,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ArtNet {
     #[serde(default, rename = "Map")]
     pub map: Option<Map>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Attribute {
     #[serde(rename = "@Name")]
@@ -48,18 +49,20 @@ pub struct Attribute {
     #[serde(default, rename = "@MainAttribute")]
     pub main_attribute: Option<String>,
     #[serde(default = "Attribute::default_physical_unit", rename = "@PhysicalUnit")]
-    pub physical_unit: PhysicalUnitEnum,
+    pub physical_unit: PhysicalUnit,
     #[serde(default, rename = "@Color")]
     pub color: Option<String>,
     #[serde(default, rename = "SubPhysicalUnit")]
-    pub sub_physical_unit: Vec<SubPhysicalUnit>,
+    pub sub_physical_units: Vec<SubPhysicalUnit>,
 }
+
 impl Attribute {
     #[must_use]
-    pub fn default_physical_unit() -> PhysicalUnitEnum {
-        PhysicalUnitEnum::None
+    pub fn default_physical_unit() -> PhysicalUnit {
+        PhysicalUnit::None
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AttributeDefinitions {
     #[serde(default, rename = "ActivationGroups")]
@@ -69,11 +72,13 @@ pub struct AttributeDefinitions {
     #[serde(rename = "Attributes")]
     pub attributes: Attributes,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Attributes {
     #[serde(default, rename = "Attribute")]
-    pub attribute: Vec<Attribute>,
+    pub attributes: Vec<Attribute>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BasicGeometryAttributes {
     #[serde(rename = "@Name")]
@@ -83,6 +88,7 @@ pub struct BasicGeometryAttributes {
     #[serde(default = "BasicGeometryAttributes::default_position", rename = "@Position")]
     pub position: String,
 }
+
 impl BasicGeometryAttributes {
     #[must_use]
     pub fn default_position() -> String {
@@ -98,8 +104,9 @@ pub struct BasicGeometryType {
     #[serde(default = "BasicGeometryType::default_position", rename = "@Position")]
     pub position: String,
     #[serde(default, rename = "$value")]
-    pub content: Vec<BasicGeometryTypeContent>,
+    pub children: Vec<BasicGeometryTypeContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum BasicGeometryTypeContent {
     #[serde(rename = "Geometry")]
@@ -139,12 +146,14 @@ pub enum BasicGeometryTypeContent {
     #[serde(rename = "Magnet")]
     Magnet(BasicGeometryType),
 }
+
 impl BasicGeometryType {
     #[must_use]
     pub fn default_position() -> String {
         String::from("{1,0,0,0}{0,1,0,0}{0,0,1,0}{0,0,0,1}")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Beam {
     #[serde(rename = "@Name")]
@@ -154,7 +163,7 @@ pub struct Beam {
     #[serde(default = "Beam::default_position", rename = "@Position")]
     pub position: String,
     #[serde(default, rename = "@LampType")]
-    pub lamp_type: Option<LampTypeEnum>,
+    pub lamp_type: Option<LampType>,
     #[serde(default, rename = "@PowerConsumption")]
     pub power_consumption: Option<f32>,
     #[serde(default, rename = "@LuminousFlux")]
@@ -172,13 +181,13 @@ pub struct Beam {
     #[serde(default, rename = "@BeamRadius")]
     pub beam_radius: Option<f32>,
     #[serde(default, rename = "@BeamType")]
-    pub beam_type: Option<BeamTypeEnum>,
+    pub beam_type: Option<BeamType>,
     #[serde(default, rename = "@ColorRenderingIndex")]
     pub color_rendering_index: Option<u8>,
     #[serde(default, rename = "@EmitterSpectrum")]
     pub emitter_spectrum: Option<String>,
     #[serde(default, rename = "$value")]
-    pub content: Vec<BeamContent>,
+    pub children: Vec<BeamContent>,
 }
 #[derive(Debug, Deserialize, Serialize)]
 pub enum BeamContent {
@@ -219,14 +228,16 @@ pub enum BeamContent {
     #[serde(rename = "Magnet")]
     Magnet(BasicGeometryType),
 }
+
 impl Beam {
     #[must_use]
     pub fn default_position() -> String {
         String::from("{1,0,0,0}{0,1,0,0}{0,0,1,0}{0,0,0,1}")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum BeamTypeEnum {
+pub enum BeamType {
     #[serde(rename = "Wash")]
     Wash,
     #[serde(rename = "Spot")]
@@ -242,6 +253,7 @@ pub enum BeamTypeEnum {
     #[serde(rename = "Glow")]
     Glow,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Break {
     #[serde(default = "Break::default_dmx_offset", rename = "@DMXOffset")]
@@ -249,6 +261,7 @@ pub struct Break {
     #[serde(default = "Break::default_dmx_break", rename = "@DMXBreak")]
     pub dmx_break: u8,
 }
+
 impl Break {
     #[must_use]
     pub fn default_dmx_offset() -> i32 {
@@ -259,8 +272,9 @@ impl Break {
         1u8
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum CesEnum {
+pub enum Ces {
     #[serde(rename = "CES01")]
     Ces01,
     #[serde(rename = "CES02")]
@@ -460,43 +474,39 @@ pub enum CesEnum {
     #[serde(rename = "CES99")]
     Ces99,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Citp;
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Cri {
     #[serde(default = "Cri::default_ces", rename = "@CES")]
-    pub ces: CesEnum,
+    pub ces: Ces,
     #[serde(default, rename = "@ColorRenderingIndex")]
     pub color_rendering_index: Option<u8>,
 }
+
 impl Cri {
     #[must_use]
-    pub fn default_ces() -> CesEnum {
-        CesEnum::Ces01
+    pub fn default_ces() -> Ces {
+        Ces::Ces01
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CriGroup {
     #[serde(default, rename = "@ColorTemperature")]
     pub color_temperature: Option<f32>,
-    #[serde(rename = "$value")]
-    pub content: Vec<CriGroupContent>,
-}
-#[derive(Debug, Deserialize, Serialize)]
-pub struct CriGroupContent {
     #[serde(rename = "CRI")]
-    pub cri: Cri,
+    pub cris: Vec<Cri>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CrIs {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<CrIsContent>,
+    #[serde(default, rename = "CRIGroup")]
+    pub cri_groups: Vec<CriGroup>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct CrIsContent {
-    #[serde(rename = "CRIGroup")]
-    pub cri_group: CriGroup,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ChannelFunction {
     #[serde(default, rename = "@Name")]
@@ -544,16 +554,12 @@ pub struct ChannelFunction {
     pub max: Option<f32>,
     #[serde(default, rename = "@CustomName")]
     pub custom_name: Option<String>,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<ChannelFunctionContent>,
+    #[serde(default, rename = "ChannelSet")]
+    pub channel_sets: Vec<ChannelSet>,
+    #[serde(default, rename = "SubChannelSet")]
+    pub sub_channel_sets: Vec<SubChannelSet>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub enum ChannelFunctionContent {
-    #[serde(rename = "ChannelSet")]
-    ChannelSet(ChannelSet),
-    #[serde(rename = "SubChannelSet")]
-    SubChannelSet(SubChannelSet),
-}
+
 impl ChannelFunction {
     #[must_use]
     pub fn default_attribute() -> String {
@@ -576,6 +582,7 @@ impl ChannelFunction {
         String::from("0/1")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ChannelSet {
     #[serde(default, rename = "@Name")]
@@ -589,12 +596,13 @@ pub struct ChannelSet {
     #[serde(default, rename = "@WheelSlotIndex")]
     pub wheel_slot_index: Option<i32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ColorSpace {
     #[serde(default, rename = "@Name")]
     pub name: Option<String>,
     #[serde(default = "ColorSpace::default_mode", rename = "@Mode")]
-    pub mode: ColorSpaceEnum,
+    pub mode: ColorSpaceMode,
     #[serde(default, rename = "@Red")]
     pub red: Option<String>,
     #[serde(default, rename = "@Green")]
@@ -604,14 +612,16 @@ pub struct ColorSpace {
     #[serde(default, rename = "@WhitePoint")]
     pub white_point: Option<String>,
 }
+
 impl ColorSpace {
     #[must_use]
-    pub fn default_mode() -> ColorSpaceEnum {
-        ColorSpaceEnum::SRgb
+    pub fn default_mode() -> ColorSpaceMode {
+        ColorSpaceMode::SRgb
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum ColorSpaceEnum {
+pub enum ColorSpaceMode {
     #[serde(rename = "Custom")]
     Custom,
     #[serde(rename = "sRGB")]
@@ -621,6 +631,7 @@ pub enum ColorSpaceEnum {
     #[serde(rename = "ANSI")]
     Ansi,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Connector {
     #[serde(rename = "@Name")]
@@ -634,16 +645,13 @@ pub struct Connector {
     #[serde(default, rename = "@Length")]
     pub length: Option<f32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Connectors {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<ConnectorsContent>,
+    #[serde(default, rename = "Connector")]
+    pub connectors: Vec<Connector>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ConnectorsContent {
-    #[serde(rename = "Connector")]
-    pub connector: Connector,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum CrossSectionType {
     #[serde(rename = "TrussFramework")]
@@ -651,6 +659,7 @@ pub enum CrossSectionType {
     #[serde(rename = "Tube")]
     Tube,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxChannel {
     #[serde(default = "DmxChannel::default_dmx_break", rename = "@DMXBreak")]
@@ -663,14 +672,10 @@ pub struct DmxChannel {
     pub highlight: String,
     #[serde(rename = "@Geometry")]
     pub geometry: String,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<DmxChannelContent>,
+    #[serde(default, rename = "LogicalChannel")]
+    pub logical_channels: Vec<LogicalChannel>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct DmxChannelContent {
-    #[serde(rename = "LogicalChannel")]
-    pub logical_channel: LogicalChannel,
-}
+
 impl DmxChannel {
     #[must_use]
     pub fn default_dmx_break() -> String {
@@ -685,16 +690,13 @@ impl DmxChannel {
         String::from("None")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxChannels {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<DmxChannelsContent>,
+    #[serde(default, rename = "DmxChannel")]
+    pub dmx_channels: Vec<DmxChannel>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct DmxChannelsContent {
-    #[serde(rename = "DMXChannel")]
-    pub dmx_channel: DmxChannel,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxMode {
     #[serde(rename = "@Name")]
@@ -710,16 +712,13 @@ pub struct DmxMode {
     #[serde(default, rename = "FTMacros")]
     pub ft_macros: Option<FtMacros>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxModes {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<DmxModesContent>,
+    #[serde(default, rename = "DmxMode")]
+    pub dmx_modes: Vec<DmxMode>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct DmxModesContent {
-    #[serde(rename = "DMXMode")]
-    pub dmx_mode: DmxMode,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxPersonality {
     #[serde(default, rename = "@Value")]
@@ -727,28 +726,21 @@ pub struct DmxPersonality {
     #[serde(default, rename = "@DMXMode")]
     pub dmx_mode: Option<String>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxProfile {
     #[serde(default, rename = "@Name")]
     pub name: Option<String>,
-    #[serde(default, rename = "$value")]
-    pub content: Option<DmxProfileContent>,
-}
-#[derive(Debug, Deserialize, Serialize)]
-pub struct DmxProfileContent {
     #[serde(rename = "Point")]
     pub point: Point,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxProfiles {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<DmxProfilesContent>,
+    #[serde(default, rename = "DmxProfile")]
+    pub dmx_profiles: Vec<DmxProfile>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct DmxProfilesContent {
-    #[serde(rename = "DMXProfile")]
-    pub dmx_profile: DmxProfile,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Display {
     #[serde(rename = "@Name")]
@@ -760,8 +752,9 @@ pub struct Display {
     #[serde(default, rename = "@Texture")]
     pub texture: Option<String>,
     #[serde(default, rename = "$value")]
-    pub content: Vec<DisplayContent>,
+    pub children: Vec<DisplayContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum DisplayContent {
     #[serde(rename = "Geometry")]
@@ -801,12 +794,14 @@ pub enum DisplayContent {
     #[serde(rename = "Magnet")]
     Magnet(BasicGeometryType),
 }
+
 impl Display {
     #[must_use]
     pub fn default_position() -> String {
         String::from("{1,0,0,0}{0,1,0,0}{0,0,1,0}{0,0,0,1}")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Emitter {
     #[serde(rename = "@Name")]
@@ -817,14 +812,10 @@ pub struct Emitter {
     pub dominant_wave_length: Option<f32>,
     #[serde(default, rename = "@DiodePart")]
     pub diode_part: Option<String>,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<EmitterContent>,
+    #[serde(default, rename = "Measurement")]
+    pub measurements: Vec<EmitterMeasurement>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct EmitterContent {
-    #[serde(rename = "Measurement")]
-    pub measurement: EmitterMeasurement,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct EmitterMeasurement {
     #[serde(rename = "@Physical")]
@@ -832,33 +823,26 @@ pub struct EmitterMeasurement {
     #[serde(rename = "@LuminousIntensity")]
     pub luminous_intensity: f32,
     #[serde(default = "EmitterMeasurement::default_interpolation_to", rename = "@InterpolationTo")]
-    pub interpolation_to: InterpolationToEnum,
+    pub interpolation_to: InterpolationTo,
     #[serde(default, rename = "@Transmission")]
     pub transmission: Option<f32>,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<EmitterMeasurementContent>,
+    #[serde(default, rename = "MeasurementPoint")]
+    pub measurement_points: Vec<MeasurementPoint>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct EmitterMeasurementContent {
-    #[serde(rename = "MeasurementPoint")]
-    pub measurement_point: MeasurementPoint,
-}
+
 impl EmitterMeasurement {
     #[must_use]
-    pub fn default_interpolation_to() -> InterpolationToEnum {
-        InterpolationToEnum::Linear
+    pub fn default_interpolation_to() -> InterpolationTo {
+        InterpolationTo::Linear
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Emitters {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<EmittersContent>,
+    #[serde(default, rename = "Emitter")]
+    pub emitters: Vec<Emitter>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct EmittersContent {
-    #[serde(rename = "Emitter")]
-    pub emitter: Emitter,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FtMacro {
     #[serde(rename = "@Name")]
@@ -868,40 +852,32 @@ pub struct FtMacro {
     #[serde(default, rename = "MacroDMX")]
     pub macro_dmx: Option<MacroDmx>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FtMacros {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<FtMacrosContent>,
-}
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FtMacrosContent {
     #[serde(default, rename = "FTMacro")]
-    pub ft_macro: Vec<FtMacro>,
+    pub ft_macros: Vec<FtMacro>,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct FtPreset;
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FtPresets {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<FtPresetsContent>,
+    #[serde(default, rename = "FTPreset")]
+    pub content: Vec<FtPreset>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FtPresetsContent {
-    #[serde(rename = "FTPreset")]
-    pub ft_preset: Citp,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Ftrdm {
     #[serde(default, rename = "@ManufacturerID")]
     pub manufacturer_id: Option<String>,
     #[serde(default, rename = "@DeviceModelID")]
     pub device_model_id: Option<String>,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<FtrdmContent>,
+    #[serde(default, rename = "SoftwareVersionID")]
+    pub software_version_ids: Vec<SoftwareVersionId>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FtrdmContent {
-    #[serde(rename = "SoftwareVersionID")]
-    pub software_version_id: SoftwareVersionId,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Facet {
     #[serde(default, rename = "@Color")]
@@ -909,39 +885,39 @@ pub struct Facet {
     #[serde(rename = "@Rotation")]
     pub rotation: String,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Feature {
+    #[serde(rename = "@Name")]
+    pub name: String,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FeatureGroup {
     #[serde(rename = "@Name")]
     pub name: String,
     #[serde(rename = "@Pretty")]
     pub pretty: String,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<FeatureGroupContent>,
+    #[serde(default, rename = "Feature")]
+    pub features: Vec<Feature>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FeatureGroupContent {
-    #[serde(rename = "Feature")]
-    pub feature: ActivationGroup,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FeatureGroups {
     #[serde(default, rename = "FeatureGroup")]
-    pub feature_group: Vec<FeatureGroup>,
+    pub feature_groups: Vec<FeatureGroup>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Filter {
     #[serde(rename = "@Name")]
     pub name: String,
     #[serde(default, rename = "@Color")]
     pub color: Option<String>,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<FilterContent>,
+    #[serde(default, rename = "Measurement")]
+    pub measurements: Vec<FilterMeasurement>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FilterContent {
-    #[serde(rename = "Measurement")]
-    pub measurement: FilterMeasurement,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FilterMeasurement {
     #[serde(rename = "@Physical")]
@@ -949,31 +925,24 @@ pub struct FilterMeasurement {
     #[serde(rename = "@Transmission")]
     pub transmission: f32,
     #[serde(default = "FilterMeasurement::default_interpolation_to", rename = "@InterpolationTo")]
-    pub interpolation_to: InterpolationToEnum,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<FilterMeasurementContent>,
+    pub interpolation_to: InterpolationTo,
+    #[serde(default, rename = "MeasurementPoint")]
+    pub measurement_points: Vec<MeasurementPoint>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FilterMeasurementContent {
-    #[serde(rename = "MeasurementPoint")]
-    pub measurement_point: MeasurementPoint,
-}
+
 impl FilterMeasurement {
     #[must_use]
-    pub fn default_interpolation_to() -> InterpolationToEnum {
-        InterpolationToEnum::Linear
+    pub fn default_interpolation_to() -> InterpolationTo {
+        InterpolationTo::Linear
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Filters {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<FiltersContent>,
+    #[serde(default, rename = "Filter")]
+    pub filters: Vec<Filter>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct FiltersContent {
-    #[serde(rename = "Filter")]
-    pub filter: Filter,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FixtureType {
     #[serde(rename = "@Name")]
@@ -997,7 +966,7 @@ pub struct FixtureType {
     #[serde(default, rename = "@RefFT")]
     pub ref_ft: Option<String>,
     #[serde(default = "FixtureType::default_can_have_children", rename = "@CanHaveChildren")]
-    pub can_have_children: YesNoEnum,
+    pub can_have_children: YesNo,
     #[serde(rename = "AttributeDefinitions")]
     pub attribute_definitions: AttributeDefinitions,
     #[serde(default, rename = "Wheels")]
@@ -1017,12 +986,14 @@ pub struct FixtureType {
     #[serde(default, rename = "Protocols")]
     pub protocols: Option<Protocols>,
 }
+
 impl FixtureType {
     #[must_use]
-    pub fn default_can_have_children() -> YesNoEnum {
-        YesNoEnum::Yes
+    pub fn default_can_have_children() -> YesNo {
+        YesNo::Yes
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Gamut {
     #[serde(default, rename = "@Name")]
@@ -1030,28 +1001,27 @@ pub struct Gamut {
     #[serde(default, rename = "@Points")]
     pub points: Option<String>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Gamuts {
-    #[serde(default, rename = "$value")]
-    pub content: Option<GamutsContent>,
+    #[serde(default, rename = "Gamut")]
+    pub gamuts: Vec<Gamut>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct GamutsContent {
-    #[serde(rename = "Gamut")]
-    pub gamut: Gamut,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GdtfDescription {
     #[serde(rename = "@DataVersion")]
-    pub data_version: f32,
+    pub data_version: String,
     #[serde(rename = "FixtureType")]
     pub fixture_type: FixtureType,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Geometries {
     #[serde(default, rename = "$value")]
-    pub content: Vec<GeometriesContent>,
+    pub children: Vec<GeometriesContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum GeometriesContent {
     #[serde(rename = "Geometry")]
@@ -1091,6 +1061,7 @@ pub enum GeometriesContent {
     #[serde(rename = "Magnet")]
     Magnet(BasicGeometryType),
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GeometryReference {
     #[serde(rename = "@Name")]
@@ -1102,8 +1073,9 @@ pub struct GeometryReference {
     #[serde(rename = "@Geometry")]
     pub geometry: String,
     #[serde(default, rename = "$value")]
-    pub content: Vec<GeometryReferenceContent>,
+    pub children: Vec<GeometryReferenceContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum GeometryReferenceContent {
     #[serde(rename = "Geometry")]
@@ -1145,14 +1117,16 @@ pub enum GeometryReferenceContent {
     #[serde(rename = "Break")]
     Break(Break),
 }
+
 impl GeometryReference {
     #[must_use]
     pub fn default_position() -> String {
         String::from("{1,0,0,0}{0,1,0,0}{0,0,1,0}{0,0,0,1}")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum InterpolationToEnum {
+pub enum InterpolationTo {
     #[serde(rename = "Linear")]
     Linear,
     #[serde(rename = "Step")]
@@ -1160,6 +1134,7 @@ pub enum InterpolationToEnum {
     #[serde(rename = "Log")]
     Log,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Inventory {
     #[serde(rename = "@Name")]
@@ -1173,8 +1148,9 @@ pub struct Inventory {
     #[serde(default, rename = "@Count")]
     pub count: Option<i32>,
     #[serde(default, rename = "$value")]
-    pub content: Vec<InventoryContent>,
+    pub children: Vec<InventoryContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum InventoryContent {
     #[serde(rename = "Geometry")]
@@ -1216,14 +1192,16 @@ pub enum InventoryContent {
     #[serde(rename = "Break")]
     Break(Break),
 }
+
 impl Inventory {
     #[must_use]
     pub fn default_position() -> String {
         String::from("{1,0,0,0}{0,1,0,0}{0,0,1,0}{0,0,0,1}")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum LampTypeEnum {
+pub enum LampType {
     #[serde(rename = "Discharge")]
     Discharge,
     #[serde(rename = "Tungsten")]
@@ -1233,6 +1211,7 @@ pub enum LampTypeEnum {
     #[serde(rename = "LED")]
     Led,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Laser {
     #[serde(rename = "@Name")]
@@ -1262,8 +1241,9 @@ pub struct Laser {
     #[serde(default, rename = "@ScanSpeed")]
     pub scan_speed: Option<f32>,
     #[serde(default, rename = "$value")]
-    pub content: Vec<LaserContent>,
+    pub children: Vec<LaserContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum LaserContent {
     #[serde(rename = "Geometry")]
@@ -1305,6 +1285,7 @@ pub enum LaserContent {
     #[serde(rename = "Protocol")]
     Protocol(Protocol),
 }
+
 impl Laser {
     #[must_use]
     pub fn default_position() -> String {
@@ -1315,6 +1296,7 @@ impl Laser {
         LaserColorType::Rgb
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum LaserColorType {
     #[serde(rename = "RGB")]
@@ -1322,63 +1304,54 @@ pub enum LaserColorType {
     #[serde(rename = "SingleWaveLength")]
     SingleWaveLength,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LegHeight {
     #[serde(default, rename = "@Value")]
     pub value: Option<f32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LogicalChannel {
     #[serde(rename = "@Attribute")]
     pub attribute: String,
     #[serde(default = "LogicalChannel::default_snap", rename = "@Snap")]
-    pub snap: SnapEnum,
+    pub snap: Snap,
     #[serde(default = "LogicalChannel::default_master", rename = "@Master")]
-    pub master: MasterEnum,
+    pub master: Master,
     #[serde(default, rename = "@MibFade")]
     pub mib_fade: Option<f32>,
     #[serde(default, rename = "@DMXChangeTimeLimit")]
     pub dmx_change_time_limit: Option<f32>,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<LogicalChannelContent>,
+    #[serde(default, rename = "ChannelFunction")]
+    pub channel_functions: Vec<ChannelFunction>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct LogicalChannelContent {
-    #[serde(rename = "ChannelFunction")]
-    pub channel_function: ChannelFunction,
-}
+
 impl LogicalChannel {
     #[must_use]
-    pub fn default_snap() -> SnapEnum {
-        SnapEnum::No
+    pub fn default_snap() -> Snap {
+        Snap::No
     }
     #[must_use]
-    pub fn default_master() -> MasterEnum {
-        MasterEnum::None
+    pub fn default_master() -> Master {
+        Master::None
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MacroDmx {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<MacroDmxContent>,
+    #[serde(default, rename = "MacroDMXStep")]
+    pub macro_dmx_steps: Vec<MacroDmxStep>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct MacroDmxContent {
-    #[serde(rename = "MacroDMXStep")]
-    pub macro_dmx_step: MacroDmxStep,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MacroDmxStep {
     #[serde(default, rename = "@Duration")]
     pub duration: Option<f32>,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<MacroDmxStepContent>,
+    #[serde(default, rename = "MacroDMXValue")]
+    pub macro_dmx_values: Vec<MacroDmxValue>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct MacroDmxStepContent {
-    #[serde(rename = "MacroDMXValue")]
-    pub macro_dmx_value: MacroDmxValue,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MacroDmxValue {
     #[serde(rename = "@Value")]
@@ -1386,6 +1359,7 @@ pub struct MacroDmxValue {
     #[serde(rename = "@DMXChannel")]
     pub dmx_channel: String,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Map {
     #[serde(default, rename = "@Key")]
@@ -1393,8 +1367,9 @@ pub struct Map {
     #[serde(default, rename = "@Value")]
     pub value: Option<u32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum MasterEnum {
+pub enum Master {
     #[serde(rename = "None")]
     None,
     #[serde(rename = "Grand")]
@@ -1402,6 +1377,7 @@ pub enum MasterEnum {
     #[serde(rename = "Group")]
     Group,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MeasurementPoint {
     #[serde(rename = "@WaveLength")]
@@ -1409,6 +1385,7 @@ pub struct MeasurementPoint {
     #[serde(rename = "@Energy")]
     pub energy: f32,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Model {
     #[serde(rename = "@Name")]
@@ -1420,7 +1397,7 @@ pub struct Model {
     #[serde(default = "Model::default_height", rename = "@Height")]
     pub height: f32,
     #[serde(default = "Model::default_primitive_type", rename = "@PrimitiveType")]
-    pub primitive_type: PrimitiveTypeEnum,
+    pub primitive_type: PrimitiveType,
     #[serde(default = "Model::default_file", rename = "@File")]
     pub file: String,
     #[serde(default, rename = "@SVGOffsetX")]
@@ -1436,6 +1413,7 @@ pub struct Model {
     #[serde(default, rename = "@SVGFrontOffsetY")]
     pub svg_front_offset_y: Option<f32>,
 }
+
 impl Model {
     #[must_use]
     pub fn default_length() -> f32 {
@@ -1450,24 +1428,21 @@ impl Model {
         0f32
     }
     #[must_use]
-    pub fn default_primitive_type() -> PrimitiveTypeEnum {
-        PrimitiveTypeEnum::Undefined
+    pub fn default_primitive_type() -> PrimitiveType {
+        PrimitiveType::Undefined
     }
     #[must_use]
     pub fn default_file() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Models {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<ModelsContent>,
+    #[serde(default, rename = "Model")]
+    pub models: Vec<Model>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ModelsContent {
-    #[serde(rename = "Model")]
-    pub model: Model,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct OperatingTemperature {
     #[serde(default, rename = "@Low")]
@@ -1475,6 +1450,7 @@ pub struct OperatingTemperature {
     #[serde(default, rename = "@High")]
     pub high: Option<f32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PhysicalDescriptions {
     #[serde(default, rename = "Emitters")]
@@ -1496,8 +1472,9 @@ pub struct PhysicalDescriptions {
     #[serde(default, rename = "Properties")]
     pub properties: Option<Properties>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum PhysicalUnitEnum {
+pub enum PhysicalUnit {
     #[serde(rename = "None")]
     None,
     #[serde(rename = "Percent")]
@@ -1543,6 +1520,7 @@ pub enum PhysicalUnitEnum {
     #[serde(rename = "ColorComponent")]
     ColorComponent,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PinPatch {
     #[serde(default, rename = "@ToWiringObject")]
@@ -1552,6 +1530,7 @@ pub struct PinPatch {
     #[serde(default, rename = "@ToPin")]
     pub to_pin: Option<i32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Point {
     #[serde(default, rename = "@DMXPercentage")]
@@ -1565,6 +1544,7 @@ pub struct Point {
     #[serde(default, rename = "@CFC3")]
     pub cfc_3: Option<f32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PowerConsumption {
     #[serde(default, rename = "@Value")]
@@ -1582,8 +1562,9 @@ pub struct PowerConsumption {
     #[serde(default, rename = "@FrequencyHigh")]
     pub frequency_high: Option<f32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum PrimitiveTypeEnum {
+pub enum PrimitiveType {
     #[serde(rename = "Undefined")]
     Undefined,
     #[serde(rename = "Cube")]
@@ -1611,27 +1592,31 @@ pub enum PrimitiveTypeEnum {
     #[serde(rename = "Conventional1_1")]
     Conventional11,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Properties {
     #[serde(default, rename = "$value")]
     pub content: Vec<PropertiesContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum PropertiesContent {
     #[serde(rename = "OperatingTemperature")]
     OperatingTemperature(OperatingTemperature),
     #[serde(rename = "Weight")]
-    Weight(LegHeight),
+    Weight(Weight),
     #[serde(rename = "PowerConsumption")]
     PowerConsumption(PowerConsumption),
     #[serde(rename = "LegHeight")]
     LegHeight(LegHeight),
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Protocol {
     #[serde(default, rename = "@Name")]
     pub name: Option<String>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Protocols {
     #[serde(default, rename = "FTRDM")]
@@ -1647,6 +1632,7 @@ pub struct Protocols {
     #[serde(default, rename = "CITP")]
     pub citp: Option<Citp>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Relation {
     #[serde(rename = "@Name")]
@@ -1656,25 +1642,23 @@ pub struct Relation {
     #[serde(rename = "@Follower")]
     pub follower: String,
     #[serde(rename = "@Type")]
-    pub type_: RelationTypesEnum,
+    pub type_: RelationTypes,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum RelationTypesEnum {
+pub enum RelationTypes {
     #[serde(rename = "Multiply")]
     Multiply,
     #[serde(rename = "Override")]
     Override,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Relations {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<RelationsContent>,
+    #[serde(default, rename = "Relation")]
+    pub relations: Vec<Relation>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct RelationsContent {
-    #[serde(rename = "Relation")]
-    pub relation: Relation,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Revision {
     #[serde(default = "Revision::default_text", rename = "@Text")]
@@ -1686,6 +1670,7 @@ pub struct Revision {
     #[serde(default = "Revision::default_modified_by", rename = "@ModifiedBy")]
     pub modified_by: String,
 }
+
 impl Revision {
     #[must_use]
     pub fn default_text() -> String {
@@ -1700,16 +1685,13 @@ impl Revision {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Revisions {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<RevisionsContent>,
+    #[serde(default, rename = "Revision")]
+    pub revisions: Vec<Revision>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct RevisionsContent {
-    #[serde(rename = "Revision")]
-    pub revision: Revision,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Slot {
     #[serde(rename = "@Name")]
@@ -1723,6 +1705,7 @@ pub struct Slot {
     #[serde(default, rename = "$value")]
     pub content: Vec<SlotContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum SlotContent {
     #[serde(rename = "Facet")]
@@ -1730,14 +1713,16 @@ pub enum SlotContent {
     #[serde(rename = "AnimationSystem")]
     AnimationSystem(AnimationSystem),
 }
+
 impl Slot {
     #[must_use]
     pub fn default_media_file_name() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum SnapEnum {
+pub enum Snap {
     #[serde(rename = "Yes")]
     Yes,
     #[serde(rename = "No")]
@@ -1747,13 +1732,15 @@ pub enum SnapEnum {
     #[serde(rename = "Off")]
     Off,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SoftwareVersionId {
     #[serde(default, rename = "@Value")]
     pub value: Option<String>,
     #[serde(default, rename = "DMXPersonality")]
-    pub dmx_personality: Vec<DmxPersonality>,
+    pub dmx_personalities: Vec<DmxPersonality>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Structure {
     #[serde(rename = "@Name")]
@@ -1777,8 +1764,9 @@ pub struct Structure {
     #[serde(default, rename = "@TrussCrossSection")]
     pub truss_cross_section: Option<String>,
     #[serde(default, rename = "$value")]
-    pub content: Vec<StructureContent>,
+    pub children: Vec<StructureContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum StructureContent {
     #[serde(rename = "Geometry")]
@@ -1820,12 +1808,14 @@ pub enum StructureContent {
     #[serde(rename = "Break")]
     Break(Break),
 }
+
 impl Structure {
     #[must_use]
     pub fn default_position() -> String {
         String::from("{1,0,0,0}{0,1,0,0}{0,0,1,0}{0,0,0,1}")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum StructureType {
     #[serde(rename = "CenterLineBased")]
@@ -1833,6 +1823,7 @@ pub enum StructureType {
     #[serde(rename = "Detail")]
     Detail,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SubChannelSet {
     #[serde(default, rename = "@Name")]
@@ -1846,8 +1837,9 @@ pub struct SubChannelSet {
     #[serde(default, rename = "@DMXProfile")]
     pub dmx_profile: Option<String>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum SubPhysicalTypeEnum {
+pub enum SubPhysicalType {
     #[serde(rename = "PlacementOffset")]
     PlacementOffset,
     #[serde(rename = "Amplitude")]
@@ -1871,17 +1863,19 @@ pub enum SubPhysicalTypeEnum {
     #[serde(rename = "AmplitudeMax")]
     AmplitudeMax,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SubPhysicalUnit {
     #[serde(default, rename = "@Type")]
-    pub type_: Option<SubPhysicalTypeEnum>,
+    pub type_: Option<SubPhysicalType>,
     #[serde(default, rename = "@PhysicalUnit")]
-    pub physical_unit: Option<PhysicalUnitEnum>,
+    pub physical_unit: Option<PhysicalUnit>,
     #[serde(default, rename = "@PhysicalFrom")]
     pub physical_from: Option<f32>,
     #[serde(default, rename = "@PhysicalTo")]
     pub physical_to: Option<f32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Support {
     #[serde(rename = "@Name")]
@@ -1923,8 +1917,9 @@ pub struct Support {
     #[serde(default, rename = "@ResistanceZZ")]
     pub resistance_zz: Option<f32>,
     #[serde(default, rename = "$value")]
-    pub content: Vec<SupportContent>,
+    pub children: Vec<SupportContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum SupportContent {
     #[serde(rename = "Geometry")]
@@ -1966,12 +1961,14 @@ pub enum SupportContent {
     #[serde(rename = "Break")]
     Break(Break),
 }
+
 impl Support {
     #[must_use]
     pub fn default_position() -> String {
         String::from("{1,0,0,0}{0,1,0,0}{0,0,1,0}{0,0,0,1}")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum SupportType {
     #[serde(rename = "Rope")]
@@ -1979,28 +1976,27 @@ pub enum SupportType {
     #[serde(rename = "GroundSupport")]
     GroundSupport,
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Weight {
+    #[serde(default, rename = "@Value")]
+    pub value: Option<f32>,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Wheel {
     #[serde(default, rename = "@Name")]
     pub name: Option<String>,
-    #[serde(default, rename = "$value")]
-    pub content: Vec<WheelContent>,
+    #[serde(default, rename = "Slot")]
+    pub slots: Vec<Slot>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct WheelContent {
-    #[serde(rename = "Slot")]
-    pub slot: Slot,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Wheels {
-    #[serde(default, rename = "$value")]
-    pub content: Vec<WheelsContent>,
+    #[serde(default, rename = "Wheel")]
+    pub wheels: Vec<Wheel>,
 }
-#[derive(Debug, Deserialize, Serialize)]
-pub struct WheelsContent {
-    #[serde(rename = "Wheel")]
-    pub wheel: Wheel,
-}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum WiringComponentType {
     #[serde(rename = "Input")]
@@ -2022,6 +2018,7 @@ pub enum WiringComponentType {
     #[serde(rename = "NetworkInOut")]
     NetworkInOut,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum WiringFuseRating {
     #[serde(rename = "B")]
@@ -2035,6 +2032,7 @@ pub enum WiringFuseRating {
     #[serde(rename = "Z")]
     Z,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WiringObject {
     #[serde(rename = "@Name")]
@@ -2078,8 +2076,9 @@ pub struct WiringObject {
     #[serde(default, rename = "@WireGroup")]
     pub wire_group: Option<String>,
     #[serde(default, rename = "$value")]
-    pub content: Vec<WiringObjectContent>,
+    pub children: Vec<WiringObjectContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum WiringObjectContent {
     #[serde(rename = "Geometry")]
@@ -2121,12 +2120,14 @@ pub enum WiringObjectContent {
     #[serde(rename = "PinPatch")]
     PinPatch(PinPatch),
 }
+
 impl WiringObject {
     #[must_use]
     pub fn default_position() -> String {
         String::from("{1,0,0,0}{0,1,0,0}{0,0,1,0}{0,0,0,1}")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum WiringOrientation {
     #[serde(rename = "Left")]
@@ -2138,8 +2139,9 @@ pub enum WiringOrientation {
     #[serde(rename = "Bottom")]
     Bottom,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum YesNoEnum {
+pub enum YesNo {
     #[serde(rename = "Yes")]
     Yes,
     #[serde(rename = "No")]
