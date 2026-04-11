@@ -1,49 +1,85 @@
-mod gsd;
-
 use std::{
-    collections::BTreeMap,
+    collections::HashMap,
     path::{Path, PathBuf},
     str::FromStr,
 };
 
-pub use gsd::*;
 use uuid::Uuid;
+
+mod gsd;
+mod resource;
+mod source;
+
+pub use gsd::*;
+pub use resource::*;
+use source::*;
 
 const GSD_FILE_NAME: &str = "GeneralSceneDescription.xml";
 
 pub struct Mvr {
     gsd: GeneralSceneDescription,
 
-    models: BTreeMap<FileName, Model>,
-    textures: BTreeMap<FileName, Texture>,
+    models: HashMap<ModelHandle, ModelResource>,
+    textures: HashMap<TextureHandle, TextureResource>,
+    gdtfs: HashMap<GdtfHandle, GdtfResource>,
 }
 
 impl Mvr {
-    pub fn from_source<S: source::Source>(source: S) -> Self {
-        let gsd = quick_xml::de::from_reader(source.gsd_reader()).unwrap();
-        let models = source.models();
-        let textures = source.textures();
-        Self { gsd, models, textures }
-    }
-
     pub fn from_folder(path: impl Into<PathBuf>) -> Self {
-        Self::from_source(source::Folder::new(path))
+        FolderSource { path: path.into() }.load()
     }
 
     pub fn from_archive(path: impl Into<PathBuf>) -> Self {
-        Self::from_source(source::Archive::new(path))
+        ArchiveSource { path: path.into() }.load()
     }
 
     pub fn gsd(&self) -> &GeneralSceneDescription {
         &self.gsd
     }
 
-    pub fn models(&self) -> &BTreeMap<FileName, Model> {
+    pub fn models(&self) -> &HashMap<ModelHandle, ModelResource> {
         &self.models
     }
 
-    pub fn textures(&self) -> &BTreeMap<FileName, Texture> {
+    pub fn model(&self, handle: &ModelHandle) -> Option<&ModelResource> {
+        self.models.get(handle)
+    }
+
+    pub fn model_handle(&self, relative_path_from_source: impl AsRef<Path>) -> Option<ModelHandle> {
+        let s = crate::sanetize_path(relative_path_from_source.as_ref());
+        let handle = ModelHandle::new(s);
+        self.models.contains_key(&handle).then_some(handle)
+    }
+
+    pub fn textures(&self) -> &HashMap<TextureHandle, TextureResource> {
         &self.textures
+    }
+
+    pub fn texture(&self, handle: &TextureHandle) -> Option<&TextureResource> {
+        self.textures.get(handle)
+    }
+
+    pub fn texture_handle(
+        &self,
+        relative_path_from_source: impl AsRef<Path>,
+    ) -> Option<TextureHandle> {
+        let s = crate::sanetize_path(relative_path_from_source.as_ref());
+        let handle = TextureHandle::new(s);
+        self.textures.contains_key(&handle).then_some(handle)
+    }
+
+    pub fn gdtfs(&self) -> &HashMap<GdtfHandle, GdtfResource> {
+        &self.gdtfs
+    }
+
+    pub fn gdtf(&self, handle: &GdtfHandle) -> Option<&GdtfResource> {
+        self.gdtfs.get(handle)
+    }
+
+    pub fn gdtf_handle(&self, relative_path_from_source: impl AsRef<Path>) -> Option<GdtfHandle> {
+        let s = crate::sanetize_path(relative_path_from_source.as_ref());
+        let handle = GdtfHandle::new(s);
+        self.gdtfs.contains_key(&handle).then_some(handle)
     }
 
     pub fn symdef(&self, uuid: Uuid) -> Option<&Symdef> {
@@ -88,148 +124,5 @@ impl Mvr {
             .position
             .iter()
             .find(|pos| Uuid::from_str(&pos.uuid).unwrap() == uuid)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Model {
-    path: PathBuf,
-}
-
-impl Model {
-    pub fn path(&self) -> &Path {
-        &self.path
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Texture {
-    path: PathBuf,
-}
-
-impl Texture {
-    pub fn path(&self) -> &Path {
-        &self.path
-    }
-}
-
-pub mod source {
-    use std::{
-        collections::BTreeMap,
-        fs::File,
-        io::{self, BufReader},
-        path::{Path, PathBuf},
-    };
-
-    use super::*;
-
-    pub trait Source {
-        fn gsd_reader(&self) -> Box<dyn io::BufRead>;
-
-        fn models(&self) -> BTreeMap<FileName, Model>;
-
-        fn textures(&self) -> BTreeMap<FileName, Texture>;
-    }
-
-    fn is_model_file(path: &Path) -> bool {
-        path.extension()
-            .and_then(|s| s.to_str())
-            .is_some_and(|ext| matches!(ext, "glb" | "gltf" | "3ds"))
-    }
-
-    fn is_texture_file(path: &Path) -> bool {
-        path.extension()
-            .and_then(|s| s.to_str())
-            .is_some_and(|ext| matches!(ext, "png" | "jpg" | "jpeg"))
-    }
-
-    pub struct Folder {
-        path: PathBuf,
-        models: BTreeMap<FileName, Model>,
-        textures: BTreeMap<FileName, Texture>,
-    }
-
-    impl Folder {
-        pub fn new(path: impl Into<PathBuf>) -> Self {
-            let path = path.into();
-
-            let mut models = BTreeMap::new();
-            let mut textures = BTreeMap::new();
-
-            if let Ok(read_dir) = std::fs::read_dir(&path) {
-                for entry in read_dir.flatten() {
-                    let p = entry.path();
-
-                    if !p.is_file() {
-                        continue;
-                    }
-
-                    let file_name = crate::sanetize_file_name(p.file_name().unwrap());
-
-                    if is_model_file(&p) {
-                        models.insert(
-                            file_name.clone(),
-                            Model { path: path.join(&file_name).canonicalize().unwrap() },
-                        );
-                    } else if is_texture_file(&p) {
-                        textures.insert(
-                            file_name.clone(),
-                            Texture { path: path.join(&file_name).canonicalize().unwrap() },
-                        );
-                    }
-                }
-            }
-
-            Self { path, models, textures }
-        }
-
-        pub fn path(&self) -> &PathBuf {
-            &self.path
-        }
-    }
-
-    impl Source for Folder {
-        fn gsd_reader(&self) -> Box<dyn io::BufRead> {
-            let gsd_path = self.path.join(GSD_FILE_NAME);
-            Box::new(BufReader::new(File::open(gsd_path).unwrap()))
-        }
-
-        fn models(&self) -> BTreeMap<FileName, Model> {
-            // FIXME: Cloning here kind of redundant, as we only call this function when creating the Mvr.
-            self.models.clone()
-        }
-
-        fn textures(&self) -> BTreeMap<FileName, Texture> {
-            // FIXME: Cloning here kind of redundant, as we only call this function when creating the Mvr.
-            self.textures.clone()
-        }
-    }
-
-    pub struct Archive {
-        path: PathBuf,
-    }
-
-    impl Archive {
-        pub fn new(path: impl Into<PathBuf>) -> Self {
-            Self { path: path.into() }
-        }
-
-        pub fn path(&self) -> &PathBuf {
-            &self.path
-        }
-    }
-
-    impl Source for Archive {
-        fn gsd_reader(&self) -> Box<dyn io::BufRead> {
-            todo!();
-        }
-
-        fn models(&self) -> BTreeMap<FileName, Model> {
-            todo!();
-        }
-
-        fn textures(&self) -> BTreeMap<FileName, Texture> {
-            todo!();
-        }
     }
 }

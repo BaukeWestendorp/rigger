@@ -123,7 +123,6 @@ impl Data {
         String::from("1")
     }
 }
-pub type FileName = String;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Fixture {
     #[serde(rename = "@uuid")]
@@ -275,8 +274,6 @@ impl GroupObject {
         String::from("")
     }
 }
-pub type Ipv4Adress = String;
-pub type Ipv6Adress = String;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Layer {
     #[serde(rename = "@uuid")]
@@ -661,7 +658,6 @@ impl Symdef {
         String::from("")
     }
 }
-pub type SymdefChildList = Geometries;
 #[derive(Debug, Deserialize, Serialize)]
 pub enum TransmissionEnum {
     #[serde(rename = "Unicast")]
@@ -798,10 +794,6 @@ impl VideoScreen {
         String::from("")
     }
 }
-pub type Ciecolortype = String;
-pub type Guidtype = String;
-pub type Matrixtype = String;
-pub type Positiveinteger = i32;
 #[derive(Debug, Deserialize, Serialize)]
 pub enum Scaleenum {
     #[serde(rename = "ScaleKeepRatio")]

@@ -1,10 +1,24 @@
 use std::path::Path;
 
+pub mod gdtf;
 pub mod mvr;
 
 pub mod stage;
 
-pub fn sanetize_file_name(file_name: impl AsRef<Path>) -> String {
+pub fn sanetize_path(path: impl AsRef<Path>) -> String {
     use unicode_normalization::UnicodeNormalization;
-    file_name.as_ref().file_name().unwrap().to_string_lossy().nfc().to_string()
+    let path = path.as_ref();
+    let mut out = String::new();
+    for component in path.components() {
+        let std::path::Component::Normal(part) = component else { continue };
+
+        let part = part.to_string_lossy().nfc().to_string();
+        if out.is_empty() {
+            out.push_str(&part);
+        } else {
+            out.push('/');
+            out.push_str(&part);
+        }
+    }
+    out
 }

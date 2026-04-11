@@ -1,38 +1,24 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{path::Path, str::FromStr};
 
 use glam::Affine3A;
 use uuid::Uuid;
 
-use crate::{
-    mvr::{self, ChildListContent, FileName, Mvr},
-    sanetize_file_name,
-};
+use crate::mvr::{self, ChildListContent, ModelHandle, Mvr};
 
-#[derive(Debug, Clone)]
 pub struct Stage {
+    mvr: Mvr,
+
     layers: Vec<Layer>,
-    models: HashMap<FileName, mvr::Model>,
-    textures: HashMap<FileName, mvr::Texture>,
 }
 
 impl Stage {
-    pub fn new(mvr: &Mvr) -> Self {
+    pub fn new(mvr: Mvr) -> Self {
         let mut layers = Vec::new();
         for layer in &mvr.gsd().scene.layers.layer {
-            layers.push(Layer::new(layer, mvr))
+            layers.push(Layer::new(layer, &mvr))
         }
 
-        let mut models = HashMap::new();
-        for (file_name, model) in mvr.models() {
-            models.insert(file_name.to_owned(), model.to_owned());
-        }
-
-        let mut textures = HashMap::new();
-        for (file_name, model) in mvr.textures() {
-            textures.insert(file_name.to_owned(), model.to_owned());
-        }
-
-        let mut stage = Self { layers, models, textures };
+        let mut stage = Self { mvr, layers };
         stage.propagate_world_transforms();
         stage
     }
@@ -46,20 +32,8 @@ impl Stage {
         self.layers.iter().find(|layer| layer.uuid() == uuid)
     }
 
-    pub fn model(&self, file_name: &FileName) -> Option<&mvr::Model> {
-        self.models.get(file_name)
-    }
-
-    pub fn models(&self) -> &HashMap<FileName, mvr::Model> {
-        &self.models
-    }
-
-    pub fn texture(&self, file_name: &FileName) -> Option<&mvr::Texture> {
-        self.textures.get(file_name)
-    }
-
-    pub fn textures(&self) -> &HashMap<FileName, mvr::Texture> {
-        &self.textures
+    pub fn mvr(&self) -> &Mvr {
+        &self.mvr
     }
 
     fn propagate_world_transforms(&mut self) {
@@ -213,7 +187,7 @@ pub enum ObjectKind {
     SceneObject { geometries: Vec<Geometry> },
     GroupObject { objects: Vec<Object> },
     FocusPoint { geometries: Vec<Geometry> },
-    Fixture {},
+    Fixture { gdtf: Option<mvr::GdtfHandle> },
     Support { geometries: Vec<Geometry> },
     Truss { geometries: Vec<Geometry> },
     VideoScreen { geometries: Vec<Geometry> },
@@ -226,8 +200,9 @@ impl ObjectKind {
             let mut geometries = Vec::new();
 
             for geo_3d in &mvr_geometries.geometry_3d {
-                geometries
-                    .push(Geometry::new(geo_3d.file_name.to_owned(), geo_3d.matrix.to_owned()));
+                if let Some(handle) = mvr.model_handle(&geo_3d.file_name) {
+                    geometries.push(Geometry::new(handle.clone(), geo_3d.matrix.to_owned()));
+                }
             }
 
             for symbol in &mvr_geometries.symbol {
@@ -254,7 +229,11 @@ impl ObjectKind {
             ChildListContent::FocusPoint(c) => {
                 Self::FocusPoint { geometries: generate_geometries(mvr, &c.geometries) }
             }
-            ChildListContent::Fixture(c) => Self::Fixture {},
+            ChildListContent::Fixture(c) => Self::Fixture {
+                gdtf: c.gdtf_spec.as_ref().and_then(|gdtf_spec| {
+                    mvr.gdtf_handle(Path::new(gdtf_spec).with_extension("gdtf"))
+                }),
+            },
             ChildListContent::Support(c) => {
                 Self::Support { geometries: generate_geometries(mvr, &c.geometries) }
             }
@@ -273,24 +252,24 @@ impl ObjectKind {
 
 #[derive(Debug, Clone)]
 pub struct Geometry {
-    file_name: String,
+    model: ModelHandle,
 
     local_transform: Affine3A,
     world_transform: Affine3A,
 }
 
 impl Geometry {
-    pub fn new(file_name: String, matrix: Option<String>) -> Self {
+    pub fn new(model: ModelHandle, matrix: Option<String>) -> Self {
         Self {
-            file_name: sanetize_file_name(file_name),
+            model,
 
             local_transform: mvr_matrix_to_affine(matrix),
             world_transform: Affine3A::IDENTITY,
         }
     }
 
-    pub fn file_name(&self) -> &str {
-        &self.file_name
+    pub fn model(&self) -> &ModelHandle {
+        &self.model
     }
 
     pub fn local_transform(&self) -> Affine3A {
@@ -306,7 +285,7 @@ impl Geometry {
     }
 }
 
-fn mvr_matrix_to_affine(matrix: Option<mvr::Matrixtype>) -> Affine3A {
+fn mvr_matrix_to_affine(matrix: Option<String>) -> Affine3A {
     let Some(matrix) = matrix else { return Affine3A::IDENTITY };
 
     let rows = matrix
