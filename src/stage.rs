@@ -9,14 +9,14 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Stage<S: mvr::source::Source> {
+pub struct Stage {
     layers: Vec<Layer>,
-    models: HashMap<FileName, S::Model>,
-    textures: HashMap<FileName, S::Texture>,
+    models: HashMap<FileName, mvr::Model>,
+    textures: HashMap<FileName, mvr::Texture>,
 }
 
-impl<S: mvr::source::Source> Stage<S> {
-    pub fn new(mvr: &Mvr<S>) -> Self {
+impl Stage {
+    pub fn new(mvr: &Mvr) -> Self {
         let mut layers = Vec::new();
         for layer in &mvr.gsd().scene.layers.layer {
             layers.push(Layer::new(layer, mvr))
@@ -46,19 +46,19 @@ impl<S: mvr::source::Source> Stage<S> {
         self.layers.iter().find(|layer| layer.uuid() == uuid)
     }
 
-    pub fn model(&self, file_name: &FileName) -> Option<&S::Model> {
+    pub fn model(&self, file_name: &FileName) -> Option<&mvr::Model> {
         self.models.get(file_name)
     }
 
-    pub fn models(&self) -> &HashMap<FileName, S::Model> {
+    pub fn models(&self) -> &HashMap<FileName, mvr::Model> {
         &self.models
     }
 
-    pub fn texture(&self, file_name: &FileName) -> Option<&S::Texture> {
+    pub fn texture(&self, file_name: &FileName) -> Option<&mvr::Texture> {
         self.textures.get(file_name)
     }
 
-    pub fn textures(&self) -> &HashMap<FileName, S::Texture> {
+    pub fn textures(&self) -> &HashMap<FileName, mvr::Texture> {
         &self.textures
     }
 
@@ -81,7 +81,7 @@ pub struct Layer {
 }
 
 impl Layer {
-    fn new<S: mvr::source::Source>(mvr_layer: &mvr::Layer, mvr: &Mvr<S>) -> Self {
+    fn new(mvr_layer: &mvr::Layer, mvr: &Mvr) -> Self {
         Self {
             uuid: Uuid::from_str(&mvr_layer.uuid).unwrap(),
             name: mvr_layer.name.clone(),
@@ -140,10 +140,7 @@ pub struct Object {
 }
 
 impl Object {
-    fn new<S: mvr::source::Source>(
-        mvr_child_list_content: &ChildListContent,
-        mvr: &Mvr<S>,
-    ) -> Self {
+    fn new(mvr_child_list_content: &ChildListContent, mvr: &Mvr) -> Self {
         let (uuid, name, matrix) = match mvr_child_list_content {
             ChildListContent::SceneObject(mvr::SceneObject { uuid, name, matrix, .. })
             | ChildListContent::GroupObject(mvr::GroupObject { uuid, name, matrix, .. })
@@ -224,14 +221,8 @@ pub enum ObjectKind {
 }
 
 impl ObjectKind {
-    pub fn new<S: mvr::source::Source>(
-        mvr_child_list_content: &ChildListContent,
-        mvr: &Mvr<S>,
-    ) -> Self {
-        fn generate_geometries<S: mvr::source::Source>(
-            mvr: &Mvr<S>,
-            mvr_geometries: &mvr::Geometries,
-        ) -> Vec<Geometry> {
+    pub fn new(mvr_child_list_content: &ChildListContent, mvr: &Mvr) -> Self {
+        fn generate_geometries(mvr: &Mvr, mvr_geometries: &mvr::Geometries) -> Vec<Geometry> {
             let mut geometries = Vec::new();
 
             for geo_3d in &mvr_geometries.geometry_3d {
