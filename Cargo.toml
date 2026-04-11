@@ -1,0 +1,11 @@
+[package]
+name = "gaffers"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glam = "0.32.1"
+quick-xml = { version = "0.39.2", features = ["serialize"] }
+serde = { version = "1.0.228", features = ["derive"] }
+unicode-normalization = "0.1.25"
+uuid = { version = "1.23.0", features = ["v4"] }
