@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AuxData {
     #[serde(default, rename = "Class")]
@@ -10,6 +11,7 @@ pub struct AuxData {
     #[serde(default, rename = "MappingDefinition")]
     pub mapping_definition: Vec<MappingDefinition>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Address {
     #[serde(default = "Address::default_break_", rename = "@break")]
@@ -17,12 +19,14 @@ pub struct Address {
     #[serde(rename = "$text")]
     pub content: i32,
 }
+
 impl Address {
     #[must_use]
     pub fn default_break_() -> i32 {
         0i32
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Addresses {
     #[serde(default, rename = "Address")]
@@ -30,6 +34,7 @@ pub struct Addresses {
     #[serde(default, rename = "Network")]
     pub network: Vec<Network>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Alignment {
     #[serde(default, rename = "@geometry")]
@@ -39,21 +44,25 @@ pub struct Alignment {
     #[serde(default = "Alignment::default_direction", rename = "@direction")]
     pub direction: String,
 }
+
 impl Alignment {
     #[must_use]
     pub fn default_up() -> String {
         String::from("0,0,1")
     }
+
     #[must_use]
     pub fn default_direction() -> String {
         String::from("0,0,-1")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Alignments {
     #[serde(default, rename = "Alignment")]
     pub alignment: Vec<Alignment>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct BasicChildListAttribute {
     #[serde(rename = "@uuid")]
@@ -61,17 +70,20 @@ pub struct BasicChildListAttribute {
     #[serde(default = "BasicChildListAttribute::default_name", rename = "@name")]
     pub name: String,
 }
+
 impl BasicChildListAttribute {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ChildList {
     #[serde(default, rename = "$value")]
     pub content: Vec<ChildListContent>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub enum ChildListContent {
     #[serde(rename = "SceneObject")]
@@ -91,6 +103,7 @@ pub enum ChildListContent {
     #[serde(rename = "Projector")]
     Projector(Projector),
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Connection {
     #[serde(rename = "@own")]
@@ -100,16 +113,19 @@ pub struct Connection {
     #[serde(rename = "@toObject")]
     pub to_object: String,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Connections {
     #[serde(default, rename = "Connection")]
     pub connection: Vec<Connection>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CustomCommands {
     #[serde(default, rename = "CustomCommand")]
     pub custom_command: Vec<String>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Data {
     #[serde(rename = "@provider")]
@@ -117,12 +133,14 @@ pub struct Data {
     #[serde(default = "Data::default_ver", rename = "@ver")]
     pub ver: String,
 }
+
 impl Data {
     #[must_use]
     pub fn default_ver() -> String {
         String::from("1")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Fixture {
     #[serde(rename = "@uuid")]
@@ -186,16 +204,19 @@ pub struct Fixture {
     #[serde(default, rename = "ChildList")]
     pub child_list: Option<Box<ChildList>>,
 }
+
 impl Fixture {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
+
     #[must_use]
     pub fn default_multipatch() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct FocusPoint {
     #[serde(rename = "@uuid")]
@@ -209,12 +230,14 @@ pub struct FocusPoint {
     #[serde(rename = "Geometries")]
     pub geometries: Geometries,
 }
+
 impl FocusPoint {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GeneralSceneDescription {
     #[serde(rename = "@verMajor")]
@@ -230,6 +253,7 @@ pub struct GeneralSceneDescription {
     #[serde(rename = "Scene")]
     pub scene: Scene,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Geometries {
     #[serde(default, rename = "Geometry3D")]
@@ -237,6 +261,7 @@ pub struct Geometries {
     #[serde(default, rename = "Symbol")]
     pub symbol: Vec<Symbol>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Geometry3D {
     #[serde(rename = "@fileName")]
@@ -244,17 +269,20 @@ pub struct Geometry3D {
     #[serde(default, rename = "Matrix")]
     pub matrix: Option<String>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Gobo {
     #[serde(default = "Gobo::default_rotation", rename = "@rotation")]
     pub rotation: f32,
 }
+
 impl Gobo {
     #[must_use]
     pub fn default_rotation() -> f32 {
         0f32
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GroupObject {
     #[serde(rename = "@uuid")]
@@ -268,12 +296,14 @@ pub struct GroupObject {
     #[serde(rename = "ChildList")]
     pub child_list: Box<ChildList>,
 }
+
 impl GroupObject {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Layer {
     #[serde(rename = "@uuid")]
@@ -285,17 +315,20 @@ pub struct Layer {
     #[serde(default, rename = "ChildList")]
     pub child_list: Option<ChildList>,
 }
+
 impl Layer {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Layers {
     #[serde(default, rename = "Layer")]
     pub layer: Vec<Layer>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Mapping {
     #[serde(rename = "@linkedDef")]
@@ -311,6 +344,7 @@ pub struct Mapping {
     #[serde(default, rename = "rz")]
     pub rz: Option<f32>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MappingDefinition {
     #[serde(rename = "@uuid")]
@@ -326,17 +360,20 @@ pub struct MappingDefinition {
     #[serde(default, rename = "ScaleHandeling")]
     pub scale_handeling: Option<ScaleHandeling>,
 }
+
 impl MappingDefinition {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Mappings {
     #[serde(default, rename = "Mapping")]
     pub mapping: Vec<Mapping>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Network {
     #[serde(rename = "@geometry")]
@@ -352,6 +389,7 @@ pub struct Network {
     #[serde(default, rename = "@hostname")]
     pub hostname: Option<String>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Overwrite {
     #[serde(rename = "@universal")]
@@ -359,17 +397,20 @@ pub struct Overwrite {
     #[serde(default = "Overwrite::default_target", rename = "@target")]
     pub target: String,
 }
+
 impl Overwrite {
     #[must_use]
     pub fn default_target() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Overwrites {
     #[serde(default, rename = "Overwrite")]
     pub overwrite: Vec<Overwrite>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Projection {
     #[serde(default, rename = "Source")]
@@ -377,11 +418,13 @@ pub struct Projection {
     #[serde(default, rename = "ScaleHandeling")]
     pub scale_handeling: Vec<ScaleHandeling>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Projections {
     #[serde(default, rename = "Projection")]
     pub projection: Vec<Projection>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Projector {
     #[serde(rename = "@uuid")]
@@ -429,16 +472,19 @@ pub struct Projector {
     #[serde(default, rename = "CustomId")]
     pub custom_id: Option<i32>,
 }
+
 impl Projector {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
+
     #[must_use]
     pub fn default_multipatch() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Protocol {
     #[serde(default = "Protocol::default_geometry", rename = "@geometry")]
@@ -450,42 +496,50 @@ pub struct Protocol {
     #[serde(default = "Protocol::default_version", rename = "@version")]
     pub version: String,
     #[serde(default, rename = "@transmission")]
-    pub transmission: Option<TransmissionEnum>,
+    pub transmission: Option<Transmission>,
 }
+
 impl Protocol {
     #[must_use]
     pub fn default_geometry() -> String {
         String::from("NetworkInOut_1")
     }
+
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
+
     #[must_use]
     pub fn default_type_() -> String {
         String::from("")
     }
+
     #[must_use]
     pub fn default_version() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Protocols {
     #[serde(default, rename = "Protocol")]
     pub protocol: Vec<Protocol>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ScaleHandeling {
     #[serde(default = "ScaleHandeling::default_enum_", rename = "@Enum")]
-    pub enum_: Scaleenum,
+    pub enum_: Scale,
 }
+
 impl ScaleHandeling {
     #[must_use]
-    pub fn default_enum_() -> Scaleenum {
-        Scaleenum::ScaleKeepRatio
+    pub fn default_enum_() -> Scale {
+        Scale::ScaleKeepRatio
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Scene {
     #[serde(default, rename = "AUXData")]
@@ -493,6 +547,7 @@ pub struct Scene {
     #[serde(rename = "Layers")]
     pub layers: Layers,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SceneObject {
     #[serde(rename = "@uuid")]
@@ -538,27 +593,31 @@ pub struct SceneObject {
     #[serde(default, rename = "ChildList")]
     pub child_list: Option<Box<ChildList>>,
 }
+
 impl SceneObject {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
+
     #[must_use]
     pub fn default_multipatch() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Source {
     #[serde(rename = "@linkedGeometry")]
     pub linked_geometry: String,
     #[serde(rename = "@type")]
-    pub type_: SourceEnum,
+    pub type_: SourceType,
     #[serde(default, rename = "$text")]
     pub content: String,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum SourceEnum {
+pub enum SourceType {
     #[serde(rename = "NDI")]
     Ndi,
     #[serde(rename = "File")]
@@ -568,11 +627,13 @@ pub enum SourceEnum {
     #[serde(rename = "CaptureDevice")]
     CaptureDevice,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Sources {
     #[serde(default, rename = "Source")]
     pub source: Vec<Source>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Support {
     #[serde(rename = "@uuid")]
@@ -624,16 +685,19 @@ pub struct Support {
     #[serde(default, rename = "ChildList")]
     pub child_list: Option<Box<ChildList>>,
 }
+
 impl Support {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
+
     #[must_use]
     pub fn default_multipatch() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Symbol {
     #[serde(rename = "@uuid")]
@@ -643,6 +707,7 @@ pub struct Symbol {
     #[serde(default, rename = "Matrix")]
     pub matrix: Option<String>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Symdef {
     #[serde(rename = "@uuid")]
@@ -652,14 +717,16 @@ pub struct Symdef {
     #[serde(rename = "ChildList")]
     pub child_list: Geometries,
 }
+
 impl Symdef {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum TransmissionEnum {
+pub enum Transmission {
     #[serde(rename = "Unicast")]
     Unicast,
     #[serde(rename = "Multicast")]
@@ -669,6 +736,7 @@ pub enum TransmissionEnum {
     #[serde(rename = "Anycast")]
     Anycast,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Truss {
     #[serde(rename = "@uuid")]
@@ -720,21 +788,25 @@ pub struct Truss {
     #[serde(default, rename = "CustomId")]
     pub custom_id: Option<i32>,
 }
+
 impl Truss {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
+
     #[must_use]
     pub fn default_multipatch() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct UserData {
     #[serde(default, rename = "Data")]
     pub data: Vec<Data>,
 }
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct VideoScreen {
     #[serde(rename = "@uuid")]
@@ -784,18 +856,21 @@ pub struct VideoScreen {
     #[serde(default, rename = "CustomId")]
     pub custom_id: Option<i32>,
 }
+
 impl VideoScreen {
     #[must_use]
     pub fn default_name() -> String {
         String::from("")
     }
+
     #[must_use]
     pub fn default_multipatch() -> String {
         String::from("")
     }
 }
+
 #[derive(Debug, Deserialize, Serialize)]
-pub enum Scaleenum {
+pub enum Scale {
     #[serde(rename = "ScaleKeepRatio")]
     ScaleKeepRatio,
     #[serde(rename = "ScaleIgnoreRatio")]

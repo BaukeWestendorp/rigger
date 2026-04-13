@@ -693,7 +693,7 @@ impl DmxChannel {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxChannels {
-    #[serde(default, rename = "DmxChannel")]
+    #[serde(default, rename = "DMXChannel")]
     pub dmx_channels: Vec<DmxChannel>,
 }
 
@@ -715,7 +715,7 @@ pub struct DmxMode {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxModes {
-    #[serde(default, rename = "DmxMode")]
+    #[serde(default, rename = "DMXMode")]
     pub dmx_modes: Vec<DmxMode>,
 }
 
@@ -737,7 +737,7 @@ pub struct DmxProfile {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DmxProfiles {
-    #[serde(default, rename = "DmxProfile")]
+    #[serde(default, rename = "DMXProfile")]
     pub dmx_profiles: Vec<DmxProfile>,
 }
 

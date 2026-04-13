@@ -4,7 +4,7 @@ mod description;
 mod resource;
 mod source;
 
-pub use description::*;
+pub(crate) use description::*;
 pub use resource::*;
 use source::*;
 

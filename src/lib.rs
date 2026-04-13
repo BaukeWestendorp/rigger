@@ -3,9 +3,9 @@ use std::path::Path;
 pub mod gdtf;
 pub mod mvr;
 
-pub mod stage;
+pub use ::glam;
 
-pub fn sanetize_path(path: impl AsRef<Path>) -> String {
+fn sanetize_path(path: impl AsRef<Path>) -> String {
     use unicode_normalization::UnicodeNormalization;
     let path = path.as_ref();
     let mut out = String::new();

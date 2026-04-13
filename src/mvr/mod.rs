@@ -1,128 +1,131 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use uuid::Uuid;
 
-mod gsd;
-mod resource;
-mod source;
+pub mod bundle;
 
-pub use gsd::*;
-pub use resource::*;
-use source::*;
+mod aux;
+mod builder;
+mod geo;
+mod layer;
 
-const GSD_FILE_NAME: &str = "GeneralSceneDescription.xml";
+pub use aux::*;
+pub use geo::*;
+pub use layer::*;
 
 pub struct Mvr {
-    gsd: GeneralSceneDescription,
+    bundle: bundle::Bundle,
 
-    models: HashMap<ModelHandle, ModelResource>,
-    textures: HashMap<TextureHandle, TextureResource>,
-    gdtfs: HashMap<GdtfHandle, GdtfResource>,
+    version: Version,
+    provider: Provider,
+
+    symdefs: HashMap<Uuid, Arc<Symdef>>,
+    classes: HashMap<Uuid, Arc<Class>>,
+    // FIXME: Implement MappingDefinition mapping_definitions: HashMap<Uuid, Arc<MappingDefinition>>,
+    positions: HashMap<Uuid, Arc<Position>>,
+
+    layers: HashMap<Uuid, layer::Layer>,
 }
 
 impl Mvr {
+    pub fn new(bundle: bundle::Bundle) -> Self {
+        builder::MvrBuilder::new(bundle).build()
+    }
+
     pub fn from_folder(path: impl Into<PathBuf>) -> Self {
-        FolderSource { path: path.into() }.load()
+        Self::new(bundle::Bundle::from_folder(path))
     }
 
     pub fn from_archive(path: impl Into<PathBuf>) -> Self {
-        ArchiveSource { path: path.into() }.load()
+        Self::new(bundle::Bundle::from_archive(path))
     }
 
-    pub fn gsd(&self) -> &GeneralSceneDescription {
-        &self.gsd
+    pub fn bundle(&self) -> &bundle::Bundle {
+        &self.bundle
     }
 
-    pub fn models(&self) -> &HashMap<ModelHandle, ModelResource> {
-        &self.models
+    pub fn version(&self) -> Version {
+        self.version
     }
 
-    pub fn model(&self, handle: &ModelHandle) -> Option<&ModelResource> {
-        self.models.get(handle)
+    pub fn provider(&self) -> &Provider {
+        &self.provider
     }
 
-    pub fn model_handle(&self, relative_path_from_source: impl AsRef<Path>) -> Option<ModelHandle> {
-        let s = crate::sanetize_path(relative_path_from_source.as_ref());
-        let handle = ModelHandle::new(s);
-        self.models.contains_key(&handle).then_some(handle)
-    }
-
-    pub fn textures(&self) -> &HashMap<TextureHandle, TextureResource> {
-        &self.textures
-    }
-
-    pub fn texture(&self, handle: &TextureHandle) -> Option<&TextureResource> {
-        self.textures.get(handle)
-    }
-
-    pub fn texture_handle(
-        &self,
-        relative_path_from_source: impl AsRef<Path>,
-    ) -> Option<TextureHandle> {
-        let s = crate::sanetize_path(relative_path_from_source.as_ref());
-        let handle = TextureHandle::new(s);
-        self.textures.contains_key(&handle).then_some(handle)
-    }
-
-    pub fn gdtfs(&self) -> &HashMap<GdtfHandle, GdtfResource> {
-        &self.gdtfs
-    }
-
-    pub fn gdtf(&self, handle: &GdtfHandle) -> Option<&GdtfResource> {
-        self.gdtfs.get(handle)
-    }
-
-    pub fn gdtf_handle(&self, relative_path_from_source: impl AsRef<Path>) -> Option<GdtfHandle> {
-        let s = crate::sanetize_path(relative_path_from_source.as_ref());
-        let handle = GdtfHandle::new(s);
-        self.gdtfs.contains_key(&handle).then_some(handle)
+    pub fn symdefs(&self) -> impl Iterator<Item = &Symdef> {
+        self.symdefs.values().map(|v| &**v)
     }
 
     pub fn symdef(&self, uuid: Uuid) -> Option<&Symdef> {
-        // FIXME: Use index for this.
-        self.gsd
-            .scene
-            .aux_data
-            .as_ref()?
-            .symdef
-            .iter()
-            .find(|symdef| Uuid::from_str(&symdef.uuid).unwrap() == uuid)
+        self.symdefs.get(&uuid).map(|v| &**v)
     }
 
-    pub fn class(&self, uuid: Uuid) -> Option<&BasicChildListAttribute> {
-        // FIXME: Use index for this.
-        self.gsd
-            .scene
-            .aux_data
-            .as_ref()?
-            .class
-            .iter()
-            .find(|class| Uuid::from_str(&class.uuid).unwrap() == uuid)
+    pub fn classes(&self) -> impl Iterator<Item = &Class> {
+        self.classes.values().map(|v| &**v)
     }
 
-    pub fn mapping_definition(&self, uuid: Uuid) -> Option<&MappingDefinition> {
-        // FIXME: Use index for this.
-        self.gsd
-            .scene
-            .aux_data
-            .as_ref()?
-            .mapping_definition
-            .iter()
-            .find(|def| Uuid::from_str(&def.uuid).unwrap() == uuid)
+    pub fn class(&self, uuid: Uuid) -> Option<&Class> {
+        self.classes.get(&uuid).map(|v| &**v)
     }
 
-    pub fn position(&self, uuid: Uuid) -> Option<&BasicChildListAttribute> {
-        // FIXME: Use index for this.
-        self.gsd
-            .scene
-            .aux_data
-            .as_ref()?
-            .position
-            .iter()
-            .find(|pos| Uuid::from_str(&pos.uuid).unwrap() == uuid)
+    pub fn positions(&self) -> impl Iterator<Item = &Position> {
+        self.positions.values().map(|v| &**v)
+    }
+
+    pub fn position(&self, uuid: Uuid) -> Option<&Position> {
+        self.positions.get(&uuid).map(|v| &**v)
+    }
+
+    pub fn layers(&self) -> impl Iterator<Item = &Layer> {
+        self.layers.values()
+    }
+
+    pub fn layer(&self, uuid: Uuid) -> Option<&layer::Layer> {
+        self.layers.get(&uuid)
+    }
+}
+
+impl std::fmt::Debug for Mvr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Mvr")
+            .field("version", &self.version)
+            .field("provider", &self.provider)
+            .field("symdefs", &self.symdefs)
+            .field("classes", &self.classes)
+            .field("positions", &self.positions)
+            .field("layers", &self.layers)
+            .finish()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Version {
+    major: i32,
+    minor: i32,
+}
+
+impl Version {
+    pub fn major(&self) -> i32 {
+        self.major
+    }
+
+    pub fn minor(&self) -> i32 {
+        self.minor
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Provider {
+    name: String,
+    version: String,
+}
+
+impl Provider {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn version(&self) -> &str {
+        &self.version
     }
 }
