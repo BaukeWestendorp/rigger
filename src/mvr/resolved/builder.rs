@@ -3,9 +3,10 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use uuid::Uuid;
 
 use crate::mvr::{
-    Class, FocusPointObject, Geometry, GroupObject, Mvr, Position, Provider, Symdef, Version,
+    Class, FixtureObject, FocusPointObject, Geometry, GroupObject, Layer, Mvr, Object, ObjectData,
+    ObjectKind, Position, ProjectorObject, Provider, SceneObject, SupportObject, Symdef,
+    TrussObject, Version, VideoScreenObject,
     bundle::{self, ResourceKey},
-    geo, layer,
 };
 
 pub struct MvrBuilder {
@@ -112,7 +113,7 @@ impl MvrBuilder {
         let mut geometries = Vec::new();
 
         for geo3d in geometry_3ds {
-            geometries.push(geo::Geometry {
+            geometries.push(Geometry {
                 local_transform: create_transform_optional(geo3d.matrix.as_deref()),
                 model: ResourceKey::new(geo3d.file_name.clone()),
             });
@@ -134,7 +135,7 @@ impl MvrBuilder {
         bundle: &bundle::Bundle,
         classes: &HashMap<Uuid, Arc<Class>>,
         aux_data: &bundle::AuxData,
-        layers: &mut HashMap<Uuid, layer::Layer>,
+        layers: &mut HashMap<Uuid, Layer>,
     ) {
         for layer_data in &bundle.description().scene.layers.layer {
             let uuid = Uuid::from_str(&layer_data.uuid).unwrap();
@@ -150,7 +151,7 @@ impl MvrBuilder {
 
             layers.insert(
                 uuid,
-                layer::Layer {
+                Layer {
                     uuid,
                     name,
                     local_transform: create_transform_optional(layer_data.matrix.as_deref()),
@@ -164,7 +165,7 @@ impl MvrBuilder {
         child_list: &Option<Box<bundle::ChildList>>,
         classes: &HashMap<Uuid, Arc<Class>>,
         aux_data: &bundle::AuxData,
-    ) -> layer::ObjectData {
+    ) -> ObjectData {
         let children = match child_list {
             Some(list) => list
                 .content
@@ -174,19 +175,16 @@ impl MvrBuilder {
             None => Vec::new(),
         };
 
-        layer::ObjectData { children }
+        ObjectData { children }
     }
 
     fn create_object(
         child: &bundle::ChildListContent,
         classes: &HashMap<Uuid, Arc<Class>>,
         aux_data: &bundle::AuxData,
-    ) -> layer::Object {
-        use bundle::ChildListContent as C;
-        use layer::{ObjectKind, SceneObject};
-
+    ) -> Object {
         let (uuid_str, name, matrix, classing, kind) = match child {
-            C::SceneObject(c) => (
+            bundle::ChildListContent::SceneObject(c) => (
                 &c.uuid,
                 &c.name,
                 c.matrix.as_deref(),
@@ -200,7 +198,7 @@ impl MvrBuilder {
                     ),
                 }),
             ),
-            C::GroupObject(c) => (
+            bundle::ChildListContent::GroupObject(c) => (
                 &c.uuid,
                 &c.name,
                 c.matrix.as_deref(),
@@ -214,7 +212,7 @@ impl MvrBuilder {
                         .collect(),
                 }),
             ),
-            C::FocusPoint(c) => (
+            bundle::ChildListContent::FocusPoint(c) => (
                 &c.uuid,
                 &c.name,
                 c.matrix.as_deref(),
@@ -227,35 +225,21 @@ impl MvrBuilder {
                     ),
                 }),
             ),
-            C::Fixture(c) => (
+            bundle::ChildListContent::Fixture(c) => (
                 &c.uuid,
                 &c.name,
                 c.matrix.as_deref(),
                 c.classing.as_ref(),
-                ObjectKind::Fixture(layer::FixtureObject {
+                ObjectKind::Fixture(FixtureObject {
                     data: Self::create_object_data(&c.child_list, classes, aux_data),
                 }),
             ),
-            C::Support(c) => (
+            bundle::ChildListContent::Support(c) => (
                 &c.uuid,
                 &c.name,
                 c.matrix.as_deref(),
                 c.classing.as_ref(),
-                ObjectKind::Support(layer::SupportObject {
-                    data: Self::create_object_data(&c.child_list, classes, aux_data),
-                    geometries: Self::create_geometries(
-                        &c.geometries.geometry_3d,
-                        &c.geometries.symbol,
-                        aux_data,
-                    ),
-                }),
-            ),
-            C::Truss(c) => (
-                &c.uuid,
-                &c.name,
-                c.matrix.as_deref(),
-                c.classing.as_ref(),
-                ObjectKind::Truss(layer::TrussObject {
+                ObjectKind::Support(SupportObject {
                     data: Self::create_object_data(&c.child_list, classes, aux_data),
                     geometries: Self::create_geometries(
                         &c.geometries.geometry_3d,
@@ -264,12 +248,12 @@ impl MvrBuilder {
                     ),
                 }),
             ),
-            C::VideoScreen(c) => (
+            bundle::ChildListContent::Truss(c) => (
                 &c.uuid,
                 &c.name,
                 c.matrix.as_deref(),
                 c.classing.as_ref(),
-                ObjectKind::VideoScreen(layer::VideoScreenObject {
+                ObjectKind::Truss(TrussObject {
                     data: Self::create_object_data(&c.child_list, classes, aux_data),
                     geometries: Self::create_geometries(
                         &c.geometries.geometry_3d,
@@ -278,12 +262,26 @@ impl MvrBuilder {
                     ),
                 }),
             ),
-            C::Projector(c) => (
+            bundle::ChildListContent::VideoScreen(c) => (
                 &c.uuid,
                 &c.name,
                 c.matrix.as_deref(),
                 c.classing.as_ref(),
-                ObjectKind::Projector(layer::ProjectorObject {
+                ObjectKind::VideoScreen(VideoScreenObject {
+                    data: Self::create_object_data(&c.child_list, classes, aux_data),
+                    geometries: Self::create_geometries(
+                        &c.geometries.geometry_3d,
+                        &c.geometries.symbol,
+                        aux_data,
+                    ),
+                }),
+            ),
+            bundle::ChildListContent::Projector(c) => (
+                &c.uuid,
+                &c.name,
+                c.matrix.as_deref(),
+                c.classing.as_ref(),
+                ObjectKind::Projector(ProjectorObject {
                     data: Self::create_object_data(&c.child_list, classes, aux_data),
                     geometries: Self::create_geometries(
                         &c.geometries.geometry_3d,
@@ -294,7 +292,7 @@ impl MvrBuilder {
             ),
         };
 
-        layer::Object {
+        Object {
             uuid: Uuid::from_str(uuid_str).unwrap(),
             name: name.to_string(),
             class: classing
