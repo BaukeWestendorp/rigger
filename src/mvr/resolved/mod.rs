@@ -11,7 +11,7 @@ pub use aux::*;
 pub use geo::*;
 pub use layer::*;
 
-use crate::mvr::bundle;
+use crate::mvr::bundle::{self, ExtractPolicy};
 
 pub struct Mvr {
     bundle: bundle::Bundle,
@@ -38,6 +38,13 @@ impl Mvr {
 
     pub fn from_archive(path: impl Into<PathBuf>) -> Self {
         Self::new(bundle::Bundle::from_archive(path))
+    }
+
+    pub fn from_archive_with_extract_policy(
+        path: impl Into<PathBuf>,
+        extract_policy: ExtractPolicy,
+    ) -> Self {
+        Self::new(bundle::Bundle::from_archive_with_extract_policy(path, extract_policy))
     }
 
     pub fn bundle(&self) -> &bundle::Bundle {

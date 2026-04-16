@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::mvr::bundle::{
-    Bundle, GSD_FILE_NAME, ResourceEntry, ResourceKey, ResourceKind, ResourceMap,
+    Bundle, ExtractPolicy, GSD_FILE_NAME, ResourceEntry, ResourceKey, ResourceKind, ResourceMap,
 };
 
 pub(crate) enum BundleSource {
@@ -70,24 +70,21 @@ impl Source for FolderSource {
 
 pub(crate) struct ArchiveSource {
     path: PathBuf,
+    extract_policy: ExtractPolicy,
 }
 
 impl ArchiveSource {
-    pub fn new(path: PathBuf) -> Self {
-        Self { path }
+    pub fn new(path: PathBuf, extract_policy: ExtractPolicy) -> Self {
+        Self { path, extract_policy }
     }
 
     pub fn path(&self) -> &Path {
         &self.path
     }
-}
 
-impl Source for ArchiveSource {
-    fn load_bundle(&self, source: BundleSource) -> Bundle {
-        let file = File::open(&self.path()).unwrap();
+    fn extract_to_root(&self, root: &Path) {
+        let file = File::open(self.path()).unwrap();
         let mut archive = zip::ZipArchive::new(file).unwrap();
-
-        let root = source.root_folder().to_path_buf();
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).unwrap();
@@ -96,7 +93,7 @@ impl Source for ArchiveSource {
             let out_path = {
                 let joined = root.join(&relative);
                 let out_path = joined.canonicalize().unwrap_or(joined);
-                if !out_path.starts_with(&root) {
+                if !out_path.starts_with(root) {
                     panic!("Invalid file path in archive: {:?}", relative);
                 }
                 out_path
@@ -112,6 +109,27 @@ impl Source for ArchiveSource {
                 }
                 let mut out_file = File::create(&out_path).unwrap();
                 io::copy(&mut file, &mut out_file).unwrap();
+            }
+        }
+    }
+}
+
+impl Source for ArchiveSource {
+    fn load_bundle(&self, source: BundleSource) -> Bundle {
+        let root = source.root_folder().to_path_buf();
+
+        match self.extract_policy {
+            ExtractPolicy::Lazy => {
+                let is_empty =
+                    fs::read_dir(&root).map(|mut it| it.next().is_none()).unwrap_or(true);
+                if is_empty {
+                    fs::create_dir_all(&root).unwrap();
+                    self.extract_to_root(&root);
+                }
+            }
+            ExtractPolicy::Always => {
+                fs::create_dir_all(&root).unwrap();
+                self.extract_to_root(&root);
             }
         }
 

@@ -42,8 +42,15 @@ impl Bundle {
     }
 
     pub fn from_archive(path: impl Into<PathBuf>) -> Self {
+        Self::from_archive_with_extract_policy(path, ExtractPolicy::Lazy)
+    }
+
+    pub fn from_archive_with_extract_policy(
+        path: impl Into<PathBuf>,
+        extract_policy: ExtractPolicy,
+    ) -> Self {
         let path = path.into();
-        ArchiveSource::new(path)
+        ArchiveSource::new(path, extract_policy)
             .load_bundle(BundleSource::Archive { temp_dir: tempfile::TempDir::new().unwrap() })
     }
 
@@ -74,4 +81,10 @@ impl Bundle {
         reader.read_to_end(&mut buf).ok()?;
         Some(buf)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ExtractPolicy {
+    Lazy,
+    Always,
 }
