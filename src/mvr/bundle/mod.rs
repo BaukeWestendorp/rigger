@@ -63,11 +63,15 @@ impl Bundle {
         self.root_folder().join(key.path())
     }
 
-    pub fn resource_bytes(&self, key: &ResourceKey) -> Option<Vec<u8>> {
+    pub fn open_resource(&self, key: &ResourceKey) -> Option<impl Read> {
         let path = self.resolve_path(key);
-        let mut f = File::open(path).ok()?;
+        File::open(path).ok()
+    }
+
+    pub fn resource_bytes(&self, key: &ResourceKey) -> Option<Vec<u8>> {
+        let mut reader = self.open_resource(key)?;
         let mut buf = Vec::new();
-        f.read_to_end(&mut buf).ok()?;
+        reader.read_to_end(&mut buf).ok()?;
         Some(buf)
     }
 }
