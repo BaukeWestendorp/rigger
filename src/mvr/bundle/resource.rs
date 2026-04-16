@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt, path::Path};
 
-/// Kind of resource inside an MVR file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ResourceKind {
     Model,
@@ -10,7 +9,6 @@ pub enum ResourceKind {
 }
 
 impl ResourceKind {
-    /// Get [`ResourceKind`] based on file extension.
     pub fn from_path(path: &Path) -> Self {
         let Some(ext) = path.extension().and_then(|e| e.to_str()).map(|s| s.to_ascii_lowercase())
         else {
@@ -26,7 +24,6 @@ impl ResourceKind {
     }
 }
 
-/// Sanitized relative path inside the bundle.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ResourceKey(String);
 
@@ -39,7 +36,7 @@ impl ResourceKey {
         &self.0
     }
 
-    pub fn as_path(&self) -> &Path {
+    pub fn path(&self) -> &Path {
         Path::new(&self.0)
     }
 }
@@ -50,7 +47,6 @@ impl fmt::Display for ResourceKey {
     }
 }
 
-/// Map entry of a file in the bundle.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ResourceEntry {
     pub key: ResourceKey,
@@ -63,7 +59,6 @@ impl ResourceEntry {
     }
 }
 
-/// Map of resources found in the bundle.
 #[derive(Debug, Clone, Default)]
 pub struct ResourceMap {
     entries: HashMap<ResourceKey, ResourceEntry>,

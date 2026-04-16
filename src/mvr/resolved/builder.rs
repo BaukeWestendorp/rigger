@@ -6,7 +6,7 @@ use crate::mvr::{
     Class, FixtureObject, FocusPointObject, Geometry, GroupObject, Layer, Mvr, Object, ObjectData,
     ObjectKind, Position, ProjectorObject, Provider, SceneObject, SupportObject, Symdef,
     TrussObject, Version, VideoScreenObject,
-    bundle::{self, ResourceKey},
+    bundle::{self},
 };
 
 pub struct MvrBuilder {
@@ -34,21 +34,13 @@ impl MvrBuilder {
         let mut positions = HashMap::new();
         let mut layers = HashMap::new();
 
-        // FIXME: Cringe but works.
-        let aux_data = self.bundle.description().scene.aux_data.as_ref();
-        let default_aux_data;
-        let aux_data = match aux_data {
-            Some(data) => data,
-            None => {
-                default_aux_data = bundle::AuxData {
-                    class: Vec::new(),
-                    symdef: Vec::new(),
-                    position: Vec::new(),
-                    mapping_definition: Vec::new(),
-                };
-                &default_aux_data
-            }
+        static EMPTY_AUX_DATA: bundle::AuxData = bundle::AuxData {
+            class: Vec::new(),
+            symdef: Vec::new(),
+            position: Vec::new(),
+            mapping_definition: Vec::new(),
         };
+        let aux_data = self.bundle.description().scene.aux_data.as_ref().unwrap_or(&EMPTY_AUX_DATA);
 
         Self::build_classes(aux_data, &mut classes);
         Self::build_positions(aux_data, &mut positions);
@@ -113,9 +105,10 @@ impl MvrBuilder {
         let mut geometries = Vec::new();
 
         for geo3d in geometry_3ds {
+            let model_key = crate::mvr::bundle::ResourceKey::new(&geo3d.file_name);
             geometries.push(Geometry {
                 local_transform: create_transform_optional(geo3d.matrix.as_deref()),
-                model: ResourceKey::new(geo3d.file_name.clone()),
+                model: model_key,
             });
         }
 

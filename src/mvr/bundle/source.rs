@@ -1,16 +1,25 @@
 use std::{
     fs::{self, File},
-    io::BufReader,
-    path::PathBuf,
+    io::{self, BufReader},
+    path::{Path, PathBuf},
 };
 
 use crate::mvr::bundle::{
-    Bundle, GSD_FILE_NAME, LoadOptions, ResourceEntry, ResourceKey, ResourceKind, ResourceMap,
+    Bundle, GSD_FILE_NAME, ResourceEntry, ResourceKey, ResourceKind, ResourceMap,
 };
 
 pub(crate) enum BundleSource {
     Folder { root: PathBuf },
-    Archive { path: PathBuf },
+    Archive { temp_dir: tempfile::TempDir },
+}
+
+impl BundleSource {
+    pub fn root_folder(&self) -> &Path {
+        match &self {
+            BundleSource::Folder { root } => root.as_path(),
+            BundleSource::Archive { temp_dir, .. } => temp_dir.path(),
+        }
+    }
 }
 
 pub(crate) trait Source {
@@ -18,78 +27,40 @@ pub(crate) trait Source {
 }
 
 pub(crate) struct FolderSource {
-    pub path: PathBuf,
-    pub options: LoadOptions,
+    path: PathBuf,
+}
+
+impl FolderSource {
+    pub(crate) fn new(path: PathBuf) -> Self {
+        Self { path }
+    }
 }
 
 impl Source for FolderSource {
     fn load_bundle(&self, source: BundleSource) -> Bundle {
         let description = quick_xml::de::from_reader(BufReader::new(
-            File::open(self.path.join(GSD_FILE_NAME)).unwrap(),
+            File::open(source.root_folder().join(GSD_FILE_NAME)).unwrap(),
         ))
         .unwrap();
 
         let mut resources = ResourceMap::new();
 
-        if self.options.root_only {
-            if let Ok(read_dir) = fs::read_dir(&self.path) {
-                for entry in read_dir.flatten() {
-                    let p = entry.path();
+        if let Ok(read_dir) = fs::read_dir(&self.path) {
+            for entry in read_dir.flatten() {
+                let p = entry.path();
 
-                    if !p.is_file() {
-                        continue;
-                    }
-
-                    let relative = match p.strip_prefix(&self.path) {
-                        Ok(r) => r,
-                        Err(_) => continue,
-                    };
-
-                    let key_str = if self.options.sanitize_paths {
-                        crate::sanetize_path(relative)
-                    } else {
-                        relative.to_string_lossy().to_string()
-                    };
-
-                    let key = ResourceKey::new(key_str);
-                    let kind = ResourceKind::from_path(&p);
-                    resources.insert(ResourceEntry { key, kind });
-                }
-            }
-        } else {
-            let mut stack = vec![self.path.clone()];
-            while let Some(dir) = stack.pop() {
-                let Ok(read_dir) = fs::read_dir(&dir) else {
+                if !p.is_file() {
                     continue;
+                }
+
+                let relative = match p.strip_prefix(&self.path) {
+                    Ok(r) => r,
+                    Err(_) => continue,
                 };
 
-                for entry in read_dir.flatten() {
-                    let p = entry.path();
-
-                    if p.is_dir() {
-                        stack.push(p);
-                        continue;
-                    }
-
-                    if !p.is_file() {
-                        continue;
-                    }
-
-                    let relative = match p.strip_prefix(&self.path) {
-                        Ok(r) => r,
-                        Err(_) => continue,
-                    };
-
-                    let key_str = if self.options.sanitize_paths {
-                        crate::sanetize_path(relative)
-                    } else {
-                        relative.to_string_lossy().to_string()
-                    };
-
-                    let key = ResourceKey::new(key_str);
-                    let kind = ResourceKind::from_path(&p);
-                    resources.insert(ResourceEntry { key, kind });
-                }
+                let key = ResourceKey::new(relative.to_string_lossy());
+                let kind = ResourceKind::from_path(&p);
+                resources.insert(ResourceEntry { key, kind });
             }
         }
 
@@ -98,12 +69,53 @@ impl Source for FolderSource {
 }
 
 pub(crate) struct ArchiveSource {
-    pub _path: PathBuf,
-    pub _options: LoadOptions,
+    path: PathBuf,
+}
+
+impl ArchiveSource {
+    pub fn new(path: PathBuf) -> Self {
+        Self { path }
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
 impl Source for ArchiveSource {
-    fn load_bundle(&self, _source: BundleSource) -> Bundle {
-        todo!();
+    fn load_bundle(&self, source: BundleSource) -> Bundle {
+        let file = File::open(&self.path()).unwrap();
+        let mut archive = zip::ZipArchive::new(file).unwrap();
+
+        let root = source.root_folder().to_path_buf();
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).unwrap();
+            let corrected_name = String::from_utf8_lossy(file.name_raw());
+            let relative = PathBuf::from(corrected_name.to_string());
+            let out_path = {
+                let joined = root.join(&relative);
+                let out_path = joined.canonicalize().unwrap_or(joined);
+                if !out_path.starts_with(&root) {
+                    panic!("Invalid file path in archive: {:?}", relative);
+                }
+                out_path
+            };
+
+            if file.is_dir() {
+                fs::create_dir_all(&out_path).unwrap();
+            } else {
+                if let Some(p) = out_path.parent() {
+                    if !p.exists() {
+                        fs::create_dir_all(p).unwrap();
+                    }
+                }
+                let mut out_file = File::create(&out_path).unwrap();
+                io::copy(&mut file, &mut out_file).unwrap();
+            }
+        }
+
+        let folder_loader = FolderSource { path: root.clone() };
+        folder_loader.load_bundle(source)
     }
 }

@@ -25,7 +25,7 @@ impl GdtfSource for FolderSource {
                     continue;
                 }
 
-                let _file_name = crate::sanetize_path(p.file_name().unwrap());
+                let _file_name = p.file_name().unwrap();
             }
         }
 
