@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::mvr::bundle::{
-    Bundle, ExtractPolicy, GSD_FILE_NAME, ResourceEntry, ResourceKey, ResourceKind, ResourceMap,
+    Bundle, GSD_FILE_NAME, ResourceEntry, ResourceKey, ResourceKind, ResourceMap,
 };
 
 pub(crate) enum BundleSource {
@@ -70,12 +70,11 @@ impl Source for FolderSource {
 
 pub(crate) struct ArchiveSource {
     path: PathBuf,
-    extract_policy: ExtractPolicy,
 }
 
 impl ArchiveSource {
-    pub fn new(path: PathBuf, extract_policy: ExtractPolicy) -> Self {
-        Self { path, extract_policy }
+    pub fn new(path: PathBuf) -> Self {
+        Self { path }
     }
 
     pub fn path(&self) -> &Path {
@@ -118,20 +117,8 @@ impl Source for ArchiveSource {
     fn load_bundle(&self, source: BundleSource) -> Bundle {
         let root = source.root_folder().to_path_buf();
 
-        match self.extract_policy {
-            ExtractPolicy::Lazy => {
-                let is_empty =
-                    fs::read_dir(&root).map(|mut it| it.next().is_none()).unwrap_or(true);
-                if is_empty {
-                    fs::create_dir_all(&root).unwrap();
-                    self.extract_to_root(&root);
-                }
-            }
-            ExtractPolicy::Always => {
-                fs::create_dir_all(&root).unwrap();
-                self.extract_to_root(&root);
-            }
-        }
+        fs::create_dir_all(&root).unwrap();
+        self.extract_to_root(&root);
 
         let folder_loader = FolderSource { path: root.clone() };
         folder_loader.load_bundle(source)

@@ -41,9 +41,9 @@ impl Bundle {
         FolderSource::new(path.clone()).load_bundle(BundleSource::Folder { root: path })
     }
 
-    pub fn from_archive(path: impl Into<PathBuf>, extract_policy: ExtractPolicy) -> Self {
+    pub fn from_archive(path: impl Into<PathBuf>) -> Self {
         let path = path.into();
-        ArchiveSource::new(path, extract_policy)
+        ArchiveSource::new(path)
             .load_bundle(BundleSource::Archive { temp_dir: tempfile::TempDir::new().unwrap() })
     }
 
@@ -74,10 +74,4 @@ impl Bundle {
         reader.read_to_end(&mut buf).ok()?;
         Some(buf)
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ExtractPolicy {
-    Lazy,
-    Always,
 }

@@ -11,7 +11,6 @@ pub mod layer;
 
 use crate::mvr::{
     aux::{Class, Position, Symdef},
-    bundle::ExtractPolicy,
     layer::Layer,
 };
 
@@ -38,8 +37,8 @@ impl Mvr {
         Self::new(bundle::Bundle::from_folder(path))
     }
 
-    pub fn from_archive(path: impl Into<PathBuf>, extract_policy: ExtractPolicy) -> Self {
-        Self::new(bundle::Bundle::from_archive(path, extract_policy))
+    pub fn from_archive(path: impl Into<PathBuf>) -> Self {
+        Self::new(bundle::Bundle::from_archive(path))
     }
 
     pub fn bundle(&self) -> &bundle::Bundle {
