@@ -1,4 +1,5 @@
 pub mod gdtf;
 pub mod mvr;
 
-pub use ::glam;
+/// Re-export of glam.
+pub use glam;

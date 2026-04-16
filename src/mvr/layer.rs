@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use uuid::Uuid;
 
-use crate::mvr::{Class, Geometry};
+use crate::mvr::{aux::Class, geo::Geometry};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Layer {

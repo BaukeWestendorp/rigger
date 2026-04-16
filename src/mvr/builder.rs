@@ -3,10 +3,14 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use uuid::Uuid;
 
 use crate::mvr::{
-    Class, FixtureObject, FocusPointObject, Geometry, GroupObject, Layer, Mvr, Object, ObjectData,
-    ObjectKind, Position, ProjectorObject, Provider, SceneObject, SupportObject, Symdef,
-    TrussObject, Version, VideoScreenObject,
-    bundle::{self},
+    Mvr, Provider, Version,
+    aux::{Class, Position, Symdef},
+    bundle,
+    geo::Geometry,
+    layer::{
+        FixtureObject, FocusPointObject, GroupObject, Layer, Object, ObjectData, ObjectKind,
+        ProjectorObject, SceneObject, SupportObject, TrussObject, VideoScreenObject,
+    },
 };
 
 pub struct MvrBuilder {
@@ -20,8 +24,8 @@ impl MvrBuilder {
 
     pub fn build(self) -> Mvr {
         let version = Version {
-            major: self.bundle.description().ver_major,
-            minor: self.bundle.description().ver_minor,
+            major: self.bundle.description().ver_major as u32,
+            minor: self.bundle.description().ver_minor as u32,
         };
 
         let provider = Provider {

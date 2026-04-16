@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::mvr::Geometry;
+use crate::mvr::geo::Geometry;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Class {
