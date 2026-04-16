@@ -1,6 +1,8 @@
 [package]
 name = "rigger"
+description = "A Rust library for reading MVR and GDTF files."
 version = "0.1.0"
+authors = ["Bauke Westendorp <baukewestendorp@gmail.com>"]
 edition = "2024"
 
 [dependencies]
