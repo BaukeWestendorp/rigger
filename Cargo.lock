@@ -80,19 +80,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
-name = "gaffers"
-version = "0.1.0"
-dependencies = [
- "glam",
- "quick-xml",
- "serde",
- "tempfile",
- "unicode-normalization",
- "uuid",
- "zip",
-]
-
-[[package]]
 name = "getrandom"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -255,6 +242,19 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
+name = "rigger"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "quick-xml",
+ "serde",
+ "tempfile",
+ "unicode-normalization",
+ "uuid",
+ "zip",
+]
 
 [[package]]
 name = "rustix"
