@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<GeneralSceneDescription verMajor="1" verMinor="6" provider="Handwritten" providerVersion="42.0">
+	<UserData>
+	    <Data provider="Vectorworks" ver="0.1" />
+	    <Data provider="VectorworksLitFiles" ver="0.1">
+	    	<VWEntry key="9f7c2656-0ba5-426d-bf8c-863140433829">VWEntry.lit</VWEntry>
+	    </Data>
+	</UserData>
+    <Scene>
+        <Layers>
+        </Layers>
+        <AUXData>
+        </AUXData>
+    </Scene>
+</GeneralSceneDescription>

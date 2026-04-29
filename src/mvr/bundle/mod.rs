@@ -10,12 +10,10 @@ mod description;
 mod resource;
 mod source;
 
-pub(crate) use description::*;
+pub use description::*;
 pub use resource::*;
 
-use source::{BundleSource, FolderSource, Source};
-
-use crate::mvr::bundle::source::ArchiveSource;
+use source::{ArchiveSource, BundleSource, FolderSource, SourceLoader as _};
 
 /// Representation of an MVR bundle.
 ///

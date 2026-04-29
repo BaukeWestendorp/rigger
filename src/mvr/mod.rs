@@ -1,6 +1,6 @@
 pub mod bundle;
 
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use uuid::Uuid;
 
@@ -10,7 +10,7 @@ pub mod geo;
 pub mod layer;
 
 use crate::mvr::{
-    aux::{Class, Position, Symdef},
+    aux::{Class, MappingDefinition, Position, Symdef},
     layer::Layer,
 };
 
@@ -20,10 +20,10 @@ pub struct Mvr {
     version: Version,
     provider: Provider,
 
-    symdefs: HashMap<Uuid, Arc<Symdef>>,
-    classes: HashMap<Uuid, Arc<Class>>,
-    // FIXME: Implement MappingDefinition mapping_definitions: HashMap<Uuid, Arc<MappingDefinition>>,
-    positions: HashMap<Uuid, Arc<Position>>,
+    symdefs: HashMap<Uuid, Symdef>,
+    classes: HashMap<Uuid, Class>,
+    mapping_definitions: HashMap<Uuid, MappingDefinition>,
+    positions: HashMap<Uuid, Position>,
 
     layers: HashMap<Uuid, Layer>,
 }
@@ -54,27 +54,35 @@ impl Mvr {
     }
 
     pub fn symdefs(&self) -> impl Iterator<Item = &Symdef> {
-        self.symdefs.values().map(|v| &**v)
+        self.symdefs.values()
     }
 
     pub fn symdef(&self, uuid: Uuid) -> Option<&Symdef> {
-        self.symdefs.get(&uuid).map(|v| &**v)
+        self.symdefs.get(&uuid)
     }
 
     pub fn classes(&self) -> impl Iterator<Item = &Class> {
-        self.classes.values().map(|v| &**v)
+        self.classes.values()
     }
 
     pub fn class(&self, uuid: Uuid) -> Option<&Class> {
-        self.classes.get(&uuid).map(|v| &**v)
+        self.classes.get(&uuid)
     }
 
     pub fn positions(&self) -> impl Iterator<Item = &Position> {
-        self.positions.values().map(|v| &**v)
+        self.positions.values()
     }
 
     pub fn position(&self, uuid: Uuid) -> Option<&Position> {
-        self.positions.get(&uuid).map(|v| &**v)
+        self.positions.get(&uuid)
+    }
+
+    pub fn mapping_definitions(&self) -> impl Iterator<Item = &MappingDefinition> {
+        self.mapping_definitions.values()
+    }
+
+    pub fn mapping_definition(&self, uuid: Uuid) -> Option<&MappingDefinition> {
+        self.mapping_definitions.get(&uuid)
     }
 
     pub fn layers(&self) -> impl Iterator<Item = &Layer> {
@@ -128,5 +136,35 @@ impl Provider {
 
     pub fn version(&self) -> &str {
         &self.version
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct NodeId<T> {
+    uuid: Uuid,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T> NodeId<T> {
+    pub fn new(uuid: Uuid) -> Self {
+        Self { uuid, _marker: std::marker::PhantomData }
+    }
+
+    pub fn as_uuid(&self) -> Uuid {
+        self.uuid
+    }
+}
+
+impl<T> From<Uuid> for NodeId<T> {
+    fn from(uuid: Uuid) -> Self {
+        Self { uuid, _marker: std::marker::PhantomData }
+    }
+}
+
+impl<T> FromStr for NodeId<T> {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::new(Uuid::from_str(s)?))
     }
 }

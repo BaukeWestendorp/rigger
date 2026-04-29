@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<GeneralSceneDescription verMajor="1" verMinor="6" provider="Handwritten" providerVersion="42.0">
+	<UserData>
+		<Data provider="Vectorworks" ver="0.1" />
+		<Data provider="VectorworksLitFiles" ver="0.1">
+			<VWEntry key="9f7c2656-0ba5-426d-bf8c-863140433829">VWEntry.lit</VWEntry>
+		</Data>
+	</UserData>
+	<Scene>
+		<Layers>
+			<!-- Empty Layer -->
+			<Layer uuid="deadbeef-0000-0000-0000-000000000001" name="Empty Layer" />
+			<!-- Layer with single simple object -->
+			<Layer uuid="deadbeef-0000-0000-0000-000000000002" name="Single Simple Object Layer">
+				<ChildList>
+					<SceneObject uuid="deadbeef-0000-0000-0000-000000000003" name="Simple Object">
+						<Geometries />
+					</SceneObject>
+				</ChildList>
+			</Layer>
+			<!-- Layer with complete objects -->
+			<Layer uuid="deadbeef-0000-0000-0000-000000000004" name="Complete Object Layer">
+				<ChildList>
+					<!-- Complete SceneObject -->
+					<SceneObject uuid="deadbeef-0000-0000-0000-000000000005" name="Complete SceneObject 1">
+						<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{1000.0,0.0,0.0}</Matrix>
+						<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+						<Geometries>
+							<Symbol uuid="deadbeef-0000-0000-0000-000000000065" symdef="deadbeef-0000-0000-0000-000000000066" />
+						</Geometries>
+						<GDTFSpec>Robe Lighting@Robin Spiider.gdtf</GDTFSpec>
+						<GDTFMode>Mode 1 - Standard 16 bit</GDTFMode>
+						<CastShadow>true</CastShadow>
+						<Addresses>
+							<Address break="0">42</Address>
+							<Address break="1">42.42</Address>
+							<Network geometry="ethernet_1" ipv4="192.168.1.100" subnetmask="255.255.255.0" dhcp="on" hostname="example-device" />
+						</Addresses>
+						<Alignments>
+							<Alignment geometry="Beam1" up="0,0,1" direction="0,0,-1" />
+						</Alignments>
+						<CustomCommands>
+							<CustomCommand>Body_Tilt.Tilt.Tilt 1,f 0.000000</CustomCommand>
+						</CustomCommands>
+						<Overwrites>
+							<Overwrite universal="SomeUniversalNode" target="SomeTargetNode" />
+						</Overwrites>
+						<Connections>
+							<Connection own="Base" other="Base.Yoke" toObject="deadbeef-0000-0000-0000-000000000009" />
+						</Connections>
+						<FixtureID>SCENEOBJECT-0005</FixtureID>
+						<FixtureIDNumeric>1005</FixtureIDNumeric>
+						<UnitNumber>2005</UnitNumber>
+						<CustomIdType>3005</CustomIdType>
+						<CustomId>4005</CustomId>
+						<ChildList>
+							<FocusPoint uuid="deadbeef-0000-0000-0000-000000000006" name="Focus Point (SceneObject Child)">
+								<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{1000.0,500.0,0.0}</Matrix>
+								<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+								<Geometries />
+							</FocusPoint>
+						</ChildList>
+						<FixtureTypeId>1</FixtureTypeId>
+					</SceneObject>
+					<!-- Complete GroupObject -->
+					<GroupObject uuid="deadbeef-0000-0000-0000-000000000007" name="Complete Group 1">
+						<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{2000.0,0.0,0.0}</Matrix>
+						<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+						<ChildList>
+							<SceneObject uuid="deadbeef-0000-0000-0000-000000000008" name="Child Object 1">
+								<Geometries>
+									<Symbol uuid="deadbeef-0000-0000-0000-000000000067" symdef="deadbeef-0000-0000-0000-000000000066">
+										<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{200.0,0.0,0.0}</Matrix>
+									</Symbol>
+								</Geometries>
+							</SceneObject>
+							<SceneObject uuid="deadbeef-0000-0000-0000-000000000010" name="Child Object 2">
+								<Geometries>
+									<Symbol uuid="deadbeef-0000-0000-0000-000000000068" symdef="deadbeef-0000-0000-0000-000000000066">
+										<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{200.0,500.0,0.0}</Matrix>
+									</Symbol>
+								</Geometries>
+							</SceneObject>
+						</ChildList>
+					</GroupObject>
+					<!-- Complete FocusPoint -->
+					<FocusPoint uuid="deadbeef-0000-0000-0000-000000000011" name="Complete Point 2">
+						<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{2500.0,500.0,0.0}</Matrix>
+						<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+						<Geometries />
+					</FocusPoint>
+					<!-- Complete Fixture -->
+					<Fixture uuid="deadbeef-0000-0000-0000-000000000009" name="Complete Fixture 1">
+						<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{3000.0,0.0,0.0}</Matrix>
+						<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+						<GDTFSpec>Robe Lighting@Robin Spiider.gdtf</GDTFSpec>
+						<GDTFMode>Mode 1 - Standard 16 bit</GDTFMode>
+						<Focus>deadbeef-0000-0000-0000-000000000006</Focus>
+						<CastShadow>true</CastShadow>
+						<DMXInvertPan>true</DMXInvertPan>
+						<DMXInvertTilt>false</DMXInvertTilt>
+						<Position>deadbeef-0000-0000-0000-000000000071</Position>
+						<Function>This fixture is meant for testing</Function>
+						<FixtureID>FIXTURE-0009</FixtureID>
+						<FixtureIDNumeric>1009</FixtureIDNumeric>
+						<UnitNumber>2009</UnitNumber>
+						<ChildPosition>Base.Yoke</ChildPosition>
+						<Addresses>
+							<Address break="0">45</Address>
+							<Network geometry="ethernet_1" ipv4="192.168.11.5" subnetmask="255.255.0.0" />
+							<Network geometry="ethernet_2" ipv6="2001:0db8:85a3:0000:0000:8a2e:0370:7344" />
+							<Network geometry="wireless_1" dhcp="on" />
+						</Addresses>
+						<Protocols>
+							<Protocol geometry="NetworkInOut_1" type="Art-Net" />
+							<Protocol geometry="NetworkInOut_3" name="NDI 1" type="NDI" />
+							<Protocol transmission="Unicast" />
+							<Protocol transmission="Multicast" />
+							<Protocol transmission="Broadcast" />
+							<Protocol transmission="Anycast" />
+						</Protocols>
+						<Alignments>
+							<Alignment geometry="Beam" up="0,0,1" direction="0,0,-1" />
+						</Alignments>
+						<CustomCommands>
+							<CustomCommand>Body_Pan,f 50</CustomCommand>
+							<CustomCommand>Yoke_Tilt,f 50</CustomCommand>
+						</CustomCommands>
+						<Overwrites>
+							<Overwrite universal="Universal Wheel 1.Universal Wheel Slot 1" target="Wheel 1.Wheel Slot" />
+							<Overwrite universal="Universal Emitter 1" target="Emitter 1" />
+							<Overwrite universal="Universal Filter 1" target="Filter 1" />
+							<Overwrite universal="Universal Wheel 1.Universal Wheel Slot 2" />
+						</Overwrites>
+						<Connections>
+							<Connection own="Input" toObject="deadbeef-0000-0000-0000-000000000005" other="Output1" />
+							<Connection own="1" toObject="deadbeef-0000-0000-0000-000000000005" other="IN" />
+							<Connection own="2" toObject="deadbeef-0000-0000-0000-000000000005" other="IN" />
+						</Connections>
+						<Color>0.314303,0.328065,87.699166</Color>
+						<CustomIdType>3009</CustomIdType>
+						<CustomId>4009</CustomId>
+						<Mappings>
+							<Mapping linkedDef="deadbeef-0000-0000-0000-000000000073">
+								<ux>10</ux>
+								<uy>10</uy>
+								<ox>5</ox>
+								<oy>5</oy>
+								<rz>45</rz>
+							</Mapping>
+						</Mappings>
+						<Gobo rotation="32.5">gobo.png</Gobo>
+						<ChildList>
+							<FocusPoint uuid="deadbeef-0000-0000-0000-000000000012" name="Focus Point (Fixture Child)">
+								<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{3000.0,500.0,0.0}</Matrix>
+								<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+								<Geometries />
+							</FocusPoint>
+						</ChildList>
+						<FixtureTypeId>1</FixtureTypeId>
+					</Fixture>
+					<!-- Complete Truss -->
+					<Truss uuid="deadbeef-0000-0000-0000-000000000013" name="Complete Truss 1">
+						<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{4000.0,0.0,0.0}</Matrix>
+						<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+						<Position>deadbeef-0000-0000-0000-000000000071</Position>
+						<Geometries>
+							<Symbol uuid="deadbeef-0000-0000-0000-000000000069" symdef="deadbeef-0000-0000-0000-000000000066" />
+						</Geometries>
+						<Function>This truss is meant for testing</Function>
+						<GDTFSpec>Robe Lighting@Robin Spiider.gdtf</GDTFSpec>
+						<GDTFMode>Mode 1 - Standard 16 bit</GDTFMode>
+						<CastShadow>true</CastShadow>
+						<Addresses>
+							<Address break="0">46</Address>
+							<Network geometry="ethernet_1" ipv4="192.168.11.6" subnetmask="255.255.0.0" />
+							<Network geometry="ethernet_2" ipv6="2001:0db8:85a3:0000:0000:8a2e:0370:7345" />
+							<Network geometry="wireless_1" dhcp="on" />
+						</Addresses>
+						<Alignments>
+							<Alignment geometry="Beam" up="0,0,1" direction="0,0,-1" />
+						</Alignments>
+						<CustomCommands>
+							<CustomCommand>Body_Pan,f 50</CustomCommand>
+							<CustomCommand>Yoke_Tilt,f 50</CustomCommand>
+						</CustomCommands>
+						<Overwrites>
+							<Overwrite universal="Universal Wheel 1.Universal Wheel Slot 1" target="Wheel 1.Wheel Slot" />
+							<Overwrite universal="Universal Emitter 1" target="Emitter 1" />
+							<Overwrite universal="Universal Filter 1" target="Filter 1" />
+							<Overwrite universal="Universal Wheel 1.Universal Wheel Slot 2" />
+						</Overwrites>
+						<Connections>
+							<Connection own="Input" toObject="deadbeef-0000-0000-0000-000000000005" other="Output1" />
+							<Connection own="1" toObject="deadbeef-0000-0000-0000-000000000005" other="IN" />
+							<Connection own="2" toObject="deadbeef-0000-0000-0000-000000000005" other="IN" />
+						</Connections>
+						<ChildPosition>Base.Yoke</ChildPosition>
+						<ChildList>
+							<SceneObject uuid="deadbeef-0000-0000-0000-000000000014" name="Truss Child Object 1">
+								<Geometries>
+									<Symbol uuid="deadbeef-0000-0000-0000-000000000070" symdef="deadbeef-0000-0000-0000-000000000066">
+										<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{500.0,0.0,0.0}</Matrix>
+									</Symbol>
+								</Geometries>
+							</SceneObject>
+						</ChildList>
+						<FixtureID>TRUSS-0013</FixtureID>
+						<FixtureIDNumeric>1013</FixtureIDNumeric>
+						<UnitNumber>2013</UnitNumber>
+						<CustomIdType>3013</CustomIdType>
+						<CustomId>4013</CustomId>
+						<FixtureTypeId>1</FixtureTypeId>
+					</Truss>
+					<!-- Complete Support -->
+					<Support uuid="deadbeef-0000-0000-0000-000000000015" name="Complete Support 1">
+						<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{5000.0,0.0,0.0}</Matrix>
+						<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+						<Position>deadbeef-0000-0000-0000-000000000071</Position>
+						<Geometries>
+							<Symbol uuid="deadbeef-0000-0000-0000-000000000072" symdef="deadbeef-0000-0000-0000-000000000066" />
+						</Geometries>
+						<Function>This support is meant for testing</Function>
+						<ChainLength>2.5</ChainLength>
+						<GDTFSpec>Robe Lighting@Robin Spiider.gdtf</GDTFSpec>
+						<GDTFMode>Mode 1 - Standard 16 bit</GDTFMode>
+						<CastShadow>true</CastShadow>
+						<Addresses>
+							<Address break="0">50</Address>
+						</Addresses>
+						<Alignments>
+							<Alignment geometry="SupportBeam" up="0,0,1" direction="1,0,0" />
+						</Alignments>
+						<CustomCommands>
+							<CustomCommand>Support_Lift,f 100</CustomCommand>
+						</CustomCommands>
+						<Overwrites>
+							<Overwrite universal="Universal Support" target="Support Target" />
+						</Overwrites>
+						<Connections>
+							<Connection own="SupportBase" toObject="deadbeef-0000-0000-0000-000000000013" other="TrussBase" />
+						</Connections>
+						<FixtureID>SUPPORT-0015</FixtureID>
+						<FixtureIDNumeric>1015</FixtureIDNumeric>
+						<UnitNumber>2015</UnitNumber>
+						<CustomIdType>3015</CustomIdType>
+						<CustomId>4015</CustomId>
+						<ChildList>
+							<SceneObject uuid="deadbeef-0000-0000-0000-000000000016" name="Support Child">
+								<Geometries />
+							</SceneObject>
+						</ChildList>
+						<FixtureTypeId>1</FixtureTypeId>
+					</Support>
+					<!-- Complete VideoScreen -->
+					<VideoScreen uuid="deadbeef-0000-0000-0000-000000000017" name="Complete VideoScreen 1">
+						<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{6000.0,0.0,0.0}</Matrix>
+						<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+						<Geometries>
+							<Symbol uuid="deadbeef-0000-0000-0000-000000000074" symdef="deadbeef-0000-0000-0000-000000000066" />
+						</Geometries>
+						<Sources>
+							<Source linkedGeometry="Display1" type="File">movie.mov</Source>
+						</Sources>
+						<Function>This video screen is meant for testing</Function>
+						<GDTFSpec>Robe Lighting@Robin Spiider.gdtf</GDTFSpec>
+						<GDTFMode>Mode 1 - Standard 16 bit</GDTFMode>
+						<CastShadow>true</CastShadow>
+						<Addresses>
+							<Address break="0">51</Address>
+						</Addresses>
+						<Alignments>
+							<Alignment geometry="ScreenSurface" up="0,1,0" direction="0,0,-1" />
+						</Alignments>
+						<CustomCommands>
+							<CustomCommand>Screen_Brightness,f 100</CustomCommand>
+						</CustomCommands>
+						<Overwrites>
+							<Overwrite universal="Universal Screen" target="Screen Target" />
+						</Overwrites>
+						<Connections>
+							<Connection own="ScreenInput" toObject="deadbeef-0000-0000-0000-000000000018" other="ProjectorOutput" />
+						</Connections>
+						<ChildList>
+							<SceneObject uuid="deadbeef-0000-0000-0000-000000000019" name="VideoScreen Child">
+								<Geometries />
+							</SceneObject>
+						</ChildList>
+						<FixtureID>SCREEN-0017</FixtureID>
+						<FixtureIDNumeric>1017</FixtureIDNumeric>
+						<UnitNumber>2017</UnitNumber>
+						<CustomIdType>3017</CustomIdType>
+						<CustomId>4017</CustomId>
+						<FixtureTypeId>1</FixtureTypeId>
+					</VideoScreen>
+					<!-- Complete Projector -->
+					<Projector uuid="deadbeef-0000-0000-0000-000000000018" name="Complete Projector 1">
+						<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{7000.0,0.0,0.0}</Matrix>
+						<Classing>deadbeef-0000-0000-0000-000000000064</Classing>
+						<Geometries>
+							<Symbol uuid="deadbeef-0000-0000-0000-000000000075" symdef="deadbeef-0000-0000-0000-000000000066" />
+						</Geometries>
+						<Projections>
+							<Projection>
+								<Source linkedGeometry="Beam1" type="File">projector_content.mov</Source>
+							</Projection>
+						</Projections>
+						<GDTFSpec>ProjectorFixture.gdtf</GDTFSpec>
+						<GDTFMode>Mode 1 - Standard 16 bit</GDTFMode>
+						<Addresses>
+							<Address break="0">52</Address>
+						</Addresses>
+						<Alignments>
+							<Alignment geometry="Beam" up="0,1,0" direction="0,0,-1" />
+						</Alignments>
+						<CustomCommands>
+							<CustomCommand>Projector_Zoom,f 100</CustomCommand>
+						</CustomCommands>
+						<Overwrites>
+							<Overwrite universal="Universal Projector" target="Projector Target" />
+						</Overwrites>
+						<Connections>
+							<Connection own="ProjectorOutput" toObject="deadbeef-0000-0000-0000-000000000017" other="ScreenInput" />
+						</Connections>
+						<ChildList>
+							<SceneObject uuid="deadbeef-0000-0000-0000-000000000020" name="Projector Child">
+								<Geometries />
+							</SceneObject>
+						</ChildList>
+						<FixtureID>PROJECTOR-0018</FixtureID>
+						<FixtureIDNumeric>1018</FixtureIDNumeric>
+						<UnitNumber>2018</UnitNumber>
+						<CustomIdType>3018</CustomIdType>
+						<CustomId>4018</CustomId>
+						<FixtureTypeId>1</FixtureTypeId>
+					</Projector>
+
+					<!-- Minimal SceneObject -->
+					<SceneObject uuid="deadbeef-0000-0000-0000-000000000021" name="Minimal SceneObject 1">
+						<Geometries />
+						<FixtureID>SCENEOBJECT-0021</FixtureID>
+						<FixtureIDNumeric>1021</FixtureIDNumeric>
+					</SceneObject>
+					<!-- Minimal GroupObject -->
+					<GroupObject uuid="deadbeef-0000-0000-0000-000000000022" name="Minimal Group 1">
+					</GroupObject>
+					<!-- Minimal FocusPoint -->
+					<FocusPoint uuid="deadbeef-0000-0000-0000-000000000023" name="Minimal Point 2">
+						<Geometries />
+					</FocusPoint>
+					<!-- Minimal Fixture -->
+					<Fixture uuid="deadbeef-0000-0000-0000-000000000024" name="Minimal Fixture 1">
+						<FixtureID>FIXTURE-0024</FixtureID>
+						<FixtureIDNumeric>1024</FixtureIDNumeric>
+						<UnitNumber>2024</UnitNumber>
+					</Fixture>
+					<!-- Minimal Truss -->
+					<Truss uuid="deadbeef-0000-0000-0000-000000000025" name="Minimal Truss 1">
+						<Geometries />
+						<FixtureID>TRUSS-0025</FixtureID>
+						<FixtureIDNumeric>1025</FixtureIDNumeric>
+					</Truss>
+					<!-- Minimal Support -->
+					<Support uuid="deadbeef-0000-0000-0000-000000000026" name="Minimal Support 1">
+						<Geometries />
+						<ChainLength>4.2</ChainLength>
+						<FixtureID>SUPPORT-0026</FixtureID>
+						<FixtureIDNumeric>1026</FixtureIDNumeric>
+					</Support>
+					<!-- Minimal VideoScreen -->
+					<VideoScreen uuid="deadbeef-0000-0000-0000-000000000027" name="Minimal VideoScreen 1">
+						<Geometries />
+						<FixtureID>SCREEN-0027</FixtureID>
+						<FixtureIDNumeric>1027</FixtureIDNumeric>
+					</VideoScreen>
+					<!-- Minimal Projector -->
+					<Projector uuid="deadbeef-0000-0000-0000-000000000028" name="Minimal Projector 1">
+						<Geometries />
+						<Projections />
+						<FixtureID>PROJECTOR-0028</FixtureID>
+						<FixtureIDNumeric>1028</FixtureIDNumeric>
+					</Projector>
+
+					<!-- Object with multipatch -->
+					<SceneObject uuid="deadbeef-0000-0000-0000-000000000029" name="Parent for Multipatch">
+						<Geometries />
+						<FixtureID>SCENEOBJECT-0029</FixtureID>
+						<FixtureIDNumeric>1029</FixtureIDNumeric>
+						<CustomIdType>3029</CustomIdType>
+						<CustomId>4029</CustomId>
+						<ChildList>
+							<SceneObject uuid="deadbeef-0000-0000-0000-000000000030" multipatch="deadbeef-0000-0000-0000-000000000029">
+								<Geometries />
+							</SceneObject>
+						</ChildList>
+					</SceneObject>
+				</ChildList>
+			</Layer>
+		</Layers>
+		<AUXData>
+			<!-- Class (0..any) -->
+			<Class uuid="deadbeef-0000-0000-0000-000000000064" name="Class 1" />
+			<Class uuid="deadbeef-0000-0000-0000-000000000063" name="Class 2" />
+
+			<!-- Symdef (0..any) with Geometry3D -->
+			<Symdef uuid="deadbeef-0000-0000-0000-000000000066" name="Symbol 1">
+				<ChildList>
+					<Geometry3D fileName="model1.glb" />
+				</ChildList>
+			</Symdef>
+			<Symdef uuid="deadbeef-0000-0000-0000-000000000080" name="Symbol 2">
+				<ChildList>
+					<Geometry3D fileName="model2.glb" />
+				</ChildList>
+			</Symdef>
+
+			<!-- Symdef (0..any) with Symbol -->
+			<Symdef uuid="deadbeef-0000-0000-0000-000000000081" name="Symdef via Symbol">
+				<ChildList>
+					<Symbol uuid="deadbeef-0000-0000-0000-000000000082" symdef="deadbeef-0000-0000-0000-000000000066" />
+				</ChildList>
+			</Symdef>
+
+			<!-- Symdef with empty ChildList -->
+			<Symdef uuid="deadbeef-0000-0000-0000-000000000083" name="Empty ChildList">
+				<ChildList />
+			</Symdef>
+
+			<!-- Symdef with combination of Symbol and Geometry3D -->
+			<Symdef uuid="deadbeef-0000-0000-0000-000000000084" name="Symbol and Geometry3D">
+				<ChildList>
+					<Symbol uuid="deadbeef-0000-0000-0000-000000000085" symdef="deadbeef-0000-0000-0000-000000000080" />
+					<Geometry3D fileName="model3.glb" />
+				</ChildList>
+			</Symdef>
+
+			<!-- Position (0..any) -->
+			<Position uuid="deadbeef-0000-0000-0000-000000000071" name="Position 1" />
+			<Position uuid="deadbeef-0000-0000-0000-000000000086" name="Position 2" />
+
+			<!-- MappingDefinition (0..any) minimal (no ScaleHandeling) -->
+			<MappingDefinition uuid="deadbeef-0000-0000-0000-000000000073" name="Mapping 1">
+				<SizeX>1920</SizeX>
+				<SizeY>1080</SizeY>
+				<Source linkedGeometry="Display1" type="File">movie.mov</Source>
+			</MappingDefinition>
+
+			<!-- MappingDefinition (0..any) with ScaleHandeling -->
+			<MappingDefinition uuid="deadbeef-0000-0000-0000-000000000087" name="Mapping 2">
+				<SizeX>1280</SizeX>
+				<SizeY>720</SizeY>
+				<Source linkedGeometry="Display2" type="File">image.png</Source>
+				<ScaleHandeling>UpScale</ScaleHandeling>
+			</MappingDefinition>
+
+			<!-- MappingDefinition with ScaleIgnoreRatio -->
+			<MappingDefinition uuid="deadbeef-0000-0000-0000-000000000088" name="Mapping 3">
+				<SizeX>1024</SizeX>
+				<SizeY>768</SizeY>
+				<Source linkedGeometry="Display3" type="File">image_3.png</Source>
+				<ScaleHandeling Enum="ScaleIgnoreRatio" />
+			</MappingDefinition>
+
+			<!-- MappingDefinition with KeepSizeCenter -->
+			<MappingDefinition uuid="deadbeef-0000-0000-0000-000000000089" name="Mapping 4">
+				<SizeX>800</SizeX>
+				<SizeY>600</SizeY>
+				<Source linkedGeometry="Display4" type="File">image_4.png</Source>
+				<ScaleHandeling Enum="KeepSizeCenter" />
+			</MappingDefinition>
+
+			<!-- MappingDefinitions covering other Source/@type enum variants -->
+			<MappingDefinition uuid="deadbeef-0000-0000-0000-000000000090" name="Mapping 5">
+				<SizeX>640</SizeX>
+				<SizeY>480</SizeY>
+				<Source linkedGeometry="Display5" type="NDI">ndi-stream-1</Source>
+			</MappingDefinition>
+			<MappingDefinition uuid="deadbeef-0000-0000-0000-000000000091" name="Mapping 6">
+				<SizeX>320</SizeX>
+				<SizeY>240</SizeY>
+				<Source linkedGeometry="Display6" type="CITP">citp-stream-1</Source>
+			</MappingDefinition>
+			<MappingDefinition uuid="deadbeef-0000-0000-0000-000000000092" name="Mapping 7">
+				<SizeX>1920</SizeX>
+				<SizeY>1080</SizeY>
+				<Source linkedGeometry="Display7" type="CaptureDevice">device-1</Source>
+			</MappingDefinition>
+		</AUXData>
+	</Scene>
+</GeneralSceneDescription>

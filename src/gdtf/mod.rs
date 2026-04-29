@@ -27,3 +27,18 @@ impl Gdtf {
         &self.description
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Node(Vec<String>);
+
+impl std::str::FromStr for Node {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.is_empty() {
+            return Ok(Node(Vec::new()));
+        }
+        let parts: Vec<String> = s.split('.').map(|part| part.trim().to_string()).collect();
+        Ok(Node(parts))
+    }
+}

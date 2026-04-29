@@ -22,7 +22,7 @@ impl BundleSource {
     }
 }
 
-pub(crate) trait Source {
+pub(crate) trait SourceLoader {
     fn load_bundle(&self, source: BundleSource) -> Bundle;
 }
 
@@ -36,7 +36,7 @@ impl FolderSource {
     }
 }
 
-impl Source for FolderSource {
+impl SourceLoader for FolderSource {
     fn load_bundle(&self, source: BundleSource) -> Bundle {
         let description = quick_xml::de::from_reader(BufReader::new(
             File::open(source.root_folder().join(GSD_FILE_NAME)).unwrap(),
@@ -113,7 +113,7 @@ impl ArchiveSource {
     }
 }
 
-impl Source for ArchiveSource {
+impl SourceLoader for ArchiveSource {
     fn load_bundle(&self, source: BundleSource) -> Bundle {
         let root = source.root_folder().to_path_buf();
 
