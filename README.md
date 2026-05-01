@@ -14,24 +14,23 @@ Because these formats support thousands of devices across multiple manufacturers
 
 ## Progress
 ### MVR
-- [x] Bundle loading from folder
-- [x] Bundle loading from `.mvr` archive.
-- [x] Test deserialization of `bundle` description.
-- [ ] Test deserialization of `bundle` resources.
-- [x] Test deserialization API of higher level `Mvr` data type and it's children.
-- [ ] Error handling
-- [ ] Test negative paths in deserialization
-- [ ] Documentation
+- [x] Load bundle from folder
+- [x] Load bundle from `.mvr` archive
+- [x] Verify deserialization of `bundle` description
+- [ ] Verify deserialization of `bundle` resources
+- [x] Verify higher level `Mvr` type and its children
+- [ ] Implement error handling
+- [ ] Add tests for invalid or malformed inputs
+- [ ] Write documentation
 ### GDTF
-- [x] Bundle loading from folder
-- [x] Bundle loading from `.mvr` archive.
-- [ ] Test deserialization of `bundle` description.
-- [ ] Test deserialization of `bundle` resources.
-- [ ] Test API of higher level `Gdtf` data type and it's children.
-- [ ] Error handling
-- [ ] Test negative paths in deserialization
-- [ ] Documentation
-
+- [x] Load bundle from folder
+- [x] Load bundle from `.gdtf` archive
+- [ ] Verify deserialization of `bundle` description
+- [ ] Verify deserialization of `bundle` resources
+- [ ] Verify higher level `Gdtf` type and its children
+- [ ] Implement error handling
+- [ ] Add tests for invalid or malformed inputs
+- [ ] Write documentation
 
 ## Contributing
 Contributions are welcome. If you find a file that this library fails to parse correctly or want to request a feature or suggest a change, feel free to open an issue!
