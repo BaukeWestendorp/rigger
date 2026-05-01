@@ -1,6 +1,5 @@
-use uuid::Uuid;
-
 use crate::mvr::{
+    self as mvr,
     geo::Geometry,
     layer::{ScaleHandling, Source},
 };
@@ -8,7 +7,7 @@ use crate::mvr::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct Class {
     pub(crate) name: String,
-    pub(crate) uuid: Uuid,
+    pub(crate) id: mvr::NodeId<Class>,
 }
 
 impl Class {
@@ -16,15 +15,15 @@ impl Class {
         &self.name
     }
 
-    pub fn uuid(&self) -> Uuid {
-        self.uuid
+    pub fn id(&self) -> mvr::NodeId<Class> {
+        self.id
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Position {
     pub(crate) name: String,
-    pub(crate) uuid: Uuid,
+    pub(crate) id: mvr::NodeId<Position>,
 }
 
 impl Position {
@@ -32,15 +31,15 @@ impl Position {
         &self.name
     }
 
-    pub fn uuid(&self) -> Uuid {
-        self.uuid
+    pub fn id(&self) -> mvr::NodeId<Position> {
+        self.id
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Symdef {
     pub(crate) name: String,
-    pub(crate) uuid: Uuid,
+    pub(crate) id: mvr::NodeId<Symdef>,
 
     pub(crate) geometries: Vec<Geometry>,
 }
@@ -50,15 +49,15 @@ impl Symdef {
         &self.name
     }
 
-    pub fn uuid(&self) -> Uuid {
-        self.uuid
+    pub fn id(&self) -> mvr::NodeId<Symdef> {
+        self.id
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MappingDefinition {
     pub(crate) name: String,
-    pub(crate) uuid: Uuid,
+    pub(crate) id: mvr::NodeId<MappingDefinition>,
 
     pub(crate) size_x: u32,
     pub(crate) size_y: u32,
@@ -71,8 +70,8 @@ impl MappingDefinition {
         &self.name
     }
 
-    pub fn uuid(&self) -> Uuid {
-        self.uuid
+    pub fn id(&self) -> mvr::NodeId<MappingDefinition> {
+        self.id
     }
 
     pub fn size_x(&self) -> u32 {

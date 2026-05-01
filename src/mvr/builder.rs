@@ -48,7 +48,6 @@ impl MvrBuilder {
         let mut positions = HashMap::new();
         let mut layers = Vec::new();
         let mut layers_ix = HashMap::new();
-        let mut objects_ix = HashMap::new();
         let mut objects_path_ix = HashMap::new();
         let mut mapping_definitions = HashMap::new();
 
@@ -67,11 +66,10 @@ impl MvrBuilder {
         Self::build_layers(&self.bundle, &classes, aux_data, &mut layers);
 
         for (layer_ix, layer) in layers.iter().enumerate() {
-            layers_ix.insert(layer.uuid().into(), layer_ix);
+            layers_ix.insert(layer.id(), layer_ix);
 
             for (object_ix, object) in layer.objects().iter().enumerate() {
-                objects_ix.insert(object.uuid(), [layer_ix, object_ix]);
-                Self::index_object_paths(layer_ix, vec![object_ix], object, &mut objects_path_ix);
+                Self::index_object_paths(layer.id(), vec![object_ix], object, &mut objects_path_ix);
             }
         }
 
@@ -85,32 +83,31 @@ impl MvrBuilder {
             positions,
             layers,
             layers_ix,
-            objects_ix,
             objects_path_ix,
         }
     }
 
     fn index_object_paths(
-        layer_ix: usize,
+        layer_id: NodeId<Layer>,
         indices: Vec<usize>,
         object: &Object,
-        objects_path_ix: &mut HashMap<Uuid, ObjectPath>,
+        objects_path_ix: &mut HashMap<NodeId<Object>, ObjectPath>,
     ) {
-        objects_path_ix.insert(object.uuid(), ObjectPath::new(layer_ix, indices.clone()));
+        objects_path_ix.insert(object.id(), ObjectPath::new(layer_id, indices.clone()));
 
         if let Some(children) = object.children() {
             for (child_ix, child) in children.iter().enumerate() {
                 let mut child_indices = indices.clone();
                 child_indices.push(child_ix);
-                Self::index_object_paths(layer_ix, child_indices, child, objects_path_ix);
+                Self::index_object_paths(layer_id, child_indices, child, objects_path_ix);
             }
         }
     }
 
     fn build_classes(aux_data: &bundle::AuxData, classes: &mut HashMap<NodeId<Class>, Class>) {
         for class in &aux_data.class {
-            let uuid = Uuid::parse_str(&class.uuid).unwrap();
-            classes.insert(uuid.into(), Class { name: class.name.clone(), uuid });
+            let id: NodeId<Class> = Uuid::parse_str(&class.uuid).unwrap().into();
+            classes.insert(id, Class { name: class.name.clone(), id });
         }
     }
 
@@ -119,15 +116,15 @@ impl MvrBuilder {
         positions: &mut HashMap<NodeId<Position>, Position>,
     ) {
         for position in &aux_data.position {
-            let uuid = Uuid::parse_str(&position.uuid).unwrap();
-            positions.insert(uuid.into(), Position { name: position.name.clone(), uuid });
+            let id: NodeId<Position> = Uuid::parse_str(&position.uuid).unwrap().into();
+            positions.insert(id, Position { name: position.name.clone(), id });
         }
     }
 
     fn build_symdefs(aux_data: &bundle::AuxData, symdefs: &mut HashMap<NodeId<Symdef>, Symdef>) {
         for symdef in &aux_data.symdef {
-            let uuid = Uuid::parse_str(&symdef.uuid).unwrap();
-            symdefs.insert(uuid.into(), Self::build_symdef(&symdef.uuid, aux_data));
+            let id: NodeId<Symdef> = Uuid::parse_str(&symdef.uuid).unwrap().into();
+            symdefs.insert(id, Self::build_symdef(&symdef.uuid, aux_data));
         }
     }
 
@@ -136,23 +133,22 @@ impl MvrBuilder {
         mapping_definitions: &mut HashMap<NodeId<MappingDefinition>, MappingDefinition>,
     ) {
         for mapping_definition in &aux_data.mapping_definition {
-            let uuid = Uuid::parse_str(&mapping_definition.uuid).unwrap();
-            mapping_definitions.insert(
-                uuid.into(),
-                Self::build_mapping_definition(&mapping_definition.uuid, aux_data),
-            );
+            let id: NodeId<MappingDefinition> =
+                Uuid::parse_str(&mapping_definition.uuid).unwrap().into();
+            mapping_definitions
+                .insert(id, Self::build_mapping_definition(&mapping_definition.uuid, aux_data));
         }
     }
 
     fn build_symdef(symdef_uuid: &str, aux_data: &bundle::AuxData) -> Symdef {
         let symdef = aux_data.symdef.iter().find(|s| s.uuid == symdef_uuid).unwrap();
-        let uuid = Uuid::parse_str(symdef_uuid).unwrap();
+        let id: NodeId<Symdef> = Uuid::parse_str(symdef_uuid).unwrap().into();
         let geometries = Self::build_geometries(
             &symdef.child_list.geometry_3d,
             &symdef.child_list.symbol,
             aux_data,
         );
-        Symdef { name: symdef.name.clone(), uuid, geometries }
+        Symdef { name: symdef.name.clone(), id, geometries }
     }
 
     fn build_geometries(
@@ -191,7 +187,6 @@ impl MvrBuilder {
             .find(|md| md.uuid == mapping_definition_uuid)
             .unwrap();
 
-        let uuid = Uuid::parse_str(mapping_definition_uuid).unwrap();
         let source = Source {
             linked_geometry: gdtf::Node::from_str(&md.source.linked_geometry).unwrap(),
             r#type: match md.source.r#type {
@@ -213,7 +208,7 @@ impl MvrBuilder {
 
         MappingDefinition {
             name: md.name.clone(),
-            uuid,
+            id: Uuid::parse_str(mapping_definition_uuid).unwrap().into(),
             size_x: md.size_x as u32,
             size_y: md.size_y as u32,
             source,
@@ -228,7 +223,7 @@ impl MvrBuilder {
         layers: &mut Vec<Layer>,
     ) {
         for layer_data in &bundle.description().scene.layers.layer {
-            let uuid = Uuid::from_str(&layer_data.uuid).unwrap();
+            let uuid: Uuid = Uuid::from_str(&layer_data.uuid).unwrap();
             let objects = layer_data
                 .child_list
                 .as_ref()
@@ -241,7 +236,7 @@ impl MvrBuilder {
                 .unwrap_or_default();
 
             layers.push(Layer {
-                uuid,
+                id: uuid.into(),
                 name: layer_data.name.clone(),
                 local_transform: build_transform_optional(layer_data.matrix.as_deref()),
                 objects,
@@ -314,12 +309,12 @@ impl MvrBuilder {
         };
 
         Object {
-            uuid: Uuid::from_str(uuid_str).unwrap(),
+            id: Uuid::from_str(uuid_str).unwrap().into(),
             name: name.to_string(),
             class: classing
                 .map(|id| Uuid::from_str(id).unwrap())
                 .and_then(|id| classes.get(&id.into()))
-                .map(|class| mvr::NodeId::new(class.uuid())),
+                .map(|class| class.id()),
             local_transform: build_transform_optional(matrix),
             kind,
         }
@@ -554,6 +549,11 @@ impl MvrBuilder {
             custom_commands: Self::build_custom_commands(c.custom_commands.as_ref()),
             overwrites: Self::build_overwrites(c.overwrites.as_ref()),
             connections: Self::build_connections(c.connections.as_ref()),
+            geometries: Self::build_geometries(
+                &c.geometries.geometry_3d,
+                &c.geometries.symbol,
+                aux_data,
+            ),
             children: c
                 .child_list
                 .as_ref()
@@ -608,6 +608,11 @@ impl MvrBuilder {
             overwrites: Self::build_overwrites(c.overwrites.as_ref()),
             connections: Self::build_connections(c.connections.as_ref()),
             cast_shadow: c.cast_shadow.unwrap_or_default(),
+            geometries: Self::build_geometries(
+                &c.geometries.geometry_3d,
+                &c.geometries.symbol,
+                aux_data,
+            ),
             children: c
                 .child_list
                 .as_ref()
@@ -815,7 +820,7 @@ impl MvrBuilder {
         custom_id_type: Option<i32>,
     ) -> ObjectIdentifier {
         match Uuid::from_str(multipatch) {
-            Ok(uuid) => ObjectIdentifier::Multipatch(uuid),
+            Ok(uuid) => ObjectIdentifier::Multipatch(uuid.into()),
             Err(_) => ObjectIdentifier::Single {
                 fixture_id,
                 fixture_id_numeric,

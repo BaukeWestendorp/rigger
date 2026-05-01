@@ -1,11 +1,9 @@
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-use uuid::Uuid;
-
 use crate::{
     CieColor, gdtf,
     mvr::{
-        self, Mvr,
+        self,
         aux::{Class, MappingDefinition, Position},
         bundle::ResourceKey,
         geo::Geometry,
@@ -14,24 +12,24 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Layer {
-    pub(crate) uuid: Uuid,
+    pub(crate) id: mvr::NodeId<Layer>,
     pub(crate) name: String,
     pub(crate) local_transform: glam::Affine3A,
 
     pub(crate) objects: Vec<Object>,
 }
 
-pub struct LayerObjectsRecursive<'a> {
+pub struct LayerWalk<'a> {
     stack: Vec<&'a Object>,
 }
 
-impl<'a> LayerObjectsRecursive<'a> {
+impl<'a> LayerWalk<'a> {
     fn new(objects: &'a [Object]) -> Self {
         Self { stack: objects.iter().rev().collect() }
     }
 }
 
-impl<'a> Iterator for LayerObjectsRecursive<'a> {
+impl<'a> Iterator for LayerWalk<'a> {
     type Item = &'a Object;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -49,11 +47,7 @@ impl<'a> Iterator for LayerObjectsRecursive<'a> {
 
 impl Layer {
     pub fn id(&self) -> mvr::NodeId<Layer> {
-        self.uuid.into()
-    }
-
-    pub fn uuid(&self) -> Uuid {
-        self.uuid
+        self.id
     }
 
     pub fn name(&self) -> &str {
@@ -69,17 +63,17 @@ impl Layer {
     }
 
     pub fn object_top_level(&self, id: mvr::NodeId<Object>) -> Option<&Object> {
-        self.objects.iter().find(|o| o.uuid == *id)
+        self.objects.iter().find(|o| o.id == id)
     }
 
-    pub fn objects_recursive(&self) -> LayerObjectsRecursive<'_> {
-        LayerObjectsRecursive::new(&self.objects)
+    pub fn walk(&self) -> LayerWalk<'_> {
+        LayerWalk::new(&self.objects)
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Object {
-    pub(crate) uuid: Uuid,
+    pub(crate) id: mvr::NodeId<Object>,
     pub(crate) name: String,
     pub(crate) class: Option<mvr::NodeId<Class>>,
     pub(crate) local_transform: glam::Affine3A,
@@ -89,23 +83,15 @@ pub struct Object {
 
 impl Object {
     pub fn id(&self) -> mvr::NodeId<Object> {
-        self.uuid.into()
-    }
-
-    pub fn uuid(&self) -> Uuid {
-        self.uuid
+        self.id
     }
 
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn class_id(&self) -> Option<mvr::NodeId<Class>> {
+    pub fn class(&self) -> Option<mvr::NodeId<Class>> {
         self.class
-    }
-
-    pub fn class<'a>(&self, mvr: &'a Mvr) -> Option<&'a Class> {
-        mvr.class(self.class?)
     }
 
     pub fn local_transform(&self) -> &glam::Affine3A {
@@ -202,10 +188,9 @@ impl Object {
             ObjectKind::FocusPoint(v) => Some(v.geometries()),
             ObjectKind::Support(v) => Some(v.geometries()),
             ObjectKind::Projector(v) => Some(v.geometries()),
-            ObjectKind::GroupObject(_)
-            | ObjectKind::Fixture(_)
-            | ObjectKind::Truss(_)
-            | ObjectKind::VideoScreen(_) => None,
+            ObjectKind::Truss(v) => Some(v.geometries()),
+            ObjectKind::VideoScreen(v) => Some(v.geometries()),
+            ObjectKind::GroupObject(_) | ObjectKind::Fixture(_) => None,
         }
     }
 
@@ -464,12 +449,8 @@ impl FixtureObject {
         self.dmx_invert_tilt
     }
 
-    pub fn focus_point_object_id(&self) -> Option<mvr::NodeId<Object>> {
+    pub fn focus_point(&self) -> Option<mvr::NodeId<Object>> {
         self.focus
-    }
-
-    pub fn focus_point_object<'a>(&self, mvr: &'a Mvr) -> Option<&'a FocusPointObject> {
-        mvr.focus_point_object(self.focus?)
     }
 
     pub fn function(&self) -> Option<&str> {
@@ -484,12 +465,8 @@ impl FixtureObject {
         &self.mappings
     }
 
-    pub fn position_id(&self) -> Option<mvr::NodeId<Position>> {
+    pub fn position(&self) -> Option<mvr::NodeId<Position>> {
         self.position
-    }
-
-    pub fn position<'a>(&self, mvr: &'a Mvr) -> Option<&'a Position> {
-        mvr.position(self.position?)
     }
 
     pub fn protocols(&self) -> &[Protocol] {
@@ -574,12 +551,8 @@ impl SupportObject {
         self.function.as_deref()
     }
 
-    pub fn position_id(&self) -> Option<mvr::NodeId<Position>> {
+    pub fn position(&self) -> Option<mvr::NodeId<Position>> {
         self.position
-    }
-
-    pub fn position<'a>(&self, mvr: &'a Mvr) -> Option<&'a Position> {
-        mvr.position(self.position?)
     }
 
     pub fn unit_number(&self) -> Option<i32> {
@@ -637,6 +610,7 @@ pub struct TrussObject {
     pub(crate) overwrites: Vec<Overwrite>,
     pub(crate) connections: Vec<Connection>,
 
+    pub(crate) geometries: Vec<Geometry>,
     pub(crate) children: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
@@ -664,12 +638,8 @@ impl TrussObject {
         self.function.as_deref()
     }
 
-    pub fn position_id(&self) -> Option<mvr::NodeId<Position>> {
+    pub fn position(&self) -> Option<mvr::NodeId<Position>> {
         self.position
-    }
-
-    pub fn position<'a>(&self, mvr: &'a Mvr) -> Option<&'a Position> {
-        mvr.position(self.position?)
     }
 
     pub fn unit_number(&self) -> Option<i32> {
@@ -700,6 +670,10 @@ impl TrussObject {
         &self.connections
     }
 
+    pub fn geometries(&self) -> &[Geometry] {
+        &self.geometries
+    }
+
     pub fn children(&self) -> &[Object] {
         &self.children
     }
@@ -712,6 +686,7 @@ pub struct VideoScreenObject {
 
     pub(crate) function: Option<String>,
     pub(crate) sources: Vec<Source>,
+    pub(crate) cast_shadow: bool,
 
     pub(crate) dmx_addresses: Vec<DmxAddress>,
     pub(crate) network_addresses: Vec<NetworkAddress>,
@@ -720,7 +695,7 @@ pub struct VideoScreenObject {
     pub(crate) overwrites: Vec<Overwrite>,
     pub(crate) connections: Vec<Connection>,
 
-    pub(crate) cast_shadow: bool,
+    pub(crate) geometries: Vec<Geometry>,
     pub(crate) children: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
@@ -769,6 +744,10 @@ impl VideoScreenObject {
 
     pub fn cast_shadow(&self) -> bool {
         self.cast_shadow
+    }
+
+    pub fn geometries(&self) -> &[Geometry] {
+        &self.geometries
     }
 
     pub fn children(&self) -> &[Object] {
@@ -854,7 +833,7 @@ impl ProjectorObject {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ObjectIdentifier {
-    Multipatch(Uuid),
+    Multipatch(mvr::NodeId<Object>),
     Single {
         fixture_id: Option<String>,
         fixture_id_numeric: Option<i32>,
@@ -999,12 +978,8 @@ impl Connection {
         &self.other
     }
 
-    pub fn to_object_id(&self) -> &mvr::NodeId<Object> {
-        &self.to_object
-    }
-
-    pub fn to_object<'a>(&self, mvr: &'a Mvr) -> Option<&'a Object> {
-        mvr.object(self.to_object)
+    pub fn to_object(&self) -> mvr::NodeId<Object> {
+        self.to_object
     }
 }
 
@@ -1075,12 +1050,8 @@ pub struct Mapping {
 }
 
 impl Mapping {
-    pub fn linked_def_id(&self) -> mvr::NodeId<MappingDefinition> {
+    pub fn linked_def(&self) -> mvr::NodeId<MappingDefinition> {
         self.linked_def
-    }
-
-    pub fn linked_def<'a>(&self, mvr: &'a Mvr) -> Option<&'a MappingDefinition> {
-        mvr.mapping_definition(self.linked_def)
     }
 
     pub fn ux(&self) -> i32 {
