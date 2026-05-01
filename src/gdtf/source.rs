@@ -1,5 +1,7 @@
 use std::{fs::File, io::BufReader, path::PathBuf};
 
+use zip::ZipArchive;
+
 use crate::gdtf::{DESCRIPTION_FILE_NAME, Gdtf};
 
 pub trait GdtfSource {
@@ -39,6 +41,10 @@ pub struct ArchiveSource {
 
 impl GdtfSource for ArchiveSource {
     fn load(&self) -> Gdtf {
-        todo!();
+        let file = File::open(&self.path).unwrap();
+        let mut archive = ZipArchive::new(file).unwrap();
+        let description_file = archive.by_name(DESCRIPTION_FILE_NAME).unwrap();
+        let description = quick_xml::de::from_reader(BufReader::new(description_file)).unwrap();
+        Gdtf { description }
     }
 }

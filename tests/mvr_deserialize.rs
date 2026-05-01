@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use rigger::mvr::Mvr;
-use uuid::Uuid;
 
 fn load_complete_mvr() -> Mvr {
     Mvr::from_folder(

@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use uuid::Uuid;
 
 use crate::{
     CieColor, gdtf,
     mvr::{
-        self,
+        self, Mvr,
         aux::{Class, MappingDefinition, Position},
         bundle::ResourceKey,
         geo::Geometry,
@@ -18,7 +18,63 @@ pub struct Layer {
     pub(crate) name: String,
     pub(crate) local_transform: glam::Affine3A,
 
-    pub(crate) objects: HashMap<Uuid, Object>,
+    pub(crate) objects: Vec<Object>,
+}
+
+pub struct LayerObjectsRecursive<'a> {
+    stack: Vec<&'a Object>,
+}
+
+impl<'a> LayerObjectsRecursive<'a> {
+    fn new(objects: &'a [Object]) -> Self {
+        Self { stack: objects.iter().rev().collect() }
+    }
+}
+
+impl<'a> Iterator for LayerObjectsRecursive<'a> {
+    type Item = &'a Object;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let object = self.stack.pop()?;
+
+        if let Some(children) = object.children() {
+            for child in children.iter().rev() {
+                self.stack.push(child);
+            }
+        }
+
+        Some(object)
+    }
+}
+
+impl Layer {
+    pub fn id(&self) -> mvr::NodeId<Layer> {
+        self.uuid.into()
+    }
+
+    pub fn uuid(&self) -> Uuid {
+        self.uuid
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn local_transform(&self) -> &glam::Affine3A {
+        &self.local_transform
+    }
+
+    pub fn objects(&self) -> &[Object] {
+        &self.objects
+    }
+
+    pub fn object_top_level(&self, id: mvr::NodeId<Object>) -> Option<&Object> {
+        self.objects.iter().find(|o| o.uuid == *id)
+    }
+
+    pub fn objects_recursive(&self) -> LayerObjectsRecursive<'_> {
+        LayerObjectsRecursive::new(&self.objects)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -29,6 +85,218 @@ pub struct Object {
     pub(crate) local_transform: glam::Affine3A,
 
     pub(crate) kind: ObjectKind,
+}
+
+impl Object {
+    pub fn id(&self) -> mvr::NodeId<Object> {
+        self.uuid.into()
+    }
+
+    pub fn uuid(&self) -> Uuid {
+        self.uuid
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn class_id(&self) -> Option<mvr::NodeId<Class>> {
+        self.class
+    }
+
+    pub fn class<'a>(&self, mvr: &'a Mvr) -> Option<&'a Class> {
+        mvr.class(self.class?)
+    }
+
+    pub fn local_transform(&self) -> &glam::Affine3A {
+        &self.local_transform
+    }
+
+    pub fn kind(&self) -> &ObjectKind {
+        &self.kind
+    }
+
+    pub fn as_scene_object(&self) -> Option<&SceneObject> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_group_object(&self) -> Option<&GroupObject> {
+        match &self.kind {
+            ObjectKind::GroupObject(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_focus_point_object(&self) -> Option<&FocusPointObject> {
+        match &self.kind {
+            ObjectKind::FocusPoint(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_fixture_object(&self) -> Option<&FixtureObject> {
+        match &self.kind {
+            ObjectKind::Fixture(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_support_object(&self) -> Option<&SupportObject> {
+        match &self.kind {
+            ObjectKind::Support(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_truss_object(&self) -> Option<&TrussObject> {
+        match &self.kind {
+            ObjectKind::Truss(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_video_screen_object(&self) -> Option<&VideoScreenObject> {
+        match &self.kind {
+            ObjectKind::VideoScreen(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_projector_object(&self) -> Option<&ProjectorObject> {
+        match &self.kind {
+            ObjectKind::Projector(v) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn identifier(&self) -> Option<&ObjectIdentifier> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v.id()),
+            ObjectKind::Fixture(v) => Some(v.id()),
+            ObjectKind::Support(v) => Some(v.id()),
+            ObjectKind::Truss(v) => Some(v.id()),
+            ObjectKind::VideoScreen(v) => Some(v.id()),
+            ObjectKind::Projector(v) => Some(v.id()),
+            ObjectKind::GroupObject(_) | ObjectKind::FocusPoint(_) => None,
+        }
+    }
+
+    pub fn gdtf_info(&self) -> Option<&GdtfInfo> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => v.gdtf(),
+            ObjectKind::Fixture(v) => v.gdtf(),
+            ObjectKind::Support(v) => v.gdtf(),
+            ObjectKind::Truss(v) => v.gdtf(),
+            ObjectKind::VideoScreen(v) => v.gdtf(),
+            ObjectKind::Projector(v) => v.gdtf(),
+            ObjectKind::GroupObject(_) | ObjectKind::FocusPoint(_) => None,
+        }
+    }
+
+    pub fn geometries(&self) -> Option<&[Geometry]> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v.geometries()),
+            ObjectKind::FocusPoint(v) => Some(v.geometries()),
+            ObjectKind::Support(v) => Some(v.geometries()),
+            ObjectKind::Projector(v) => Some(v.geometries()),
+            ObjectKind::GroupObject(_)
+            | ObjectKind::Fixture(_)
+            | ObjectKind::Truss(_)
+            | ObjectKind::VideoScreen(_) => None,
+        }
+    }
+
+    pub fn children(&self) -> Option<&[Object]> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v.children()),
+            ObjectKind::GroupObject(v) => Some(v.children()),
+            ObjectKind::Fixture(v) => Some(v.children()),
+            ObjectKind::Support(v) => Some(v.children()),
+            ObjectKind::Truss(v) => Some(v.children()),
+            ObjectKind::VideoScreen(v) => Some(v.children()),
+            ObjectKind::Projector(v) => Some(v.children()),
+            ObjectKind::FocusPoint(_) => None,
+        }
+    }
+
+    pub fn has_children(&self) -> bool {
+        self.children().is_some_and(|c| !c.is_empty())
+    }
+
+    pub fn dmx_addresses(&self) -> Option<&[DmxAddress]> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v.dmx_addresses()),
+            ObjectKind::Fixture(v) => Some(v.dmx_addresses()),
+            ObjectKind::Support(v) => Some(v.dmx_addresses()),
+            ObjectKind::Truss(v) => Some(v.dmx_addresses()),
+            ObjectKind::VideoScreen(v) => Some(v.dmx_addresses()),
+            ObjectKind::Projector(v) => Some(v.dmx_addresses()),
+            ObjectKind::GroupObject(_) | ObjectKind::FocusPoint(_) => None,
+        }
+    }
+
+    pub fn network_addresses(&self) -> Option<&[NetworkAddress]> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v.network_addresses()),
+            ObjectKind::Fixture(v) => Some(v.network_addresses()),
+            ObjectKind::Support(v) => Some(v.network_addresses()),
+            ObjectKind::Truss(v) => Some(v.network_addresses()),
+            ObjectKind::VideoScreen(v) => Some(v.network_addresses()),
+            ObjectKind::Projector(v) => Some(v.network_addresses()),
+            ObjectKind::GroupObject(_) | ObjectKind::FocusPoint(_) => None,
+        }
+    }
+
+    pub fn alignments(&self) -> Option<&[Alignment]> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v.alignments()),
+            ObjectKind::Fixture(v) => Some(v.alignments()),
+            ObjectKind::Support(v) => Some(v.alignments()),
+            ObjectKind::Truss(v) => Some(v.alignments()),
+            ObjectKind::VideoScreen(v) => Some(v.alignments()),
+            ObjectKind::Projector(v) => Some(v.alignments()),
+            ObjectKind::GroupObject(_) | ObjectKind::FocusPoint(_) => None,
+        }
+    }
+
+    pub fn custom_commands(&self) -> Option<&[CustomCommand]> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v.custom_commands()),
+            ObjectKind::Fixture(v) => Some(v.custom_commands()),
+            ObjectKind::Support(v) => Some(v.custom_commands()),
+            ObjectKind::Truss(v) => Some(v.custom_commands()),
+            ObjectKind::VideoScreen(v) => Some(v.custom_commands()),
+            ObjectKind::Projector(v) => Some(v.custom_commands()),
+            ObjectKind::GroupObject(_) | ObjectKind::FocusPoint(_) => None,
+        }
+    }
+
+    pub fn overwrites(&self) -> Option<&[Overwrite]> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v.overwrites()),
+            ObjectKind::Fixture(v) => Some(v.overwrites()),
+            ObjectKind::Support(v) => Some(v.overwrites()),
+            ObjectKind::Truss(v) => Some(v.overwrites()),
+            ObjectKind::VideoScreen(v) => Some(v.overwrites()),
+            ObjectKind::Projector(v) => Some(v.overwrites()),
+            ObjectKind::GroupObject(_) | ObjectKind::FocusPoint(_) => None,
+        }
+    }
+
+    pub fn connections(&self) -> Option<&[Connection]> {
+        match &self.kind {
+            ObjectKind::SceneObject(v) => Some(v.connections()),
+            ObjectKind::Fixture(v) => Some(v.connections()),
+            ObjectKind::Support(v) => Some(v.connections()),
+            ObjectKind::Truss(v) => Some(v.connections()),
+            ObjectKind::VideoScreen(v) => Some(v.connections()),
+            ObjectKind::Projector(v) => Some(v.connections()),
+            ObjectKind::GroupObject(_) | ObjectKind::FocusPoint(_) => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -64,14 +332,76 @@ pub struct SceneObject {
     // fixture_type_id: Option<i32>,
 }
 
+impl SceneObject {
+    pub fn id(&self) -> &ObjectIdentifier {
+        &self.id
+    }
+
+    pub fn gdtf(&self) -> Option<&GdtfInfo> {
+        self.gdtf.as_ref()
+    }
+
+    pub fn cast_shadow(&self) -> bool {
+        self.cast_shadow
+    }
+
+    pub fn unit_number(&self) -> Option<i32> {
+        self.unit_number
+    }
+
+    pub fn dmx_addresses(&self) -> &[DmxAddress] {
+        &self.dmx_addresses
+    }
+
+    pub fn network_addresses(&self) -> &[NetworkAddress] {
+        &self.network_addresses
+    }
+
+    pub fn alignments(&self) -> &[Alignment] {
+        &self.alignments
+    }
+
+    pub fn custom_commands(&self) -> &[CustomCommand] {
+        &self.custom_commands
+    }
+
+    pub fn overwrites(&self) -> &[Overwrite] {
+        &self.overwrites
+    }
+
+    pub fn connections(&self) -> &[Connection] {
+        &self.connections
+    }
+
+    pub fn geometries(&self) -> &[Geometry] {
+        &self.geometries
+    }
+
+    pub fn children(&self) -> &[Object] {
+        &self.children
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupObject {
     pub(crate) children: Vec<Object>,
 }
 
+impl GroupObject {
+    pub fn children(&self) -> &[Object] {
+        &self.children
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FocusPointObject {
     pub(crate) geometries: Vec<Geometry>,
+}
+
+impl FocusPointObject {
+    pub fn geometries(&self) -> &[Geometry] {
+        &self.geometries
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -84,7 +414,7 @@ pub struct FixtureObject {
     pub(crate) color: Option<CieColor>,
     pub(crate) dmx_invert_pan: bool,
     pub(crate) dmx_invert_tilt: bool,
-    pub(crate) focus: Option<mvr::NodeId<FocusPointObject>>,
+    pub(crate) focus: Option<mvr::NodeId<Object>>,
     pub(crate) function: Option<String>,
     pub(crate) gobo: Option<Gobo>,
     pub(crate) mappings: Vec<Mapping>,
@@ -102,6 +432,101 @@ pub struct FixtureObject {
     pub(crate) children: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
+}
+
+impl FixtureObject {
+    pub fn id(&self) -> &ObjectIdentifier {
+        &self.id
+    }
+
+    pub fn gdtf(&self) -> Option<&GdtfInfo> {
+        self.gdtf.as_ref()
+    }
+
+    pub fn cast_shadow(&self) -> bool {
+        self.cast_shadow
+    }
+
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn child_position(&self) -> Option<&gdtf::Node> {
+        self.child_position.as_ref()
+    }
+
+    pub fn color(&self) -> Option<CieColor> {
+        self.color
+    }
+
+    pub fn dmx_invert_pan(&self) -> bool {
+        self.dmx_invert_pan
+    }
+
+    pub fn dmx_invert_tilt(&self) -> bool {
+        self.dmx_invert_tilt
+    }
+
+    pub fn focus_point_object_id(&self) -> Option<mvr::NodeId<Object>> {
+        self.focus
+    }
+
+    pub fn focus_point_object<'a>(&self, mvr: &'a Mvr) -> Option<&'a FocusPointObject> {
+        mvr.focus_point_object(self.focus?)
+    }
+
+    pub fn function(&self) -> Option<&str> {
+        self.function.as_deref()
+    }
+
+    pub fn gobo(&self) -> Option<&Gobo> {
+        self.gobo.as_ref()
+    }
+
+    pub fn mappings(&self) -> &[Mapping] {
+        &self.mappings
+    }
+
+    pub fn position_id(&self) -> Option<mvr::NodeId<Position>> {
+        self.position
+    }
+
+    pub fn position<'a>(&self, mvr: &'a Mvr) -> Option<&'a Position> {
+        mvr.position(self.position?)
+    }
+
+    pub fn protocols(&self) -> &[Protocol] {
+        &self.protocols
+    }
+
+    pub fn unit_number(&self) -> Option<i32> {
+        self.unit_number
+    }
+
+    pub fn dmx_addresses(&self) -> &[DmxAddress] {
+        &self.dmx_addresses
+    }
+
+    pub fn network_addresses(&self) -> &[NetworkAddress] {
+        &self.network_addresses
+    }
+
+    pub fn alignments(&self) -> &[Alignment] {
+        &self.alignments
+    }
+
+    pub fn custom_commands(&self) -> &[CustomCommand] {
+        &self.custom_commands
+    }
+
+    pub fn overwrites(&self) -> &[Overwrite] {
+        &self.overwrites
+    }
+
+    pub fn connections(&self) -> &[Connection] {
+        &self.connections
+    }
+
+    pub fn children(&self) -> &[Object] {
+        &self.children
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -128,6 +553,72 @@ pub struct SupportObject {
     // fixture_type_id: Option<i32>,
 }
 
+impl SupportObject {
+    pub fn gdtf(&self) -> Option<&GdtfInfo> {
+        self.gdtf.as_ref()
+    }
+
+    pub fn id(&self) -> &ObjectIdentifier {
+        &self.id
+    }
+
+    pub fn cast_shadow(&self) -> bool {
+        self.cast_shadow
+    }
+
+    pub fn chain_length(&self) -> f32 {
+        self.chain_length
+    }
+
+    pub fn function(&self) -> Option<&str> {
+        self.function.as_deref()
+    }
+
+    pub fn position_id(&self) -> Option<mvr::NodeId<Position>> {
+        self.position
+    }
+
+    pub fn position<'a>(&self, mvr: &'a Mvr) -> Option<&'a Position> {
+        mvr.position(self.position?)
+    }
+
+    pub fn unit_number(&self) -> Option<i32> {
+        self.unit_number
+    }
+
+    pub fn dmx_addresses(&self) -> &[DmxAddress] {
+        &self.dmx_addresses
+    }
+
+    pub fn network_addresses(&self) -> &[NetworkAddress] {
+        &self.network_addresses
+    }
+
+    pub fn alignments(&self) -> &[Alignment] {
+        &self.alignments
+    }
+
+    pub fn custom_commands(&self) -> &[CustomCommand] {
+        &self.custom_commands
+    }
+
+    pub fn overwrites(&self) -> &[Overwrite] {
+        &self.overwrites
+    }
+
+    pub fn connections(&self) -> &[Connection] {
+        &self.connections
+    }
+
+    pub fn geometries(&self) -> &[Geometry] {
+        &self.geometries
+    }
+
+    pub fn children(&self) -> &[Object] {
+        &self.children
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrussObject {
     pub(crate) id: ObjectIdentifier,
@@ -151,6 +642,69 @@ pub struct TrussObject {
     // fixture_type_id: Option<i32>,
 }
 
+impl TrussObject {
+    pub fn id(&self) -> &ObjectIdentifier {
+        &self.id
+    }
+
+    pub fn gdtf(&self) -> Option<&GdtfInfo> {
+        self.gdtf.as_ref()
+    }
+
+    pub fn cast_shadow(&self) -> bool {
+        self.cast_shadow
+    }
+
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn child_position(&self) -> Option<&gdtf::Node> {
+        self.child_position.as_ref()
+    }
+
+    pub fn function(&self) -> Option<&str> {
+        self.function.as_deref()
+    }
+
+    pub fn position_id(&self) -> Option<mvr::NodeId<Position>> {
+        self.position
+    }
+
+    pub fn position<'a>(&self, mvr: &'a Mvr) -> Option<&'a Position> {
+        mvr.position(self.position?)
+    }
+
+    pub fn unit_number(&self) -> Option<i32> {
+        self.unit_number
+    }
+
+    pub fn dmx_addresses(&self) -> &[DmxAddress] {
+        &self.dmx_addresses
+    }
+
+    pub fn network_addresses(&self) -> &[NetworkAddress] {
+        &self.network_addresses
+    }
+
+    pub fn alignments(&self) -> &[Alignment] {
+        &self.alignments
+    }
+
+    pub fn custom_commands(&self) -> &[CustomCommand] {
+        &self.custom_commands
+    }
+
+    pub fn overwrites(&self) -> &[Overwrite] {
+        &self.overwrites
+    }
+
+    pub fn connections(&self) -> &[Connection] {
+        &self.connections
+    }
+
+    pub fn children(&self) -> &[Object] {
+        &self.children
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct VideoScreenObject {
     pub(crate) id: ObjectIdentifier,
@@ -170,6 +724,56 @@ pub struct VideoScreenObject {
     pub(crate) children: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
+}
+
+impl VideoScreenObject {
+    pub fn id(&self) -> &ObjectIdentifier {
+        &self.id
+    }
+
+    pub fn gdtf(&self) -> Option<&GdtfInfo> {
+        self.gdtf.as_ref()
+    }
+
+    pub fn function(&self) -> Option<&str> {
+        self.function.as_deref()
+    }
+
+    pub fn sources(&self) -> &[Source] {
+        &self.sources
+    }
+
+    pub fn dmx_addresses(&self) -> &[DmxAddress] {
+        &self.dmx_addresses
+    }
+
+    pub fn network_addresses(&self) -> &[NetworkAddress] {
+        &self.network_addresses
+    }
+
+    pub fn alignments(&self) -> &[Alignment] {
+        &self.alignments
+    }
+
+    pub fn custom_commands(&self) -> &[CustomCommand] {
+        &self.custom_commands
+    }
+
+    pub fn overwrites(&self) -> &[Overwrite] {
+        &self.overwrites
+    }
+
+    pub fn connections(&self) -> &[Connection] {
+        &self.connections
+    }
+
+    pub fn cast_shadow(&self) -> bool {
+        self.cast_shadow
+    }
+
+    pub fn children(&self) -> &[Object] {
+        &self.children
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -194,6 +798,60 @@ pub struct ProjectorObject {
     // fixture_type_id: Option<i32>,
 }
 
+impl ProjectorObject {
+    pub fn id(&self) -> &ObjectIdentifier {
+        &self.id
+    }
+
+    pub fn gdtf(&self) -> Option<&GdtfInfo> {
+        self.gdtf.as_ref()
+    }
+
+    pub fn cast_shadow(&self) -> bool {
+        self.cast_shadow
+    }
+
+    pub fn projections(&self) -> &[Projection] {
+        &self.projections
+    }
+
+    pub fn unit_number(&self) -> Option<i32> {
+        self.unit_number
+    }
+
+    pub fn dmx_addresses(&self) -> &[DmxAddress] {
+        &self.dmx_addresses
+    }
+
+    pub fn network_addresses(&self) -> &[NetworkAddress] {
+        &self.network_addresses
+    }
+
+    pub fn alignments(&self) -> &[Alignment] {
+        &self.alignments
+    }
+
+    pub fn custom_commands(&self) -> &[CustomCommand] {
+        &self.custom_commands
+    }
+
+    pub fn overwrites(&self) -> &[Overwrite] {
+        &self.overwrites
+    }
+
+    pub fn connections(&self) -> &[Connection] {
+        &self.connections
+    }
+
+    pub fn geometries(&self) -> &[Geometry] {
+        &self.geometries
+    }
+
+    pub fn children(&self) -> &[Object] {
+        &self.children
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ObjectIdentifier {
     Multipatch(Uuid),
@@ -211,20 +869,67 @@ pub struct GdtfInfo {
     pub(crate) gdtf_mode: String,
 }
 
+impl GdtfInfo {
+    pub fn gdtf_spec(&self) -> &str {
+        &self.gdtf_spec
+    }
+
+    pub fn gdtf_mode(&self) -> &str {
+        &self.gdtf_mode
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct DmxAddress {
     pub(crate) r#break: u32,
     pub(crate) absolute_value: u32,
 }
 
+impl DmxAddress {
+    pub fn break_(&self) -> u32 {
+        self.r#break
+    }
+
+    pub fn absolute_value(&self) -> u32 {
+        self.absolute_value
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct NetworkAddress {
     pub(crate) geometry: gdtf::Node,
-    pub(crate) ipv4: Option<std::net::Ipv4Addr>,
-    pub(crate) subnetmask: Option<std::net::Ipv4Addr>,
-    pub(crate) ipv6: Option<std::net::Ipv6Addr>,
+    pub(crate) ipv4: Option<Ipv4Addr>,
+    pub(crate) subnetmask: Option<Ipv4Addr>,
+    pub(crate) ipv6: Option<Ipv6Addr>,
     pub(crate) dhcp: bool,
     pub(crate) hostname: Option<String>,
+}
+
+impl NetworkAddress {
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn geometry(&self) -> &gdtf::Node {
+        &self.geometry
+    }
+
+    pub fn ipv4(&self) -> Option<Ipv4Addr> {
+        self.ipv4
+    }
+
+    pub fn subnetmask(&self) -> Option<Ipv4Addr> {
+        self.subnetmask
+    }
+
+    pub fn ipv6(&self) -> Option<Ipv6Addr> {
+        self.ipv6
+    }
+
+    pub fn dhcp(&self) -> bool {
+        self.dhcp
+    }
+
+    pub fn hostname(&self) -> Option<&str> {
+        self.hostname.as_deref()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -234,14 +939,46 @@ pub struct Alignment {
     pub(crate) direction: glam::Vec3A,
 }
 
-// FIXME: Instead of a string, this should be a custom type that parses the commands.
+impl Alignment {
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn geometry(&self) -> &gdtf::Node {
+        &self.geometry
+    }
+
+    pub fn up(&self) -> &glam::Vec3A {
+        &self.up
+    }
+
+    pub fn direction(&self) -> &glam::Vec3A {
+        &self.direction
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CustomCommand(pub(crate) String);
+
+impl CustomCommand {
+    pub fn command(&self) -> &str {
+        &self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Overwrite {
     pub(crate) universal: gdtf::Node,
     pub(crate) target: Option<gdtf::Node>,
+}
+
+impl Overwrite {
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn universal(&self) -> &gdtf::Node {
+        &self.universal
+    }
+
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn target(&self) -> Option<&gdtf::Node> {
+        self.target.as_ref()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -251,10 +988,40 @@ pub struct Connection {
     pub(crate) to_object: mvr::NodeId<Object>,
 }
 
+impl Connection {
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn own(&self) -> &gdtf::Node {
+        &self.own
+    }
+
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn other(&self) -> &gdtf::Node {
+        &self.other
+    }
+
+    pub fn to_object_id(&self) -> &mvr::NodeId<Object> {
+        &self.to_object
+    }
+
+    pub fn to_object<'a>(&self, mvr: &'a Mvr) -> Option<&'a Object> {
+        mvr.object(self.to_object)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Gobo {
     pub(crate) resource: ResourceKey,
     pub(crate) rotation: f32,
+}
+
+impl Gobo {
+    pub fn resource(&self) -> &ResourceKey {
+        &self.resource
+    }
+
+    pub fn rotation(&self) -> f32 {
+        self.rotation
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -266,7 +1033,30 @@ pub struct Protocol {
     pub(crate) transmission: Option<Transmission>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl Protocol {
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn geometry(&self) -> &gdtf::Node {
+        &self.geometry
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn type_(&self) -> Option<&str> {
+        self.r#type.as_deref()
+    }
+
+    pub fn version(&self) -> Option<&str> {
+        self.version.as_deref()
+    }
+
+    pub fn transmission(&self) -> Option<Transmission> {
+        self.transmission
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Transmission {
     Unicast,
     Multicast,
@@ -284,11 +1074,56 @@ pub struct Mapping {
     pub(crate) rz: f32,
 }
 
+impl Mapping {
+    pub fn linked_def_id(&self) -> mvr::NodeId<MappingDefinition> {
+        self.linked_def
+    }
+
+    pub fn linked_def<'a>(&self, mvr: &'a Mvr) -> Option<&'a MappingDefinition> {
+        mvr.mapping_definition(self.linked_def)
+    }
+
+    pub fn ux(&self) -> i32 {
+        self.ux
+    }
+
+    pub fn uy(&self) -> i32 {
+        self.uy
+    }
+
+    pub fn ox(&self) -> i32 {
+        self.ox
+    }
+
+    pub fn oy(&self) -> i32 {
+        self.oy
+    }
+
+    pub fn rz(&self) -> f32 {
+        self.rz
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Source {
     pub(crate) linked_geometry: gdtf::Node,
     pub(crate) r#type: SourceType,
     pub(crate) value: String,
+}
+
+impl Source {
+    // FIXME: Add direct getter from `Mvr` for this.
+    pub fn linked_geometry(&self) -> &gdtf::Node {
+        &self.linked_geometry
+    }
+
+    pub fn type_(&self) -> SourceType {
+        self.r#type
+    }
+
+    pub fn value(&self) -> &str {
+        &self.value
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -311,4 +1146,14 @@ pub enum ScaleHandling {
 pub struct Projection {
     pub(crate) source: Source,
     pub(crate) scale_handling: ScaleHandling,
+}
+
+impl Projection {
+    pub fn source(&self) -> &Source {
+        &self.source
+    }
+
+    pub fn scale_handling(&self) -> ScaleHandling {
+        self.scale_handling
+    }
 }

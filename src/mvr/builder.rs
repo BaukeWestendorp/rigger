@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::{
     CieColor, gdtf,
     mvr::{
-        self, Mvr, NodeId, Provider, Version,
+        self, Mvr, NodeId, ObjectPath, Provider, Version,
         aux::{Class, MappingDefinition, Position, Symdef},
         bundle::{self, ResourceKey},
         geo::Geometry,
@@ -46,7 +46,10 @@ impl MvrBuilder {
         let mut symdefs = HashMap::new();
         let mut classes = HashMap::new();
         let mut positions = HashMap::new();
-        let mut layers = HashMap::new();
+        let mut layers = Vec::new();
+        let mut layers_ix = HashMap::new();
+        let mut objects_ix = HashMap::new();
+        let mut objects_path_ix = HashMap::new();
         let mut mapping_definitions = HashMap::new();
 
         static EMPTY_AUX_DATA: bundle::AuxData = bundle::AuxData {
@@ -63,6 +66,15 @@ impl MvrBuilder {
         Self::build_mapping_definitions(aux_data, &mut mapping_definitions);
         Self::build_layers(&self.bundle, &classes, aux_data, &mut layers);
 
+        for (layer_ix, layer) in layers.iter().enumerate() {
+            layers_ix.insert(layer.uuid().into(), layer_ix);
+
+            for (object_ix, object) in layer.objects().iter().enumerate() {
+                objects_ix.insert(object.uuid(), [layer_ix, object_ix]);
+                Self::index_object_paths(layer_ix, vec![object_ix], object, &mut objects_path_ix);
+            }
+        }
+
         Mvr {
             bundle: self.bundle,
             version,
@@ -72,38 +84,63 @@ impl MvrBuilder {
             mapping_definitions,
             positions,
             layers,
+            layers_ix,
+            objects_ix,
+            objects_path_ix,
         }
     }
 
-    fn build_classes(aux_data: &bundle::AuxData, classes: &mut HashMap<Uuid, Class>) {
+    fn index_object_paths(
+        layer_ix: usize,
+        indices: Vec<usize>,
+        object: &Object,
+        objects_path_ix: &mut HashMap<Uuid, ObjectPath>,
+    ) {
+        objects_path_ix.insert(object.uuid(), ObjectPath::new(layer_ix, indices.clone()));
+
+        if let Some(children) = object.children() {
+            for (child_ix, child) in children.iter().enumerate() {
+                let mut child_indices = indices.clone();
+                child_indices.push(child_ix);
+                Self::index_object_paths(layer_ix, child_indices, child, objects_path_ix);
+            }
+        }
+    }
+
+    fn build_classes(aux_data: &bundle::AuxData, classes: &mut HashMap<NodeId<Class>, Class>) {
         for class in &aux_data.class {
             let uuid = Uuid::parse_str(&class.uuid).unwrap();
-            classes.insert(uuid, Class { name: class.name.clone(), uuid });
+            classes.insert(uuid.into(), Class { name: class.name.clone(), uuid });
         }
     }
 
-    fn build_positions(aux_data: &bundle::AuxData, positions: &mut HashMap<Uuid, Position>) {
+    fn build_positions(
+        aux_data: &bundle::AuxData,
+        positions: &mut HashMap<NodeId<Position>, Position>,
+    ) {
         for position in &aux_data.position {
             let uuid = Uuid::parse_str(&position.uuid).unwrap();
-            positions.insert(uuid, Position { name: position.name.clone(), uuid });
+            positions.insert(uuid.into(), Position { name: position.name.clone(), uuid });
         }
     }
 
-    fn build_symdefs(aux_data: &bundle::AuxData, symdefs: &mut HashMap<Uuid, Symdef>) {
+    fn build_symdefs(aux_data: &bundle::AuxData, symdefs: &mut HashMap<NodeId<Symdef>, Symdef>) {
         for symdef in &aux_data.symdef {
             let uuid = Uuid::parse_str(&symdef.uuid).unwrap();
-            symdefs.insert(uuid, Self::build_symdef(&symdef.uuid, aux_data));
+            symdefs.insert(uuid.into(), Self::build_symdef(&symdef.uuid, aux_data));
         }
     }
 
     fn build_mapping_definitions(
         aux_data: &bundle::AuxData,
-        mapping_definitions: &mut HashMap<Uuid, MappingDefinition>,
+        mapping_definitions: &mut HashMap<NodeId<MappingDefinition>, MappingDefinition>,
     ) {
         for mapping_definition in &aux_data.mapping_definition {
             let uuid = Uuid::parse_str(&mapping_definition.uuid).unwrap();
-            mapping_definitions
-                .insert(uuid, Self::build_mapping_definition(&mapping_definition.uuid, aux_data));
+            mapping_definitions.insert(
+                uuid.into(),
+                Self::build_mapping_definition(&mapping_definition.uuid, aux_data),
+            );
         }
     }
 
@@ -186,9 +223,9 @@ impl MvrBuilder {
 
     fn build_layers(
         bundle: &bundle::Bundle,
-        classes: &HashMap<Uuid, Class>,
+        classes: &HashMap<NodeId<Class>, Class>,
         aux_data: &bundle::AuxData,
-        layers: &mut HashMap<Uuid, Layer>,
+        layers: &mut Vec<Layer>,
     ) {
         for layer_data in &bundle.description().scene.layers.layer {
             let uuid = Uuid::from_str(&layer_data.uuid).unwrap();
@@ -198,29 +235,23 @@ impl MvrBuilder {
                 .map(|cl| {
                     cl.content
                         .iter()
-                        .map(|child| {
-                            let obj = Self::build_object(child, classes, aux_data);
-                            (obj.uuid, obj)
-                        })
+                        .map(|child| Self::build_object(child, classes, aux_data))
                         .collect()
                 })
                 .unwrap_or_default();
 
-            layers.insert(
+            layers.push(Layer {
                 uuid,
-                Layer {
-                    uuid,
-                    name: layer_data.name.clone(),
-                    local_transform: build_transform_optional(layer_data.matrix.as_deref()),
-                    objects,
-                },
-            );
+                name: layer_data.name.clone(),
+                local_transform: build_transform_optional(layer_data.matrix.as_deref()),
+                objects,
+            });
         }
     }
 
     fn build_object(
         child: &bundle::ChildListContent,
-        classes: &HashMap<Uuid, Class>,
+        classes: &HashMap<NodeId<Class>, Class>,
         aux_data: &bundle::AuxData,
     ) -> Object {
         let (uuid_str, name, matrix, classing, kind) = match child {
@@ -287,7 +318,7 @@ impl MvrBuilder {
             name: name.to_string(),
             class: classing
                 .map(|id| Uuid::from_str(id).unwrap())
-                .and_then(|id| classes.get(&id))
+                .and_then(|id| classes.get(&id.into()))
                 .map(|class| mvr::NodeId::new(class.uuid())),
             local_transform: build_transform_optional(matrix),
             kind,
@@ -296,7 +327,7 @@ impl MvrBuilder {
 
     fn build_children(
         child_list: Option<&bundle::ChildList>,
-        classes: &HashMap<Uuid, Class>,
+        classes: &HashMap<NodeId<Class>, Class>,
         aux_data: &bundle::AuxData,
     ) -> Vec<Object> {
         child_list
@@ -311,7 +342,7 @@ impl MvrBuilder {
 
     fn build_scene_object(
         c: &bundle::SceneObject,
-        classes: &HashMap<Uuid, Class>,
+        classes: &HashMap<NodeId<Class>, Class>,
         aux_data: &bundle::AuxData,
     ) -> SceneObject {
         // FIXME: If invalid UUID, error instead of falling back to Single.
@@ -345,7 +376,7 @@ impl MvrBuilder {
 
     fn build_group_object(
         c: &bundle::GroupObject,
-        classes: &HashMap<Uuid, Class>,
+        classes: &HashMap<NodeId<Class>, Class>,
         aux_data: &bundle::AuxData,
     ) -> GroupObject {
         GroupObject {
