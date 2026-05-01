@@ -19,14 +19,17 @@ Because these formats support thousands of devices across multiple manufacturers
 - [x] Test deserialization of `bundle` description.
 - [ ] Test deserialization of `bundle` resources.
 - [x] Test deserialization API of higher level `Mvr` data type and it's children.
+- [ ] Error handling
 - [ ] Test negative paths in deserialization
 - [ ] Documentation
 ### GDTF
-- [ ] Bundle loading from folder
-- [ ] Bundle loading from `.mvr` archive.
+- [x] Bundle loading from folder
+- [x] Bundle loading from `.mvr` archive.
 - [ ] Test deserialization of `bundle` description.
 - [ ] Test deserialization of `bundle` resources.
 - [ ] Test API of higher level `Gdtf` data type and it's children.
+- [ ] Error handling
+- [ ] Test negative paths in deserialization
 - [ ] Documentation
 
 

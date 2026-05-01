@@ -1,85 +1,19 @@
-pub mod bundle;
-
-use std::{
-    collections::HashMap,
-    ops::{Deref, DerefMut},
-    path::PathBuf,
-    str::FromStr,
-};
+use std::{collections::HashMap, path::PathBuf, str::FromStr};
 
 use uuid::Uuid;
 
 use crate::gdtf;
 
 pub mod aux;
-mod builder;
+pub mod bundle;
 pub mod geo;
 pub mod layer;
 
-use crate::mvr::{
-    aux::{Class, MappingDefinition, Position, Symdef},
-    layer::{Layer, Object},
-};
+mod builder;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ObjectPath {
-    layer_id: NodeId<Layer>,
-    indices: Vec<usize>,
-}
-
-impl ObjectPath {
-    pub fn new(layer_id: NodeId<Layer>, indices: Vec<usize>) -> Self {
-        Self { layer_id, indices }
-    }
-
-    pub fn layer_id(&self) -> NodeId<Layer> {
-        self.layer_id
-    }
-
-    pub fn indices(&self) -> &[usize] {
-        &self.indices
-    }
-}
-
-pub struct ObjectWalk<'a> {
-    mvr: &'a Mvr,
-    stack: Vec<ObjectPath>,
-}
-
-impl<'a> ObjectWalk<'a> {
-    fn new(mvr: &'a Mvr) -> Self {
-        let mut stack = Vec::new();
-
-        for layer in mvr.layers.iter().rev() {
-            let layer_id = layer.id();
-            for object_ix in (0..layer.objects.len()).rev() {
-                stack.push(ObjectPath::new(layer_id, vec![object_ix]));
-            }
-        }
-
-        Self { mvr, stack }
-    }
-}
-
-impl<'a> Iterator for ObjectWalk<'a> {
-    type Item = (ObjectPath, &'a Object);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mvr = self.mvr;
-        let path = self.stack.pop()?;
-        let object = mvr.object_by_path(&path)?;
-
-        if let Some(children) = object.children() {
-            for child_ix in (0..children.len()).rev() {
-                let mut child_path = path.indices.clone();
-                child_path.push(child_ix);
-                self.stack.push(ObjectPath::new(path.layer_id, child_path));
-            }
-        }
-
-        Some((path, object))
-    }
-}
+pub use aux::{Class, MappingDefinition, Position, Symdef};
+pub use geo::Geometry;
+pub use layer::{GdtfInfo, Layer, Object, ObjectKind};
 
 pub struct Mvr {
     bundle: bundle::Bundle,
@@ -95,6 +29,8 @@ pub struct Mvr {
     layers: Vec<Layer>,
     layers_ix: HashMap<NodeId<Layer>, usize>,
     objects_path_ix: HashMap<NodeId<Object>, ObjectPath>,
+
+    gdtfs: HashMap<bundle::ResourceKey, gdtf::Gdtf>,
 }
 
 impl Mvr {
@@ -168,22 +104,21 @@ impl Mvr {
         self.object_by_path(path)
     }
 
-    pub fn root_objects(&self) -> impl Iterator<Item = (NodeId<Layer>, &Object)> + '_ {
-        self.layers.iter().flat_map(|layer| {
-            let layer_id = layer.id();
-            layer.objects().iter().map(move |object| (layer_id, object))
-        })
+    pub fn root_objects(&self) -> impl Iterator<Item = (&Layer, &Object)> + '_ {
+        self.layers
+            .iter()
+            .flat_map(|layer| layer.objects().iter().map(move |object| (layer, object)))
     }
 
     pub fn objects(&self) -> ObjectWalk<'_> {
         ObjectWalk::new(self)
     }
 
-    pub fn object_path(&self, id: NodeId<Object>) -> Option<&ObjectPath> {
+    pub(crate) fn object_path(&self, id: NodeId<Object>) -> Option<&ObjectPath> {
         self.objects_path_ix.get(&id)
     }
 
-    pub fn object_by_path(&self, path: &ObjectPath) -> Option<&Object> {
+    pub(crate) fn object_by_path(&self, path: &ObjectPath) -> Option<&Object> {
         let layer_ix = *self.layers_ix.get(&path.layer_id)?;
         let layer = self.layers.get(layer_ix)?;
 
@@ -234,6 +169,24 @@ impl Mvr {
         Some(geometries.iter().map(move |g| (g, world * g.local_transform())))
     }
 
+    pub fn gdtfs(&self) -> impl Iterator<Item = &gdtf::Gdtf> {
+        self.gdtfs.values()
+    }
+
+    pub fn gdtf(&self, info: &GdtfInfo) -> Option<&gdtf::Gdtf> {
+        let key = self.gdtf_resource_key(info.gdtf_spec())?;
+        self.gdtfs.get(&key)
+    }
+
+    pub fn gdtf_for_object(&self, id: NodeId<Object>) -> Option<&gdtf::Gdtf> {
+        let object = self.object(id)?;
+        self.gdtf(object.gdtf_info()?)
+    }
+
+    pub fn resource_bytes(&self, key: &bundle::ResourceKey) -> Option<Vec<u8>> {
+        self.bundle.resource_bytes(key)
+    }
+
     fn gdtf_resource_key(&self, gdtf_spec: &str) -> Option<bundle::ResourceKey> {
         let key = bundle::ResourceKey::new(gdtf_spec);
         if self.bundle.resources().contains_key(&key) {
@@ -251,22 +204,6 @@ impl Mvr {
         }
 
         None
-    }
-
-    fn gdtf_path(&self, gdtf_spec: &str) -> Option<PathBuf> {
-        let key = self.gdtf_resource_key(gdtf_spec)?;
-        Some(self.bundle.resolve_path(&key))
-    }
-
-    pub fn gdtf(&self, gdtf_spec: &str) -> Option<gdtf::Gdtf> {
-        let path = self.gdtf_path(gdtf_spec)?;
-        Some(gdtf::Gdtf::from_archive(path))
-    }
-
-    pub fn gdtf_for_object(&self, id: NodeId<Object>) -> Option<gdtf::Gdtf> {
-        let object = self.object(id)?;
-        let info = object.gdtf_info()?;
-        self.gdtf(info.gdtf_spec())
     }
 }
 
@@ -367,16 +304,54 @@ impl<T> FromStr for NodeId<T> {
     }
 }
 
-impl<T> Deref for NodeId<T> {
-    type Target = Uuid;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub(crate) struct ObjectPath {
+    layer_id: NodeId<Layer>,
+    indices: Vec<usize>,
+}
 
-    fn deref(&self) -> &Self::Target {
-        &self.uuid
+impl ObjectPath {
+    pub(crate) fn new(layer_id: NodeId<Layer>, indices: Vec<usize>) -> Self {
+        Self { layer_id, indices }
     }
 }
 
-impl<T> DerefMut for NodeId<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.uuid
+pub struct ObjectWalk<'a> {
+    mvr: &'a Mvr,
+    stack: Vec<ObjectPath>,
+}
+
+impl<'a> ObjectWalk<'a> {
+    fn new(mvr: &'a Mvr) -> Self {
+        let mut stack = Vec::new();
+
+        for layer in mvr.layers.iter().rev() {
+            let layer_id = layer.id();
+            for object_ix in (0..layer.objects.len()).rev() {
+                stack.push(ObjectPath::new(layer_id, vec![object_ix]));
+            }
+        }
+
+        Self { mvr, stack }
+    }
+}
+
+impl<'a> Iterator for ObjectWalk<'a> {
+    type Item = &'a Object;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mvr = self.mvr;
+        let path = self.stack.pop()?;
+        let object = mvr.object_by_path(&path)?;
+
+        if let Some(children) = object.children() {
+            for child_ix in (0..children.len()).rev() {
+                let mut child_path = path.indices.clone();
+                child_path.push(child_ix);
+                self.stack.push(ObjectPath::new(path.layer_id, child_path));
+            }
+        }
+
+        Some(object)
     }
 }

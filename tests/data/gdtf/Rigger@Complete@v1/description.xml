@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<GDTF DataVersion="1.2">
+  <FixtureType
+		CanHaveChildren="Yes"
+		Description="Description"
+		FixtureTypeID="ab128988-6cf0-4a87-93de-e0b2d6c7aa19"
+		ShortName="Short Name"
+		LongName="Long Name"
+		Manufacturer="Manufacturer"
+		Name="Name"
+		RefFT="f0a9b846-1051-4016-a054-b1d4ff90539e"
+		Thumbnail="thumbnail"
+		ThumbnailOffsetX="197"
+		ThumbnailOffsetY="142"
+	>
+    <AttributeDefinitions>
+      <FeatureGroups />
+      <Attributes />
+    </AttributeDefinitions>
+    <Wheels>
+    </Wheels>
+    <PhysicalDescriptions>
+    </PhysicalDescriptions>
+    <Models>
+    </Models>
+    <Geometries>
+    </Geometries>
+    <DMXModes>
+    </DMXModes>
+    <Revisions>
+    </Revisions>
+    <FTPresets />
+    <Protocols>
+    </Protocols>
+  </FixtureType>
+</GDTF>

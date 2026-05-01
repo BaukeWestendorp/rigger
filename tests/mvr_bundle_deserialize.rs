@@ -7,13 +7,21 @@ use rigger::mvr::{
 
 fn load_complete_mvr() -> Mvr {
     Mvr::from_folder(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("data").join("complete_mvr"),
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests")
+            .join("data")
+            .join("mvr")
+            .join("complete"),
     )
 }
 
 fn load_empty_scene_data_mvr() -> Mvr {
     Mvr::from_folder(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("data").join("empty_scene_data"),
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests")
+            .join("data")
+            .join("mvr")
+            .join("empty_scene_data"),
     )
 }
 
@@ -22,6 +30,7 @@ fn load_empty_scene_and_user_data_mvr() -> Mvr {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests")
             .join("data")
+            .join("mvr")
             .join("empty_scene_and_user_data"),
     )
 }
@@ -1085,8 +1094,11 @@ fn test_complete_projector_fields() {
 
 #[test]
 fn test_mvr_bundle_from_archive() {
-    let archive_path =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("data").join("complete_mvr.mvr");
+    let archive_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("data")
+        .join("mvr")
+        .join("complete.mvr");
 
     let mvr = Mvr::from_archive(archive_path);
     let desc = mvr.bundle().description();

@@ -1,30 +1,150 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
-mod description;
-mod resource;
-mod source;
+use uuid::Uuid;
 
-pub(crate) use description::*;
-pub use resource::*;
-use source::*;
+use crate::gdtf::bundle::ResourceKey;
 
-const DESCRIPTION_FILE_NAME: &str = "description.xml";
+pub mod bundle;
+
+mod builder;
 
 pub struct Gdtf {
-    description: GdtfDescription,
+    bundle: bundle::Bundle,
+
+    version: Version,
+
+    name: String,
+    short_name: Option<String>,
+    long_name: Option<String>,
+    manufacturer: String,
+    description: String,
+
+    fixture_type_id: FixtureTypeId,
+    reference_fixture_type_id: Option<FixtureTypeId>,
+
+    thumbnail: Thumbnail,
+
+    can_have_children: bool,
 }
 
 impl Gdtf {
+    pub fn new(bundle: bundle::Bundle) -> Self {
+        builder::GdtfBuilder::new(bundle).build()
+    }
+
     pub fn from_folder(path: impl Into<PathBuf>) -> Self {
-        FolderSource { path: path.into() }.load()
+        Self::new(bundle::Bundle::from_folder(path))
     }
 
     pub fn from_archive(path: impl Into<PathBuf>) -> Self {
-        ArchiveSource { path: path.into() }.load()
+        Self::new(bundle::Bundle::from_archive(path))
     }
 
-    pub fn description(&self) -> &GdtfDescription {
+    pub fn bundle(&self) -> &bundle::Bundle {
+        &self.bundle
+    }
+
+    pub fn version(&self) -> &Version {
+        &self.version
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn short_name(&self) -> Option<&str> {
+        self.short_name.as_deref()
+    }
+
+    pub fn long_name(&self) -> Option<&str> {
+        self.long_name.as_deref()
+    }
+
+    pub fn manufacturer(&self) -> &str {
+        &self.manufacturer
+    }
+
+    pub fn description(&self) -> &str {
         &self.description
+    }
+
+    pub fn fixture_type_id(&self) -> &FixtureTypeId {
+        &self.fixture_type_id
+    }
+
+    pub fn reference_fixture_type_id(&self) -> Option<&FixtureTypeId> {
+        self.reference_fixture_type_id.as_ref()
+    }
+
+    pub fn thumbnail(&self) -> &Thumbnail {
+        &self.thumbnail
+    }
+
+    pub fn can_have_children(&self) -> bool {
+        self.can_have_children
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FixtureTypeId(Uuid);
+
+impl FixtureTypeId {
+    pub fn new(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+}
+
+impl From<Uuid> for FixtureTypeId {
+    fn from(uuid: Uuid) -> Self {
+        Self(uuid)
+    }
+}
+
+impl FromStr for FixtureTypeId {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::new(Uuid::from_str(s)?))
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Version {
+    major: u32,
+    minor: u32,
+}
+
+impl Version {
+    pub fn major(&self) -> u32 {
+        self.major
+    }
+
+    pub fn minor(&self) -> u32 {
+        self.minor
+    }
+}
+
+pub struct Thumbnail {
+    pub(crate) resource: ResourceKey,
+    pub(crate) offset_x: i32,
+    pub(crate) offset_y: i32,
+}
+
+impl Thumbnail {
+    pub fn resource(&self) -> &ResourceKey {
+        &self.resource
+    }
+
+    pub fn offset_x(&self) -> i32 {
+        self.offset_x
+    }
+
+    pub fn offset_y(&self) -> i32 {
+        self.offset_y
     }
 }
 

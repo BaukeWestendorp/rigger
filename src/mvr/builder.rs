@@ -65,6 +65,8 @@ impl MvrBuilder {
         Self::build_mapping_definitions(aux_data, &mut mapping_definitions);
         Self::build_layers(&self.bundle, &classes, aux_data, &mut layers);
 
+        let gdtfs = Self::build_gdtfs(&self.bundle);
+
         for (layer_ix, layer) in layers.iter().enumerate() {
             layers_ix.insert(layer.id(), layer_ix);
 
@@ -84,6 +86,7 @@ impl MvrBuilder {
             layers,
             layers_ix,
             objects_path_ix,
+            gdtfs,
         }
     }
 
@@ -805,9 +808,7 @@ impl MvrBuilder {
 
     fn build_gdtf_info(gdtf_spec: &Option<String>, gdtf_mode: &Option<String>) -> Option<GdtfInfo> {
         match (gdtf_spec, gdtf_mode) {
-            (Some(spec), Some(mode)) => {
-                Some(GdtfInfo { gdtf_spec: spec.to_owned(), gdtf_mode: mode.to_owned() })
-            }
+            (Some(spec), Some(mode)) => Some(GdtfInfo::new(spec.to_owned(), mode.to_owned())),
             _ => None,
         }
     }
@@ -828,6 +829,18 @@ impl MvrBuilder {
                 custom_id_type,
             },
         }
+    }
+
+    fn build_gdtfs(bundle: &bundle::Bundle) -> HashMap<bundle::ResourceKey, gdtf::Gdtf> {
+        bundle
+            .resources()
+            .entries()
+            .filter(|e| e.kind == bundle::ResourceKind::Gdtf)
+            .map(|e| {
+                let path = bundle.resolve_path(&e.key);
+                (e.key.clone(), gdtf::Gdtf::from_archive(path))
+            })
+            .collect()
     }
 }
 

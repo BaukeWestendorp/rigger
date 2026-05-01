@@ -1,8 +1,6 @@
 pub mod gdtf;
 pub mod mvr;
 
-use std::str::FromStr;
-
 /// Re-export of glam.
 pub use glam;
 
@@ -13,7 +11,7 @@ pub struct CieColor {
     pub yy: f32,
 }
 
-impl FromStr for CieColor {
+impl std::str::FromStr for CieColor {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

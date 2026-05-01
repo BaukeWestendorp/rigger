@@ -844,11 +844,15 @@ pub enum ObjectIdentifier {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GdtfInfo {
-    pub(crate) gdtf_spec: String,
-    pub(crate) gdtf_mode: String,
+    gdtf_spec: String,
+    gdtf_mode: String,
 }
 
 impl GdtfInfo {
+    pub fn new(gdtf_spec: impl Into<String>, gdtf_mode: impl Into<String>) -> Self {
+        Self { gdtf_spec: gdtf_spec.into(), gdtf_mode: gdtf_mode.into() }
+    }
+
     pub fn gdtf_spec(&self) -> &str {
         &self.gdtf_spec
     }

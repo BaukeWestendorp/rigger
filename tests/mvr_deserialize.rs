@@ -5,13 +5,17 @@ use std::{
 };
 
 use rigger::mvr::{
-    Mvr, NodeId,
-    layer::{Layer, Object, ObjectIdentifier, ObjectKind, ScaleHandling, SourceType, Transmission},
+    GdtfInfo, Layer, Mvr, NodeId, Object,
+    layer::{ObjectIdentifier, ObjectKind, ScaleHandling, SourceType, Transmission},
 };
 
 fn load_complete_mvr() -> Mvr {
     Mvr::from_folder(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("data").join("complete_mvr"),
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests")
+            .join("data")
+            .join("mvr")
+            .join("complete"),
     )
 }
 
@@ -20,6 +24,7 @@ fn load_empty_scene_and_user_data_mvr() -> Mvr {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests")
             .join("data")
+            .join("mvr")
             .join("empty_scene_and_user_data"),
     )
 }
@@ -175,23 +180,19 @@ fn test_object_lookup_returns_none_for_unknown_id() {
 }
 
 #[test]
-fn test_object_path() {
+fn test_object_is_first_in_layer() {
     let mvr = load_complete_mvr();
     let id: NodeId<Object> = NodeId::from_str("deadbeef-0000-0000-0000-000000000003").unwrap();
-    let path = mvr.object_path(id).expect("Expected path for Simple Object");
-
-    let expected_layer_id: NodeId<Layer> =
-        NodeId::from_str("deadbeef-0000-0000-0000-000000000002").unwrap();
-    assert_eq!(path.layer_id(), expected_layer_id);
-    assert_eq!(path.indices(), &[0]);
+    let layer = layer_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000002");
+    assert_eq!(layer.objects().first().map(Object::id), Some(id));
 }
 
 #[test]
-fn test_child_object_path() {
+fn test_child_object_is_reachable() {
     let mvr = load_complete_mvr();
-    let id: NodeId<Object> = NodeId::from_str("deadbeef-0000-0000-0000-000000000006").unwrap();
-    let path = mvr.object_path(id).expect("Expected path for child FocusPoint");
-    assert_eq!(path.indices(), &[0, 0]);
+    let child_id: NodeId<Object> =
+        NodeId::from_str("deadbeef-0000-0000-0000-000000000006").unwrap();
+    assert!(mvr.object(child_id).is_some());
 }
 
 #[test]
@@ -761,4 +762,16 @@ fn test_projector_projection_and_scale_handling() {
     assert_eq!(projs[0].source().type_(), SourceType::File);
     assert_eq!(projs[0].source().value(), "projector_content.mov");
     assert_eq!(projs[0].scale_handling(), ScaleHandling::ScaleKeepRatio);
+}
+
+#[test]
+fn test_gdtf_loading() {
+    let mvr = load_complete_mvr();
+
+    assert_eq!(mvr.gdtfs().count(), 1);
+
+    let gdtf = mvr
+        .gdtf(&GdtfInfo::new("Robe Lighting@Robin Spiider.gdtf", "Mode 10 - Pattern full RGBW"))
+        .expect("Should have GDTF file");
+    assert_eq!(gdtf.bundle().description().data_version, "1.2");
 }
