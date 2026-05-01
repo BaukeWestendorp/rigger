@@ -237,7 +237,6 @@ impl Provider {
     }
 }
 
-#[derive(Debug)]
 pub struct NodeId<T> {
     uuid: Uuid,
     _marker: std::marker::PhantomData<T>,
@@ -286,6 +285,12 @@ impl<T> FromStr for NodeId<T> {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self::new(Uuid::from_str(s)?))
+    }
+}
+
+impl<T> Debug for NodeId<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NodeId<{}>({:?})", std::any::type_name::<T>(), self.uuid)
     }
 }
 
