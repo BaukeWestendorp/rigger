@@ -36,7 +36,7 @@ impl ResourceKey {
         &self.0
     }
 
-    pub fn path(&self) -> &Path {
+    pub fn relative_path(&self) -> &Path {
         Path::new(&self.0)
     }
 }
@@ -49,13 +49,21 @@ impl fmt::Display for ResourceKey {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ResourceEntry {
-    pub key: ResourceKey,
-    pub kind: ResourceKind,
+    key: ResourceKey,
+    kind: ResourceKind,
 }
 
 impl ResourceEntry {
-    pub fn new(key: ResourceKey, kind: ResourceKind) -> Self {
+    pub(crate) fn new(key: ResourceKey, kind: ResourceKind) -> Self {
         Self { key, kind }
+    }
+
+    pub fn key(&self) -> &ResourceKey {
+        &self.key
+    }
+
+    pub fn kind(&self) -> ResourceKind {
+        self.kind
     }
 }
 

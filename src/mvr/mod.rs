@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt::Debug, path::PathBuf, str::FromStr};
 
 use uuid::Uuid;
 
@@ -104,16 +104,6 @@ impl Mvr {
         self.object_by_path(path)
     }
 
-    pub fn root_objects(&self) -> impl Iterator<Item = (&Layer, &Object)> + '_ {
-        self.layers
-            .iter()
-            .flat_map(|layer| layer.objects().iter().map(move |object| (layer, object)))
-    }
-
-    pub fn objects(&self) -> ObjectWalk<'_> {
-        ObjectWalk::new(self)
-    }
-
     pub(crate) fn object_path(&self, id: NodeId<Object>) -> Option<&ObjectPath> {
         self.objects_path_ix.get(&id)
     }
@@ -127,8 +117,8 @@ impl Mvr {
         let mut object = layer.objects.get(first)?;
 
         for &ix in indices {
-            let children = object.children()?;
-            object = children.get(ix)?;
+            let child_objects = object.child_objects()?;
+            object = child_objects.get(ix)?;
         }
 
         Some(object)
@@ -149,8 +139,8 @@ impl Mvr {
         let mut transform = *layer.local_transform() * *object.local_transform();
 
         for &ix in indices {
-            let children = object.children()?;
-            object = children.get(ix)?;
+            let child_objects = object.child_objects()?;
+            object = child_objects.get(ix)?;
             transform = transform * *object.local_transform();
         }
 
@@ -185,8 +175,8 @@ impl Mvr {
         }
 
         for entry in self.bundle.resources().entries() {
-            if entry.key.path().file_name()?.to_str()? == gdtf_spec {
-                return Some(entry.key.clone());
+            if entry.key().relative_path().file_name()?.to_str()? == gdtf_spec {
+                return Some(entry.key().clone());
             }
         }
 
@@ -194,11 +184,11 @@ impl Mvr {
     }
 
     pub fn models(&self) -> impl Iterator<Item = &bundle::ResourceEntry> {
-        self.bundle.resources().entries().filter(|e| e.kind == bundle::ResourceKind::Model)
+        self.bundle.resources().entries().filter(|e| e.kind() == bundle::ResourceKind::Model)
     }
 
     pub fn textures(&self) -> impl Iterator<Item = &bundle::ResourceEntry> {
-        self.bundle.resources().entries().filter(|e| e.kind == bundle::ResourceKind::Texture)
+        self.bundle.resources().entries().filter(|e| e.kind() == bundle::ResourceKind::Texture)
     }
 }
 
@@ -306,47 +296,7 @@ pub(crate) struct ObjectPath {
 }
 
 impl ObjectPath {
-    pub(crate) fn new(layer_id: NodeId<Layer>, indices: Vec<usize>) -> Self {
+    pub fn new(layer_id: NodeId<Layer>, indices: Vec<usize>) -> Self {
         Self { layer_id, indices }
-    }
-}
-
-pub struct ObjectWalk<'a> {
-    mvr: &'a Mvr,
-    stack: Vec<ObjectPath>,
-}
-
-impl<'a> ObjectWalk<'a> {
-    fn new(mvr: &'a Mvr) -> Self {
-        let mut stack = Vec::new();
-
-        for layer in mvr.layers.iter().rev() {
-            let layer_id = layer.id();
-            for object_ix in (0..layer.objects.len()).rev() {
-                stack.push(ObjectPath::new(layer_id, vec![object_ix]));
-            }
-        }
-
-        Self { mvr, stack }
-    }
-}
-
-impl<'a> Iterator for ObjectWalk<'a> {
-    type Item = &'a Object;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mvr = self.mvr;
-        let path = self.stack.pop()?;
-        let object = mvr.object_by_path(&path)?;
-
-        if let Some(children) = object.children() {
-            for child_ix in (0..children.len()).rev() {
-                let mut child_path = path.indices.clone();
-                child_path.push(child_ix);
-                self.stack.push(ObjectPath::new(path.layer_id, child_path));
-            }
-        }
-
-        Some(object)
     }
 }

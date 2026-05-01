@@ -196,31 +196,6 @@ fn test_child_object_is_reachable() {
 }
 
 #[test]
-fn test_objects_walk_visits_all_objects() {
-    let mvr = load_complete_mvr();
-    assert_eq!(mvr.objects().count(), 27);
-}
-
-#[test]
-fn test_layer_walk_visits_all_objects_in_layer() {
-    let mvr = load_complete_mvr();
-    let layer = layer_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000004");
-    assert_eq!(layer.walk().count(), 26);
-}
-
-#[test]
-fn test_layer_walk_is_depth_first_preorder() {
-    let mvr = load_complete_mvr();
-    let layer = layer_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000004");
-
-    let names: Vec<_> = layer.walk().map(|o| o.name()).take(4).collect();
-    assert_eq!(names[0], "Complete SceneObject 1");
-    assert_eq!(names[1], "Focus Point (SceneObject Child)");
-    assert_eq!(names[2], "Complete Group 1");
-    assert_eq!(names[3], "Child Object 1");
-}
-
-#[test]
 fn test_object_name() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000005");
@@ -394,13 +369,13 @@ fn test_group_and_focus_have_no_gdtf_info() {
 }
 
 #[test]
-fn test_object_children() {
+fn test_object_child_objects() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000007");
-    let children = obj.children().expect("Expected children on Complete Group 1");
-    assert_eq!(children.len(), 2);
-    assert_eq!(children[0].name(), "Child Object 1");
-    assert_eq!(children[1].name(), "Child Object 2");
+    let child_objects = obj.child_objects().expect("Expected children on Complete Group 1");
+    assert_eq!(child_objects.len(), 2);
+    assert_eq!(child_objects[0].name(), "Child Object 1");
+    assert_eq!(child_objects[1].name(), "Child Object 2");
 }
 
 #[test]
@@ -414,7 +389,7 @@ fn test_has_children() {
 fn test_focus_point_has_no_children() {
     let mvr = load_complete_mvr();
     let fp = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000011");
-    assert!(fp.children().is_none());
+    assert!(fp.child_objects().is_none());
 }
 
 #[test]
@@ -718,7 +693,7 @@ fn test_truss_fields() {
     let pos = mvr.position(pos_id).expect("Expected position to resolve");
     assert_eq!(pos.name(), "Position 1");
 
-    assert_eq!(t.children().len(), 1);
+    assert_eq!(t.child_objects().len(), 1);
 }
 
 #[test]
@@ -730,7 +705,7 @@ fn test_support_fields() {
     assert!((s.chain_length() - 2.5).abs() < 1e-5);
     assert_eq!(s.cast_shadow(), true);
     assert_eq!(s.unit_number(), Some(2015));
-    assert_eq!(s.children().len(), 1);
+    assert_eq!(s.child_objects().len(), 1);
 }
 
 #[test]

@@ -60,7 +60,7 @@ impl SourceLoader for FolderSource {
 
                 let key = ResourceKey::new(relative.to_string_lossy());
                 let kind = ResourceKind::from_path(&p);
-                resources.insert(ResourceEntry { key, kind });
+                resources.insert(ResourceEntry::new(key, kind));
             }
         }
 

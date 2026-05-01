@@ -98,7 +98,7 @@ impl MvrBuilder {
     ) {
         objects_path_ix.insert(object.id(), ObjectPath::new(layer_id, indices.clone()));
 
-        if let Some(children) = object.children() {
+        if let Some(children) = object.child_objects() {
             for (child_ix, child) in children.iter().enumerate() {
                 let mut child_indices = indices.clone();
                 child_indices.push(child_ix);
@@ -323,7 +323,7 @@ impl MvrBuilder {
         }
     }
 
-    fn build_children(
+    fn build_child_objects(
         child_list: Option<&bundle::ChildList>,
         classes: &HashMap<NodeId<Class>, Class>,
         aux_data: &bundle::AuxData,
@@ -368,7 +368,7 @@ impl MvrBuilder {
                 &c.geometries.symbol,
                 aux_data,
             ),
-            children: Self::build_children(c.child_list.as_deref(), classes, aux_data),
+            child_objects: Self::build_child_objects(c.child_list.as_deref(), classes, aux_data),
         }
     }
 
@@ -378,7 +378,7 @@ impl MvrBuilder {
         aux_data: &bundle::AuxData,
     ) -> GroupObject {
         GroupObject {
-            children: c
+            child_objects: c
                 .child_list
                 .content
                 .iter()
@@ -479,7 +479,7 @@ impl MvrBuilder {
             custom_commands: Self::build_custom_commands(c.custom_commands.as_ref()),
             overwrites: Self::build_overwrites(c.overwrites.as_ref()),
             connections: Self::build_connections(c.connections.as_ref()),
-            children: c
+            child_objects: c
                 .child_list
                 .as_ref()
                 .map(|cl| {
@@ -518,7 +518,7 @@ impl MvrBuilder {
                 &c.geometries.symbol,
                 aux_data,
             ),
-            children: c
+            child_objects: c
                 .child_list
                 .as_ref()
                 .map(|cl| {
@@ -557,7 +557,7 @@ impl MvrBuilder {
                 &c.geometries.symbol,
                 aux_data,
             ),
-            children: c
+            child_objects: c
                 .child_list
                 .as_ref()
                 .map(|cl| {
@@ -616,7 +616,7 @@ impl MvrBuilder {
                 &c.geometries.symbol,
                 aux_data,
             ),
-            children: c
+            child_objects: c
                 .child_list
                 .as_ref()
                 .map(|cl| {
@@ -684,7 +684,7 @@ impl MvrBuilder {
                 &c.geometries.symbol,
                 aux_data,
             ),
-            children: c
+            child_objects: c
                 .child_list
                 .as_ref()
                 .map(|cl| {
@@ -835,10 +835,10 @@ impl MvrBuilder {
         bundle
             .resources()
             .entries()
-            .filter(|e| e.kind == bundle::ResourceKind::Gdtf)
+            .filter(|e| e.kind() == bundle::ResourceKind::Gdtf)
             .map(|e| {
-                let path = bundle.resolve_path(&e.key);
-                (e.key.clone(), gdtf::Gdtf::from_archive(path))
+                let path = bundle.root_folder().join(e.key().relative_path());
+                (e.key().clone(), gdtf::Gdtf::from_archive(path))
             })
             .collect()
     }

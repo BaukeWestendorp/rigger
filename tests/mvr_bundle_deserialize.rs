@@ -1119,11 +1119,11 @@ fn test_mvr_bundle_resources() {
 
     let gdtf_key = ResourceKey::new("Robe Lighting@Robin Spiider.gdtf");
     let gdtf_entry = resources.get(&gdtf_key).expect("Expected GDTF resource entry");
-    assert_eq!(gdtf_entry.kind, ResourceKind::Gdtf);
+    assert_eq!(gdtf_entry.kind(), ResourceKind::Gdtf);
 
     let xml_key = ResourceKey::new("GeneralSceneDescription.xml");
     let xml_entry = resources.get(&xml_key).expect("Expected XML resource entry");
-    assert_eq!(xml_entry.kind, ResourceKind::Other);
+    assert_eq!(xml_entry.kind(), ResourceKind::Other);
 
     let missing_key = ResourceKey::new("nonexistent.glb");
     assert!(!resources.contains_key(&missing_key));

@@ -11,6 +11,12 @@ pub struct CieColor {
     pub yy: f32,
 }
 
+impl Default for CieColor {
+    fn default() -> Self {
+        Self { x: 0.3127, y: 0.3290, yy: 100.0 }
+    }
+}
+
 impl std::str::FromStr for CieColor {
     type Err = ();
 

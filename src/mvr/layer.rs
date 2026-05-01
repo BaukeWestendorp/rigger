@@ -19,32 +19,6 @@ pub struct Layer {
     pub(crate) objects: Vec<Object>,
 }
 
-pub struct LayerWalk<'a> {
-    stack: Vec<&'a Object>,
-}
-
-impl<'a> LayerWalk<'a> {
-    fn new(objects: &'a [Object]) -> Self {
-        Self { stack: objects.iter().rev().collect() }
-    }
-}
-
-impl<'a> Iterator for LayerWalk<'a> {
-    type Item = &'a Object;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let object = self.stack.pop()?;
-
-        if let Some(children) = object.children() {
-            for child in children.iter().rev() {
-                self.stack.push(child);
-            }
-        }
-
-        Some(object)
-    }
-}
-
 impl Layer {
     pub fn id(&self) -> mvr::NodeId<Layer> {
         self.id
@@ -60,14 +34,6 @@ impl Layer {
 
     pub fn objects(&self) -> &[Object] {
         &self.objects
-    }
-
-    pub fn object_top_level(&self, id: mvr::NodeId<Object>) -> Option<&Object> {
-        self.objects.iter().find(|o| o.id == id)
-    }
-
-    pub fn walk(&self) -> LayerWalk<'_> {
-        LayerWalk::new(&self.objects)
     }
 }
 
@@ -194,21 +160,21 @@ impl Object {
         }
     }
 
-    pub fn children(&self) -> Option<&[Object]> {
+    pub fn child_objects(&self) -> Option<&[Object]> {
         match &self.kind {
-            ObjectKind::SceneObject(v) => Some(v.children()),
-            ObjectKind::GroupObject(v) => Some(v.children()),
-            ObjectKind::Fixture(v) => Some(v.children()),
-            ObjectKind::Support(v) => Some(v.children()),
-            ObjectKind::Truss(v) => Some(v.children()),
-            ObjectKind::VideoScreen(v) => Some(v.children()),
-            ObjectKind::Projector(v) => Some(v.children()),
+            ObjectKind::SceneObject(v) => Some(v.child_objects()),
+            ObjectKind::GroupObject(v) => Some(v.child_objects()),
+            ObjectKind::Fixture(v) => Some(v.child_objects()),
+            ObjectKind::Support(v) => Some(v.child_objects()),
+            ObjectKind::Truss(v) => Some(v.child_objects()),
+            ObjectKind::VideoScreen(v) => Some(v.child_objects()),
+            ObjectKind::Projector(v) => Some(v.child_objects()),
             ObjectKind::FocusPoint(_) => None,
         }
     }
 
     pub fn has_children(&self) -> bool {
-        self.children().is_some_and(|c| !c.is_empty())
+        self.child_objects().is_some_and(|c| !c.is_empty())
     }
 
     pub fn dmx_addresses(&self) -> Option<&[DmxAddress]> {
@@ -312,7 +278,7 @@ pub struct SceneObject {
     pub(crate) connections: Vec<Connection>,
 
     pub(crate) geometries: Vec<Geometry>,
-    pub(crate) children: Vec<Object>,
+    pub(crate) child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -362,19 +328,19 @@ impl SceneObject {
         &self.geometries
     }
 
-    pub fn children(&self) -> &[Object] {
-        &self.children
+    pub fn child_objects(&self) -> &[Object] {
+        &self.child_objects
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupObject {
-    pub(crate) children: Vec<Object>,
+    pub(crate) child_objects: Vec<Object>,
 }
 
 impl GroupObject {
-    pub fn children(&self) -> &[Object] {
-        &self.children
+    pub fn child_objects(&self) -> &[Object] {
+        &self.child_objects
     }
 }
 
@@ -414,7 +380,7 @@ pub struct FixtureObject {
     pub(crate) overwrites: Vec<Overwrite>,
     pub(crate) connections: Vec<Connection>,
 
-    pub(crate) children: Vec<Object>,
+    pub(crate) child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -501,8 +467,8 @@ impl FixtureObject {
         &self.connections
     }
 
-    pub fn children(&self) -> &[Object] {
-        &self.children
+    pub fn child_objects(&self) -> &[Object] {
+        &self.child_objects
     }
 }
 
@@ -525,7 +491,7 @@ pub struct SupportObject {
     pub(crate) connections: Vec<Connection>,
 
     pub(crate) geometries: Vec<Geometry>,
-    pub(crate) children: Vec<Object>,
+    pub(crate) child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -587,8 +553,8 @@ impl SupportObject {
         &self.geometries
     }
 
-    pub fn children(&self) -> &[Object] {
-        &self.children
+    pub fn child_objects(&self) -> &[Object] {
+        &self.child_objects
     }
 }
 
@@ -611,7 +577,7 @@ pub struct TrussObject {
     pub(crate) connections: Vec<Connection>,
 
     pub(crate) geometries: Vec<Geometry>,
-    pub(crate) children: Vec<Object>,
+    pub(crate) child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -674,8 +640,8 @@ impl TrussObject {
         &self.geometries
     }
 
-    pub fn children(&self) -> &[Object] {
-        &self.children
+    pub fn child_objects(&self) -> &[Object] {
+        &self.child_objects
     }
 }
 
@@ -696,7 +662,7 @@ pub struct VideoScreenObject {
     pub(crate) connections: Vec<Connection>,
 
     pub(crate) geometries: Vec<Geometry>,
-    pub(crate) children: Vec<Object>,
+    pub(crate) child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -750,8 +716,8 @@ impl VideoScreenObject {
         &self.geometries
     }
 
-    pub fn children(&self) -> &[Object] {
-        &self.children
+    pub fn child_objects(&self) -> &[Object] {
+        &self.child_objects
     }
 }
 
@@ -772,7 +738,7 @@ pub struct ProjectorObject {
     pub(crate) connections: Vec<Connection>,
 
     pub(crate) geometries: Vec<Geometry>,
-    pub(crate) children: Vec<Object>,
+    pub(crate) child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -826,8 +792,8 @@ impl ProjectorObject {
         &self.geometries
     }
 
-    pub fn children(&self) -> &[Object] {
-        &self.children
+    pub fn child_objects(&self) -> &[Object] {
+        &self.child_objects
     }
 }
 

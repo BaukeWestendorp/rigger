@@ -1,10 +1,6 @@
 const GSD_FILE_NAME: &str = "GeneralSceneDescription.xml";
 
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 mod description;
 mod resource;
@@ -55,21 +51,5 @@ impl Bundle {
 
     pub fn root_folder(&self) -> &Path {
         self.source.root_folder()
-    }
-
-    pub fn resolve_path(&self, key: &ResourceKey) -> PathBuf {
-        self.root_folder().join(key.path())
-    }
-
-    pub fn open_resource(&self, key: &ResourceKey) -> Option<impl Read> {
-        let path = self.resolve_path(key);
-        File::open(path).ok()
-    }
-
-    pub fn resource_bytes(&self, key: &ResourceKey) -> Option<Vec<u8>> {
-        let mut reader = self.open_resource(key)?;
-        let mut buf = Vec::new();
-        reader.read_to_end(&mut buf).ok()?;
-        Some(buf)
     }
 }
