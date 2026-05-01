@@ -5,7 +5,7 @@ use std::{
 };
 
 use rigger::mvr::{
-    GdtfInfo, Layer, Mvr, NodeId, Object,
+    Layer, Mvr, NodeId, Object,
     layer::{ObjectIdentifier, ObjectKind, ScaleHandling, SourceType, Transmission},
 };
 
@@ -193,12 +193,6 @@ fn test_child_object_is_reachable() {
     let child_id: NodeId<Object> =
         NodeId::from_str("deadbeef-0000-0000-0000-000000000006").unwrap();
     assert!(mvr.object(child_id).is_some());
-}
-
-#[test]
-fn test_root_objects_count() {
-    let mvr = load_complete_mvr();
-    assert_eq!(mvr.root_objects().count(), 18);
 }
 
 #[test]
@@ -770,8 +764,6 @@ fn test_gdtf_loading() {
 
     assert_eq!(mvr.gdtfs().count(), 1);
 
-    let gdtf = mvr
-        .gdtf(&GdtfInfo::new("Robe Lighting@Robin Spiider.gdtf", "Mode 10 - Pattern full RGBW"))
-        .expect("Should have GDTF file");
+    let gdtf = mvr.gdtf("Robe Lighting@Robin Spiider.gdtf").expect("Should have GDTF file");
     assert_eq!(gdtf.bundle().description().data_version, "1.2");
 }

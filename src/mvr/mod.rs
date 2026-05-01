@@ -169,22 +169,13 @@ impl Mvr {
         Some(geometries.iter().map(move |g| (g, world * g.local_transform())))
     }
 
-    pub fn gdtfs(&self) -> impl Iterator<Item = &gdtf::Gdtf> {
-        self.gdtfs.values()
+    pub fn gdtfs(&self) -> impl Iterator<Item = (&bundle::ResourceKey, &gdtf::Gdtf)> {
+        self.gdtfs.iter()
     }
 
-    pub fn gdtf(&self, info: &GdtfInfo) -> Option<&gdtf::Gdtf> {
-        let key = self.gdtf_resource_key(info.gdtf_spec())?;
+    pub fn gdtf(&self, file_name: &str) -> Option<&gdtf::Gdtf> {
+        let key = self.gdtf_resource_key(file_name)?;
         self.gdtfs.get(&key)
-    }
-
-    pub fn gdtf_for_object(&self, id: NodeId<Object>) -> Option<&gdtf::Gdtf> {
-        let object = self.object(id)?;
-        self.gdtf(object.gdtf_info()?)
-    }
-
-    pub fn resource_bytes(&self, key: &bundle::ResourceKey) -> Option<Vec<u8>> {
-        self.bundle.resource_bytes(key)
     }
 
     fn gdtf_resource_key(&self, gdtf_spec: &str) -> Option<bundle::ResourceKey> {
@@ -194,16 +185,20 @@ impl Mvr {
         }
 
         for entry in self.bundle.resources().entries() {
-            if entry.kind != bundle::ResourceKind::Gdtf {
-                continue;
-            }
-
             if entry.key.path().file_name()?.to_str()? == gdtf_spec {
                 return Some(entry.key.clone());
             }
         }
 
         None
+    }
+
+    pub fn models(&self) -> impl Iterator<Item = &bundle::ResourceEntry> {
+        self.bundle.resources().entries().filter(|e| e.kind == bundle::ResourceKind::Model)
+    }
+
+    pub fn textures(&self) -> impl Iterator<Item = &bundle::ResourceEntry> {
+        self.bundle.resources().entries().filter(|e| e.kind == bundle::ResourceKind::Texture)
     }
 }
 

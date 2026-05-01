@@ -844,17 +844,17 @@ pub enum ObjectIdentifier {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GdtfInfo {
-    gdtf_spec: String,
+    gdtf_file_name: String,
     gdtf_mode: String,
 }
 
 impl GdtfInfo {
     pub fn new(gdtf_spec: impl Into<String>, gdtf_mode: impl Into<String>) -> Self {
-        Self { gdtf_spec: gdtf_spec.into(), gdtf_mode: gdtf_mode.into() }
+        Self { gdtf_file_name: gdtf_spec.into(), gdtf_mode: gdtf_mode.into() }
     }
 
     pub fn gdtf_spec(&self) -> &str {
-        &self.gdtf_spec
+        &self.gdtf_file_name
     }
 
     pub fn gdtf_mode(&self) -> &str {
