@@ -12,6 +12,24 @@ Because these formats support thousands of devices across multiple manufacturers
 
 `rigger` abstracts this complexity by providing lookup tables and high-level helper functions. The goal is to let you extract the data you actually need without navigating the deep, nested specifications of the underlying XML. Though, if you want to manually find anything defined in the description files, you can.
 
+## Progress
+### MVR
+- [x] Bundle loading from folder
+- [x] Bundle loading from `.mvr` archive.
+- [x] Test deserialization of `bundle` description.
+- [ ] Test deserialization of `bundle` resources.
+- [x] Test deserialization API of higher level `Mvr` data type and it's children.
+- [ ] Test negative paths in deserialization
+- [ ] Documentation
+### GDTF
+- [ ] Bundle loading from folder
+- [ ] Bundle loading from `.mvr` archive.
+- [ ] Test deserialization of `bundle` description.
+- [ ] Test deserialization of `bundle` resources.
+- [ ] Test API of higher level `Gdtf` data type and it's children.
+- [ ] Documentation
+
+
 ## Contributing
 Contributions are welcome. If you find a file that this library fails to parse correctly or want to request a feature or suggest a change, feel free to open an issue!
 

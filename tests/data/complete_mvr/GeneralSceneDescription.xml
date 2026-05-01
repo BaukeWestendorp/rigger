@@ -303,6 +303,7 @@
 						<Projections>
 							<Projection>
 								<Source linkedGeometry="Beam1" type="File">projector_content.mov</Source>
+								<ScaleHandeling Enum="ScaleKeepRatio" />
 							</Projection>
 						</Projections>
 						<GDTFSpec>ProjectorFixture.gdtf</GDTFSpec>
@@ -405,7 +406,9 @@
 			<!-- Symdef (0..any) with Geometry3D -->
 			<Symdef uuid="deadbeef-0000-0000-0000-000000000066" name="Symbol 1">
 				<ChildList>
-					<Geometry3D fileName="model1.glb" />
+					<Geometry3D fileName="model1.glb">
+						<Matrix>{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{100.0,0.0,0.0}</Matrix>
+					</Geometry3D>
 				</ChildList>
 			</Symdef>
 			<Symdef uuid="deadbeef-0000-0000-0000-000000000080" name="Symbol 2">

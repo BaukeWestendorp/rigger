@@ -2,7 +2,7 @@ use std::path::Path;
 
 use rigger::mvr::{
     Mvr,
-    bundle::{ChildListContent, Scale, SourceType, Transmission},
+    bundle::{ChildListContent, ResourceKey, ResourceKind, Scale, SourceType, Transmission},
 };
 
 fn load_complete_mvr() -> Mvr {
@@ -125,6 +125,10 @@ fn test_mvr_bundle_aux_data() {
     assert_eq!(symdef_1.name, "Symbol 1");
     assert_eq!(symdef_1.child_list.geometry_3d.len(), 1);
     assert_eq!(symdef_1.child_list.geometry_3d[0].file_name, "model1.glb");
+    assert_eq!(
+        symdef_1.child_list.geometry_3d[0].matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{100.0,0.0,0.0}")
+    );
     assert_eq!(symdef_1.child_list.symbol.len(), 0);
 
     let symdef_2 = aux
@@ -135,6 +139,7 @@ fn test_mvr_bundle_aux_data() {
     assert_eq!(symdef_2.name, "Symbol 2");
     assert_eq!(symdef_2.child_list.geometry_3d.len(), 1);
     assert_eq!(symdef_2.child_list.geometry_3d[0].file_name, "model2.glb");
+    assert_eq!(symdef_2.child_list.geometry_3d[0].matrix, None);
     assert_eq!(symdef_2.child_list.symbol.len(), 0);
 
     let symdef_via_symbol = aux
@@ -482,11 +487,12 @@ fn test_mvr_bundle_minimal_objects_parse_defaults() {
     assert_eq!(child.multipatch, "deadbeef-0000-0000-0000-000000000029");
 }
 
-#[test]
-fn test_mvr_bundle_layer_objects_complete_layer_parses_all_fields() {
-    let mvr = load_complete_mvr();
+fn find_complete_layer_object<'a, T>(
+    mvr: &'a Mvr,
+    extract: impl Fn(&'a ChildListContent) -> Option<&'a T>,
+    label: &str,
+) -> &'a T {
     let desc = mvr.bundle().description();
-
     let layer = desc
         .scene
         .layers
@@ -494,61 +500,41 @@ fn test_mvr_bundle_layer_objects_complete_layer_parses_all_fields() {
         .iter()
         .find(|l| l.name == "Complete Object Layer")
         .expect("Expected 'Complete Object Layer'");
+    layer
+        .child_list
+        .as_ref()
+        .expect("Expected ChildList in complete layer")
+        .content
+        .iter()
+        .find_map(extract)
+        .unwrap_or_else(|| panic!("Expected {label}"))
+}
 
-    let child_list = layer.child_list.as_ref().expect("Expected ChildList in complete layer");
+#[test]
+fn test_complete_scene_object_fields() {
+    let mvr = load_complete_mvr();
 
-    let mut scene_object = None;
-    let mut group_object = None;
-    let mut focus_point = None;
-    let mut fixture = None;
-    let mut truss = None;
-    let mut support = None;
-    let mut video_screen = None;
-    let mut projector = None;
+    let o = find_complete_layer_object(
+        &mvr,
+        |i| match i {
+            ChildListContent::SceneObject(o) if o.name == "Complete SceneObject 1" => Some(o),
+            _ => None,
+        },
+        "Complete SceneObject 1",
+    );
 
-    for item in &child_list.content {
-        match item {
-            ChildListContent::SceneObject(o) if o.name == "Complete SceneObject 1" => {
-                scene_object = Some(o);
-            }
-            ChildListContent::GroupObject(o) if o.name == "Complete Group 1" => {
-                group_object = Some(o);
-            }
-            ChildListContent::FocusPoint(o) if o.name == "Complete Point 2" => {
-                focus_point = Some(o);
-            }
-            ChildListContent::Fixture(o) if o.name == "Complete Fixture 1" => {
-                fixture = Some(o);
-            }
-            ChildListContent::Truss(o) if o.name == "Complete Truss 1" => {
-                truss = Some(o);
-            }
-            ChildListContent::Support(o) if o.name == "Complete Support 1" => {
-                support = Some(o);
-            }
-            ChildListContent::VideoScreen(o) if o.name == "Complete VideoScreen 1" => {
-                video_screen = Some(o);
-            }
-            ChildListContent::Projector(o) if o.name == "Complete Projector 1" => {
-                projector = Some(o);
-            }
-            _ => {}
-        }
-    }
-
-    let scene_object = scene_object.expect("Expected Complete SceneObject 1");
-    assert_eq!(scene_object.uuid, "deadbeef-0000-0000-0000-000000000005");
-    assert_eq!(scene_object.multipatch, "");
+    assert_eq!(o.uuid, "deadbeef-0000-0000-0000-000000000005");
+    assert_eq!(o.multipatch, "");
     assert_eq!(
-        scene_object.matrix.as_deref(),
+        o.matrix.as_deref(),
         Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{1000.0,0.0,0.0}")
     );
-    assert_eq!(scene_object.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
-    assert_eq!(scene_object.gdtf_spec.as_deref(), Some("Robe Lighting@Robin Spiider.gdtf"));
-    assert_eq!(scene_object.gdtf_mode.as_deref(), Some("Mode 1 - Standard 16 bit"));
-    assert_eq!(scene_object.cast_shadow, Some(true));
+    assert_eq!(o.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+    assert_eq!(o.gdtf_spec.as_deref(), Some("Robe Lighting@Robin Spiider.gdtf"));
+    assert_eq!(o.gdtf_mode.as_deref(), Some("Mode 1 - Standard 16 bit"));
+    assert_eq!(o.cast_shadow, Some(true));
 
-    let addresses = scene_object.addresses.as_ref().expect("Expected addresses");
+    let addresses = o.addresses.as_ref().expect("Expected addresses");
     assert_eq!(addresses.address.len(), 2);
     assert_eq!(addresses.address[0].r#break, 0);
     assert_eq!(addresses.address[0].content, "42");
@@ -560,161 +546,573 @@ fn test_mvr_bundle_layer_objects_complete_layer_parses_all_fields() {
     assert_eq!(addresses.network[0].subnetmask.as_deref(), Some("255.255.255.0"));
     assert_eq!(addresses.network[0].dhcp.as_deref(), Some("on"));
     assert_eq!(addresses.network[0].hostname.as_deref(), Some("example-device"));
+    assert!(addresses.network[0].ipv_6.is_none());
 
-    let alignments = scene_object.alignments.as_ref().expect("Expected alignments");
+    let alignments = o.alignments.as_ref().expect("Expected alignments");
     assert_eq!(alignments.alignment.len(), 1);
     assert_eq!(alignments.alignment[0].geometry.as_deref(), Some("Beam1"));
     assert_eq!(alignments.alignment[0].up, "0,0,1");
     assert_eq!(alignments.alignment[0].direction, "0,0,-1");
 
-    let overwrites = scene_object.overwrites.as_ref().expect("Expected overwrites");
+    let custom_commands = o.custom_commands.as_ref().expect("Expected custom_commands");
+    assert_eq!(custom_commands.custom_command.len(), 1);
+    assert_eq!(custom_commands.custom_command[0], "Body_Tilt.Tilt.Tilt 1,f 0.000000");
+
+    let overwrites = o.overwrites.as_ref().expect("Expected overwrites");
     assert_eq!(overwrites.overwrite.len(), 1);
     assert_eq!(overwrites.overwrite[0].universal, "SomeUniversalNode");
     assert_eq!(overwrites.overwrite[0].target, "SomeTargetNode");
 
-    let connections = scene_object.connections.as_ref().expect("Expected connections");
+    let connections = o.connections.as_ref().expect("Expected connections");
     assert_eq!(connections.connection.len(), 1);
     assert_eq!(connections.connection[0].own, "Base");
     assert_eq!(connections.connection[0].other, "Base.Yoke");
     assert_eq!(connections.connection[0].to_object, "deadbeef-0000-0000-0000-000000000009");
 
-    assert_eq!(scene_object.fixture_id.as_deref(), Some("SCENEOBJECT-0005"));
-    assert_eq!(scene_object.fixture_id_numeric, Some(1005));
-    assert_eq!(scene_object.unit_number, Some(2005));
-    assert_eq!(scene_object.custom_id_type, Some(3005));
-    assert_eq!(scene_object.custom_id, Some(4005));
+    assert_eq!(o.fixture_id.as_deref(), Some("SCENEOBJECT-0005"));
+    assert_eq!(o.fixture_id_numeric, Some(1005));
+    assert_eq!(o.unit_number, Some(2005));
+    assert_eq!(o.custom_id_type, Some(3005));
+    assert_eq!(o.custom_id, Some(4005));
+    assert_eq!(o.fixture_type_id, Some(1));
 
-    let fixture = fixture.expect("Expected Complete Fixture 1");
-    assert_eq!(fixture.uuid, "deadbeef-0000-0000-0000-000000000009");
-    assert_eq!(fixture.multipatch, "");
+    let child_list = o.child_list.as_ref().expect("Expected SceneObject child list");
+    assert_eq!(child_list.content.len(), 1);
+    let ChildListContent::FocusPoint(child_fp) = &child_list.content[0] else {
+        panic!("Expected FocusPoint as SceneObject child");
+    };
+    assert_eq!(child_fp.uuid, "deadbeef-0000-0000-0000-000000000006");
     assert_eq!(
-        fixture.matrix.as_deref(),
-        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{3000.0,0.0,0.0}")
+        child_fp.matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{1000.0,500.0,0.0}")
     );
-    assert_eq!(fixture.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
-    assert_eq!(fixture.gdtf_spec.as_deref(), Some("Robe Lighting@Robin Spiider.gdtf"));
-    assert_eq!(fixture.gdtf_mode.as_deref(), Some("Mode 1 - Standard 16 bit"));
-    assert_eq!(fixture.focus.as_deref(), Some("deadbeef-0000-0000-0000-000000000006"));
-    assert_eq!(fixture.cast_shadow, Some(true));
-    assert_eq!(fixture.dmx_invert_pan, Some(true));
-    assert_eq!(fixture.dmx_invert_tilt, Some(false));
-    assert_eq!(fixture.position.as_deref(), Some("deadbeef-0000-0000-0000-000000000071"));
-    assert_eq!(fixture.function.as_deref(), Some("This fixture is meant for testing"));
-    assert_eq!(fixture.fixture_id, "FIXTURE-0009");
-    assert_eq!(fixture.fixture_id_numeric, Some(1009));
-    assert_eq!(fixture.unit_number, 2009);
-    assert_eq!(fixture.child_position.as_deref(), Some("Base.Yoke"));
+    assert_eq!(child_fp.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+}
 
-    let fixture_protocols = fixture.protocols.as_ref().expect("Expected protocols");
-    assert_eq!(fixture_protocols.protocol.len(), 6);
+#[test]
+fn test_complete_group_object_fields() {
+    let mvr = load_complete_mvr();
 
-    assert_eq!(fixture_protocols.protocol[0].geometry, "NetworkInOut_1");
-    assert_eq!(fixture_protocols.protocol[0].name, "");
-    assert_eq!(fixture_protocols.protocol[0].r#type, "Art-Net");
-    assert_eq!(fixture_protocols.protocol[0].transmission, None);
-
-    assert_eq!(fixture_protocols.protocol[1].geometry, "NetworkInOut_3");
-    assert_eq!(fixture_protocols.protocol[1].name, "NDI 1");
-    assert_eq!(fixture_protocols.protocol[1].r#type, "NDI");
-    assert_eq!(fixture_protocols.protocol[1].transmission, None);
-
-    assert_eq!(fixture_protocols.protocol[2].transmission, Some(Transmission::Unicast));
-    assert_eq!(fixture_protocols.protocol[3].transmission, Some(Transmission::Multicast));
-    assert_eq!(fixture_protocols.protocol[4].transmission, Some(Transmission::Broadcast));
-    assert_eq!(fixture_protocols.protocol[5].transmission, Some(Transmission::Anycast));
-
-    let fixture_addresses = fixture.addresses.as_ref().expect("Expected fixture addresses");
-    assert_eq!(fixture_addresses.address.len(), 1);
-    assert_eq!(fixture_addresses.address[0].r#break, 0);
-    assert_eq!(fixture_addresses.address[0].content, "45");
-    assert_eq!(fixture_addresses.network.len(), 3);
-
-    assert_eq!(fixture.color.as_deref(), Some("0.314303,0.328065,87.699166"));
-
-    let fixture_mappings = fixture.mappings.as_ref().expect("Expected mappings");
-    assert_eq!(fixture_mappings.mapping.len(), 1);
-    assert_eq!(fixture_mappings.mapping[0].linked_def, "deadbeef-0000-0000-0000-000000000073");
-    assert_eq!(fixture_mappings.mapping[0].ux, Some(10));
-    assert_eq!(fixture_mappings.mapping[0].uy, Some(10));
-    assert_eq!(fixture_mappings.mapping[0].ox, Some(5));
-    assert_eq!(fixture_mappings.mapping[0].oy, Some(5));
-    assert_eq!(fixture_mappings.mapping[0].rz, Some(45.0));
-
-    let fixture_gobo = fixture.gobo.as_ref().expect("Expected gobo");
-    assert_eq!(fixture_gobo.rotation, 32.5);
-    assert_eq!(fixture_gobo.file_name, "gobo.png");
-
-    let truss = truss.expect("Expected Complete Truss 1");
-    assert_eq!(truss.uuid, "deadbeef-0000-0000-0000-000000000013");
-    assert_eq!(truss.multipatch, "");
-    assert_eq!(
-        truss.matrix.as_deref(),
-        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{4000.0,0.0,0.0}")
+    let o = find_complete_layer_object(
+        &mvr,
+        |i| match i {
+            ChildListContent::GroupObject(o) if o.name == "Complete Group 1" => Some(o),
+            _ => None,
+        },
+        "Complete Group 1",
     );
-    assert_eq!(truss.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
-    assert_eq!(truss.position.as_deref(), Some("deadbeef-0000-0000-0000-000000000071"));
-    assert_eq!(truss.function.as_deref(), Some("This truss is meant for testing"));
-    assert_eq!(truss.cast_shadow, Some(true));
-    assert_eq!(truss.child_position.as_deref(), Some("Base.Yoke"));
-    assert_eq!(truss.fixture_id, "TRUSS-0013");
-    assert_eq!(truss.fixture_id_numeric, Some(1013));
-    assert_eq!(truss.unit_number, Some(2013));
 
-    let truss_child_list = truss.child_list.as_ref().expect("Expected truss child list");
-    assert_eq!(truss_child_list.content.len(), 1);
-
-    let support = support.expect("Expected Complete Support 1");
-    assert_eq!(support.uuid, "deadbeef-0000-0000-0000-000000000015");
-    assert_eq!(support.multipatch, "");
+    assert_eq!(o.uuid, "deadbeef-0000-0000-0000-000000000007");
     assert_eq!(
-        support.matrix.as_deref(),
-        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{5000.0,0.0,0.0}")
-    );
-    assert_eq!(support.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
-    assert_eq!(support.position.as_deref(), Some("deadbeef-0000-0000-0000-000000000071"));
-    assert_eq!(support.function.as_deref(), Some("This support is meant for testing"));
-    assert_eq!(support.chain_length, 2.5);
-    assert_eq!(support.cast_shadow, Some(true));
-    assert_eq!(support.fixture_id, "SUPPORT-0015");
-    assert_eq!(support.fixture_id_numeric, Some(1015));
-    assert_eq!(support.unit_number, Some(2015));
-
-    let video_screen = video_screen.expect("Expected Complete VideoScreen 1");
-    assert_eq!(video_screen.uuid, "deadbeef-0000-0000-0000-000000000017");
-    assert_eq!(video_screen.multipatch, "");
-    assert_eq!(
-        video_screen.matrix.as_deref(),
-        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{6000.0,0.0,0.0}")
-    );
-    assert_eq!(video_screen.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
-    let vs_sources = video_screen.sources.as_ref().expect("Expected sources");
-    assert_eq!(vs_sources.source.len(), 1);
-    assert_eq!(vs_sources.source[0].linked_geometry, "Display1");
-    assert_eq!(vs_sources.source[0].r#type, SourceType::File);
-    assert_eq!(vs_sources.source[0].content, "movie.mov");
-
-    let projector = projector.expect("Expected Complete Projector 1");
-    assert_eq!(projector.uuid, "deadbeef-0000-0000-0000-000000000018");
-    assert_eq!(projector.multipatch, "");
-    assert_eq!(
-        projector.matrix.as_deref(),
-        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{7000.0,0.0,0.0}")
-    );
-    assert_eq!(projector.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
-    assert_eq!(projector.projections.projection.len(), 1);
-    assert_eq!(projector.projections.projection[0].source.len(), 1);
-    assert_eq!(projector.projections.projection[0].source[0].linked_geometry, "Beam1");
-    assert_eq!(projector.projections.projection[0].source[0].r#type, SourceType::File);
-    assert_eq!(projector.projections.projection[0].source[0].content, "projector_content.mov");
-
-    let group_object = group_object.expect("Expected Complete Group 1");
-    assert_eq!(group_object.uuid, "deadbeef-0000-0000-0000-000000000007");
-    assert_eq!(
-        group_object.matrix.as_deref(),
+        o.matrix.as_deref(),
         Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{2000.0,0.0,0.0}")
     );
-    assert_eq!(group_object.child_list.content.len(), 2);
+    assert_eq!(o.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+    assert_eq!(o.child_list.content.len(), 2);
 
-    let focus_point = focus_point.expect("Expected Complete Point 2");
-    assert_eq!(focus_point.uuid, "deadbeef-0000-0000-0000-000000000011");
+    let ChildListContent::SceneObject(child_1) = &o.child_list.content[0] else {
+        panic!("Expected SceneObject as first GroupObject child");
+    };
+    assert_eq!(child_1.uuid, "deadbeef-0000-0000-0000-000000000008");
+    assert_eq!(child_1.geometries.symbol.len(), 1);
+    assert_eq!(child_1.geometries.symbol[0].uuid, "deadbeef-0000-0000-0000-000000000067");
+    assert_eq!(child_1.geometries.symbol[0].symdef, "deadbeef-0000-0000-0000-000000000066");
+    assert_eq!(
+        child_1.geometries.symbol[0].matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{200.0,0.0,0.0}")
+    );
+
+    let ChildListContent::SceneObject(child_2) = &o.child_list.content[1] else {
+        panic!("Expected SceneObject as second GroupObject child");
+    };
+    assert_eq!(child_2.uuid, "deadbeef-0000-0000-0000-000000000010");
+    assert_eq!(child_2.geometries.symbol.len(), 1);
+    assert_eq!(
+        child_2.geometries.symbol[0].matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{200.0,500.0,0.0}")
+    );
+}
+
+#[test]
+fn test_complete_focus_point_fields() {
+    let mvr = load_complete_mvr();
+
+    let o = find_complete_layer_object(
+        &mvr,
+        |i| match i {
+            ChildListContent::FocusPoint(o) if o.name == "Complete Point 2" => Some(o),
+            _ => None,
+        },
+        "Complete Point 2",
+    );
+
+    assert_eq!(o.uuid, "deadbeef-0000-0000-0000-000000000011");
+    assert_eq!(
+        o.matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{2500.0,500.0,0.0}")
+    );
+    assert_eq!(o.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+}
+
+#[test]
+fn test_complete_fixture_fields() {
+    let mvr = load_complete_mvr();
+
+    let o = find_complete_layer_object(
+        &mvr,
+        |i| match i {
+            ChildListContent::Fixture(o) if o.name == "Complete Fixture 1" => Some(o),
+            _ => None,
+        },
+        "Complete Fixture 1",
+    );
+
+    assert_eq!(o.uuid, "deadbeef-0000-0000-0000-000000000009");
+    assert_eq!(o.multipatch, "");
+    assert_eq!(
+        o.matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{3000.0,0.0,0.0}")
+    );
+    assert_eq!(o.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+    assert_eq!(o.gdtf_spec.as_deref(), Some("Robe Lighting@Robin Spiider.gdtf"));
+    assert_eq!(o.gdtf_mode.as_deref(), Some("Mode 1 - Standard 16 bit"));
+    assert_eq!(o.focus.as_deref(), Some("deadbeef-0000-0000-0000-000000000006"));
+    assert_eq!(o.cast_shadow, Some(true));
+    assert_eq!(o.dmx_invert_pan, Some(true));
+    assert_eq!(o.dmx_invert_tilt, Some(false));
+    assert_eq!(o.position.as_deref(), Some("deadbeef-0000-0000-0000-000000000071"));
+    assert_eq!(o.function.as_deref(), Some("This fixture is meant for testing"));
+    assert_eq!(o.fixture_id, "FIXTURE-0009");
+    assert_eq!(o.fixture_id_numeric, Some(1009));
+    assert_eq!(o.unit_number, 2009);
+    assert_eq!(o.child_position.as_deref(), Some("Base.Yoke"));
+    assert_eq!(o.fixture_type_id, Some(1));
+    assert_eq!(o.custom_id_type, Some(3009));
+    assert_eq!(o.custom_id, Some(4009));
+
+    let addresses = o.addresses.as_ref().expect("Expected fixture addresses");
+    assert_eq!(addresses.address.len(), 1);
+    assert_eq!(addresses.address[0].r#break, 0);
+    assert_eq!(addresses.address[0].content, "45");
+    assert_eq!(addresses.network.len(), 3);
+    assert_eq!(addresses.network[0].geometry, "ethernet_1");
+    assert_eq!(addresses.network[0].ipv_4.as_deref(), Some("192.168.11.5"));
+    assert_eq!(addresses.network[0].subnetmask.as_deref(), Some("255.255.0.0"));
+    assert!(addresses.network[0].ipv_6.is_none());
+    assert_eq!(addresses.network[1].geometry, "ethernet_2");
+    assert_eq!(
+        addresses.network[1].ipv_6.as_deref(),
+        Some("2001:0db8:85a3:0000:0000:8a2e:0370:7344")
+    );
+    assert!(addresses.network[1].ipv_4.is_none());
+    assert_eq!(addresses.network[2].geometry, "wireless_1");
+    assert_eq!(addresses.network[2].dhcp.as_deref(), Some("on"));
+
+    let protocols = o.protocols.as_ref().expect("Expected protocols");
+    assert_eq!(protocols.protocol.len(), 6);
+    assert_eq!(protocols.protocol[0].geometry, "NetworkInOut_1");
+    assert_eq!(protocols.protocol[0].name, "");
+    assert_eq!(protocols.protocol[0].r#type, "Art-Net");
+    assert_eq!(protocols.protocol[0].transmission, None);
+    assert_eq!(protocols.protocol[1].geometry, "NetworkInOut_3");
+    assert_eq!(protocols.protocol[1].name, "NDI 1");
+    assert_eq!(protocols.protocol[1].r#type, "NDI");
+    assert_eq!(protocols.protocol[1].transmission, None);
+    assert_eq!(protocols.protocol[2].transmission, Some(Transmission::Unicast));
+    assert_eq!(protocols.protocol[3].transmission, Some(Transmission::Multicast));
+    assert_eq!(protocols.protocol[4].transmission, Some(Transmission::Broadcast));
+    assert_eq!(protocols.protocol[5].transmission, Some(Transmission::Anycast));
+
+    let alignments = o.alignments.as_ref().expect("Expected fixture alignments");
+    assert_eq!(alignments.alignment.len(), 1);
+    assert_eq!(alignments.alignment[0].geometry.as_deref(), Some("Beam"));
+    assert_eq!(alignments.alignment[0].up, "0,0,1");
+    assert_eq!(alignments.alignment[0].direction, "0,0,-1");
+
+    let custom_commands = o.custom_commands.as_ref().expect("Expected fixture custom_commands");
+    assert_eq!(custom_commands.custom_command.len(), 2);
+    assert_eq!(custom_commands.custom_command[0], "Body_Pan,f 50");
+    assert_eq!(custom_commands.custom_command[1], "Yoke_Tilt,f 50");
+
+    let overwrites = o.overwrites.as_ref().expect("Expected fixture overwrites");
+    assert_eq!(overwrites.overwrite.len(), 4);
+    assert_eq!(overwrites.overwrite[0].universal, "Universal Wheel 1.Universal Wheel Slot 1");
+    assert_eq!(overwrites.overwrite[0].target, "Wheel 1.Wheel Slot");
+    assert_eq!(overwrites.overwrite[1].universal, "Universal Emitter 1");
+    assert_eq!(overwrites.overwrite[1].target, "Emitter 1");
+    assert_eq!(overwrites.overwrite[2].universal, "Universal Filter 1");
+    assert_eq!(overwrites.overwrite[2].target, "Filter 1");
+    assert_eq!(overwrites.overwrite[3].universal, "Universal Wheel 1.Universal Wheel Slot 2");
+
+    let connections = o.connections.as_ref().expect("Expected fixture connections");
+    assert_eq!(connections.connection.len(), 3);
+    assert_eq!(connections.connection[0].own, "Input");
+    assert_eq!(connections.connection[0].other, "Output1");
+    assert_eq!(connections.connection[0].to_object, "deadbeef-0000-0000-0000-000000000005");
+    assert_eq!(connections.connection[1].own, "1");
+    assert_eq!(connections.connection[1].other, "IN");
+    assert_eq!(connections.connection[2].own, "2");
+    assert_eq!(connections.connection[2].other, "IN");
+
+    assert_eq!(o.color.as_deref(), Some("0.314303,0.328065,87.699166"));
+
+    let mappings = o.mappings.as_ref().expect("Expected mappings");
+    assert_eq!(mappings.mapping.len(), 1);
+    assert_eq!(mappings.mapping[0].linked_def, "deadbeef-0000-0000-0000-000000000073");
+    assert_eq!(mappings.mapping[0].ux, Some(10));
+    assert_eq!(mappings.mapping[0].uy, Some(10));
+    assert_eq!(mappings.mapping[0].ox, Some(5));
+    assert_eq!(mappings.mapping[0].oy, Some(5));
+    assert_eq!(mappings.mapping[0].rz, Some(45.0));
+
+    let gobo = o.gobo.as_ref().expect("Expected gobo");
+    assert_eq!(gobo.rotation, 32.5);
+    assert_eq!(gobo.file_name, "gobo.png");
+
+    let child_list = o.child_list.as_ref().expect("Expected fixture child list");
+    assert_eq!(child_list.content.len(), 1);
+    let ChildListContent::FocusPoint(child_fp) = &child_list.content[0] else {
+        panic!("Expected FocusPoint as Fixture child");
+    };
+    assert_eq!(child_fp.uuid, "deadbeef-0000-0000-0000-000000000012");
+    assert_eq!(
+        child_fp.matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{3000.0,500.0,0.0}")
+    );
+    assert_eq!(child_fp.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+}
+
+#[test]
+fn test_complete_truss_fields() {
+    let mvr = load_complete_mvr();
+
+    let o = find_complete_layer_object(
+        &mvr,
+        |i| match i {
+            ChildListContent::Truss(o) if o.name == "Complete Truss 1" => Some(o),
+            _ => None,
+        },
+        "Complete Truss 1",
+    );
+
+    assert_eq!(o.uuid, "deadbeef-0000-0000-0000-000000000013");
+    assert_eq!(o.multipatch, "");
+    assert_eq!(
+        o.matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{4000.0,0.0,0.0}")
+    );
+    assert_eq!(o.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+    assert_eq!(o.position.as_deref(), Some("deadbeef-0000-0000-0000-000000000071"));
+    assert_eq!(o.function.as_deref(), Some("This truss is meant for testing"));
+    assert_eq!(o.gdtf_spec.as_deref(), Some("Robe Lighting@Robin Spiider.gdtf"));
+    assert_eq!(o.gdtf_mode.as_deref(), Some("Mode 1 - Standard 16 bit"));
+    assert_eq!(o.cast_shadow, Some(true));
+    assert_eq!(o.child_position.as_deref(), Some("Base.Yoke"));
+    assert_eq!(o.fixture_id, "TRUSS-0013");
+    assert_eq!(o.fixture_id_numeric, Some(1013));
+    assert_eq!(o.unit_number, Some(2013));
+    assert_eq!(o.custom_id_type, Some(3013));
+    assert_eq!(o.custom_id, Some(4013));
+    assert_eq!(o.fixture_type_id, Some(1));
+
+    let addresses = o.addresses.as_ref().expect("Expected truss addresses");
+    assert_eq!(addresses.address.len(), 1);
+    assert_eq!(addresses.address[0].r#break, 0);
+    assert_eq!(addresses.address[0].content, "46");
+    assert_eq!(addresses.network.len(), 3);
+    assert_eq!(addresses.network[0].geometry, "ethernet_1");
+    assert_eq!(addresses.network[0].ipv_4.as_deref(), Some("192.168.11.6"));
+    assert_eq!(addresses.network[0].subnetmask.as_deref(), Some("255.255.0.0"));
+    assert!(addresses.network[0].ipv_6.is_none());
+    assert_eq!(addresses.network[1].geometry, "ethernet_2");
+    assert_eq!(
+        addresses.network[1].ipv_6.as_deref(),
+        Some("2001:0db8:85a3:0000:0000:8a2e:0370:7345")
+    );
+    assert!(addresses.network[1].ipv_4.is_none());
+    assert_eq!(addresses.network[2].geometry, "wireless_1");
+    assert_eq!(addresses.network[2].dhcp.as_deref(), Some("on"));
+
+    let alignments = o.alignments.as_ref().expect("Expected truss alignments");
+    assert_eq!(alignments.alignment.len(), 1);
+    assert_eq!(alignments.alignment[0].geometry.as_deref(), Some("Beam"));
+    assert_eq!(alignments.alignment[0].up, "0,0,1");
+    assert_eq!(alignments.alignment[0].direction, "0,0,-1");
+
+    let custom_commands = o.custom_commands.as_ref().expect("Expected truss custom_commands");
+    assert_eq!(custom_commands.custom_command.len(), 2);
+    assert_eq!(custom_commands.custom_command[0], "Body_Pan,f 50");
+    assert_eq!(custom_commands.custom_command[1], "Yoke_Tilt,f 50");
+
+    let overwrites = o.overwrites.as_ref().expect("Expected truss overwrites");
+    assert_eq!(overwrites.overwrite.len(), 4);
+    assert_eq!(overwrites.overwrite[0].universal, "Universal Wheel 1.Universal Wheel Slot 1");
+    assert_eq!(overwrites.overwrite[0].target, "Wheel 1.Wheel Slot");
+    assert_eq!(overwrites.overwrite[3].universal, "Universal Wheel 1.Universal Wheel Slot 2");
+
+    let connections = o.connections.as_ref().expect("Expected truss connections");
+    assert_eq!(connections.connection.len(), 3);
+    assert_eq!(connections.connection[0].own, "Input");
+    assert_eq!(connections.connection[0].other, "Output1");
+    assert_eq!(connections.connection[0].to_object, "deadbeef-0000-0000-0000-000000000005");
+
+    let child_list = o.child_list.as_ref().expect("Expected truss child list");
+    assert_eq!(child_list.content.len(), 1);
+    let ChildListContent::SceneObject(child) = &child_list.content[0] else {
+        panic!("Expected SceneObject as Truss child");
+    };
+    assert_eq!(child.uuid, "deadbeef-0000-0000-0000-000000000014");
+    assert_eq!(child.geometries.symbol.len(), 1);
+    assert_eq!(
+        child.geometries.symbol[0].matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{500.0,0.0,0.0}")
+    );
+}
+
+#[test]
+fn test_complete_support_fields() {
+    let mvr = load_complete_mvr();
+
+    let o = find_complete_layer_object(
+        &mvr,
+        |i| match i {
+            ChildListContent::Support(o) if o.name == "Complete Support 1" => Some(o),
+            _ => None,
+        },
+        "Complete Support 1",
+    );
+
+    assert_eq!(o.uuid, "deadbeef-0000-0000-0000-000000000015");
+    assert_eq!(o.multipatch, "");
+    assert_eq!(
+        o.matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{5000.0,0.0,0.0}")
+    );
+    assert_eq!(o.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+    assert_eq!(o.position.as_deref(), Some("deadbeef-0000-0000-0000-000000000071"));
+    assert_eq!(o.function.as_deref(), Some("This support is meant for testing"));
+    assert_eq!(o.chain_length, 2.5);
+    assert_eq!(o.gdtf_spec.as_deref(), Some("Robe Lighting@Robin Spiider.gdtf"));
+    assert_eq!(o.gdtf_mode.as_deref(), Some("Mode 1 - Standard 16 bit"));
+    assert_eq!(o.cast_shadow, Some(true));
+    assert_eq!(o.fixture_id, "SUPPORT-0015");
+    assert_eq!(o.fixture_id_numeric, Some(1015));
+    assert_eq!(o.unit_number, Some(2015));
+    assert_eq!(o.custom_id_type, Some(3015));
+    assert_eq!(o.custom_id, Some(4015));
+    assert_eq!(o.fixture_type_id, Some(1));
+
+    let addresses = o.addresses.as_ref().expect("Expected support addresses");
+    assert_eq!(addresses.address.len(), 1);
+    assert_eq!(addresses.address[0].r#break, 0);
+    assert_eq!(addresses.address[0].content, "50");
+
+    let alignments = o.alignments.as_ref().expect("Expected support alignments");
+    assert_eq!(alignments.alignment.len(), 1);
+    assert_eq!(alignments.alignment[0].geometry.as_deref(), Some("SupportBeam"));
+    assert_eq!(alignments.alignment[0].up, "0,0,1");
+    assert_eq!(alignments.alignment[0].direction, "1,0,0");
+
+    let custom_commands = o.custom_commands.as_ref().expect("Expected support custom_commands");
+    assert_eq!(custom_commands.custom_command.len(), 1);
+    assert_eq!(custom_commands.custom_command[0], "Support_Lift,f 100");
+
+    let overwrites = o.overwrites.as_ref().expect("Expected support overwrites");
+    assert_eq!(overwrites.overwrite.len(), 1);
+    assert_eq!(overwrites.overwrite[0].universal, "Universal Support");
+    assert_eq!(overwrites.overwrite[0].target, "Support Target");
+
+    let connections = o.connections.as_ref().expect("Expected support connections");
+    assert_eq!(connections.connection.len(), 1);
+    assert_eq!(connections.connection[0].own, "SupportBase");
+    assert_eq!(connections.connection[0].other, "TrussBase");
+    assert_eq!(connections.connection[0].to_object, "deadbeef-0000-0000-0000-000000000013");
+
+    let child_list = o.child_list.as_ref().expect("Expected support child list");
+    assert_eq!(child_list.content.len(), 1);
+    let ChildListContent::SceneObject(child) = &child_list.content[0] else {
+        panic!("Expected SceneObject as Support child");
+    };
+    assert_eq!(child.uuid, "deadbeef-0000-0000-0000-000000000016");
+    assert_eq!(child.name, "Support Child");
+}
+
+#[test]
+fn test_complete_video_screen_fields() {
+    let mvr = load_complete_mvr();
+
+    let o = find_complete_layer_object(
+        &mvr,
+        |i| match i {
+            ChildListContent::VideoScreen(o) if o.name == "Complete VideoScreen 1" => Some(o),
+            _ => None,
+        },
+        "Complete VideoScreen 1",
+    );
+
+    assert_eq!(o.uuid, "deadbeef-0000-0000-0000-000000000017");
+    assert_eq!(o.multipatch, "");
+    assert_eq!(
+        o.matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{6000.0,0.0,0.0}")
+    );
+    assert_eq!(o.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+    assert_eq!(o.function.as_deref(), Some("This video screen is meant for testing"));
+    assert_eq!(o.gdtf_spec.as_deref(), Some("Robe Lighting@Robin Spiider.gdtf"));
+    assert_eq!(o.gdtf_mode.as_deref(), Some("Mode 1 - Standard 16 bit"));
+    assert_eq!(o.cast_shadow, Some(true));
+    assert_eq!(o.fixture_id, "SCREEN-0017");
+    assert_eq!(o.fixture_id_numeric, Some(1017));
+    assert_eq!(o.unit_number, Some(2017));
+    assert_eq!(o.custom_id_type, Some(3017));
+    assert_eq!(o.custom_id, Some(4017));
+    assert_eq!(o.fixture_type_id, Some(1));
+
+    let sources = o.sources.as_ref().expect("Expected sources");
+    assert_eq!(sources.source.len(), 1);
+    assert_eq!(sources.source[0].linked_geometry, "Display1");
+    assert_eq!(sources.source[0].r#type, SourceType::File);
+    assert_eq!(sources.source[0].content, "movie.mov");
+
+    let addresses = o.addresses.as_ref().expect("Expected video_screen addresses");
+    assert_eq!(addresses.address.len(), 1);
+    assert_eq!(addresses.address[0].r#break, 0);
+    assert_eq!(addresses.address[0].content, "51");
+
+    let alignments = o.alignments.as_ref().expect("Expected video_screen alignments");
+    assert_eq!(alignments.alignment.len(), 1);
+    assert_eq!(alignments.alignment[0].geometry.as_deref(), Some("ScreenSurface"));
+    assert_eq!(alignments.alignment[0].up, "0,1,0");
+    assert_eq!(alignments.alignment[0].direction, "0,0,-1");
+
+    let custom_commands =
+        o.custom_commands.as_ref().expect("Expected video_screen custom_commands");
+    assert_eq!(custom_commands.custom_command.len(), 1);
+    assert_eq!(custom_commands.custom_command[0], "Screen_Brightness,f 100");
+
+    let overwrites = o.overwrites.as_ref().expect("Expected video_screen overwrites");
+    assert_eq!(overwrites.overwrite.len(), 1);
+    assert_eq!(overwrites.overwrite[0].universal, "Universal Screen");
+    assert_eq!(overwrites.overwrite[0].target, "Screen Target");
+
+    let connections = o.connections.as_ref().expect("Expected video_screen connections");
+    assert_eq!(connections.connection.len(), 1);
+    assert_eq!(connections.connection[0].own, "ScreenInput");
+    assert_eq!(connections.connection[0].other, "ProjectorOutput");
+    assert_eq!(connections.connection[0].to_object, "deadbeef-0000-0000-0000-000000000018");
+
+    let child_list = o.child_list.as_ref().expect("Expected video_screen child list");
+    assert_eq!(child_list.content.len(), 1);
+    let ChildListContent::SceneObject(child) = &child_list.content[0] else {
+        panic!("Expected SceneObject as VideoScreen child");
+    };
+    assert_eq!(child.uuid, "deadbeef-0000-0000-0000-000000000019");
+    assert_eq!(child.name, "VideoScreen Child");
+}
+
+#[test]
+fn test_complete_projector_fields() {
+    let mvr = load_complete_mvr();
+
+    let o = find_complete_layer_object(
+        &mvr,
+        |i| match i {
+            ChildListContent::Projector(o) if o.name == "Complete Projector 1" => Some(o),
+            _ => None,
+        },
+        "Complete Projector 1",
+    );
+
+    assert_eq!(o.uuid, "deadbeef-0000-0000-0000-000000000018");
+    assert_eq!(o.multipatch, "");
+    assert_eq!(
+        o.matrix.as_deref(),
+        Some("{1.0,0.0,0.0}{0.0,1.0,0.0}{0.0,0.0,1.0}{7000.0,0.0,0.0}")
+    );
+    assert_eq!(o.classing.as_deref(), Some("deadbeef-0000-0000-0000-000000000064"));
+    assert_eq!(o.gdtf_spec.as_deref(), Some("ProjectorFixture.gdtf"));
+    assert_eq!(o.gdtf_mode.as_deref(), Some("Mode 1 - Standard 16 bit"));
+    assert_eq!(o.fixture_id, "PROJECTOR-0018");
+    assert_eq!(o.fixture_id_numeric, Some(1018));
+    assert_eq!(o.unit_number, Some(2018));
+    assert_eq!(o.custom_id_type, Some(3018));
+    assert_eq!(o.custom_id, Some(4018));
+    assert_eq!(o.fixture_type_id, Some(1));
+
+    assert_eq!(o.projections.projection.len(), 1);
+    let proj = &o.projections.projection[0];
+    assert_eq!(proj.source.len(), 1);
+    assert_eq!(proj.source[0].linked_geometry, "Beam1");
+    assert_eq!(proj.source[0].r#type, SourceType::File);
+    assert_eq!(proj.source[0].content, "projector_content.mov");
+    assert_eq!(proj.scale_handeling.len(), 1);
+    assert_eq!(proj.scale_handeling[0].r#enum, Scale::ScaleKeepRatio);
+
+    let addresses = o.addresses.as_ref().expect("Expected projector addresses");
+    assert_eq!(addresses.address.len(), 1);
+    assert_eq!(addresses.address[0].r#break, 0);
+    assert_eq!(addresses.address[0].content, "52");
+
+    let alignments = o.alignments.as_ref().expect("Expected projector alignments");
+    assert_eq!(alignments.alignment.len(), 1);
+    assert_eq!(alignments.alignment[0].geometry.as_deref(), Some("Beam"));
+    assert_eq!(alignments.alignment[0].up, "0,1,0");
+    assert_eq!(alignments.alignment[0].direction, "0,0,-1");
+
+    let custom_commands = o.custom_commands.as_ref().expect("Expected projector custom_commands");
+    assert_eq!(custom_commands.custom_command.len(), 1);
+    assert_eq!(custom_commands.custom_command[0], "Projector_Zoom,f 100");
+
+    let overwrites = o.overwrites.as_ref().expect("Expected projector overwrites");
+    assert_eq!(overwrites.overwrite.len(), 1);
+    assert_eq!(overwrites.overwrite[0].universal, "Universal Projector");
+    assert_eq!(overwrites.overwrite[0].target, "Projector Target");
+
+    let connections = o.connections.as_ref().expect("Expected projector connections");
+    assert_eq!(connections.connection.len(), 1);
+    assert_eq!(connections.connection[0].own, "ProjectorOutput");
+    assert_eq!(connections.connection[0].other, "ScreenInput");
+    assert_eq!(connections.connection[0].to_object, "deadbeef-0000-0000-0000-000000000017");
+
+    let child_list = o.child_list.as_ref().expect("Expected projector child list");
+    assert_eq!(child_list.content.len(), 1);
+    let ChildListContent::SceneObject(child) = &child_list.content[0] else {
+        panic!("Expected SceneObject as Projector child");
+    };
+    assert_eq!(child.uuid, "deadbeef-0000-0000-0000-000000000020");
+    assert_eq!(child.name, "Projector Child");
+}
+
+#[test]
+fn test_mvr_bundle_from_archive() {
+    let archive_path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("data").join("complete_mvr.mvr");
+
+    let mvr = Mvr::from_archive(archive_path);
+    let desc = mvr.bundle().description();
+
+    assert_eq!(desc.provider, Some("Handwritten".to_string()));
+    assert_eq!(desc.ver_major, 1);
+    assert_eq!(desc.ver_minor, 6);
+    assert_eq!(desc.scene.layers.layer.len(), 3);
+
+    let aux = desc.scene.aux_data.as_ref().expect("Expected AUXData");
+    assert_eq!(aux.symdef.len(), 5);
+}
+
+#[test]
+fn test_mvr_bundle_resources() {
+    let mvr = load_complete_mvr();
+    let resources = mvr.bundle().resources();
+
+    let gdtf_key = ResourceKey::new("Robe Lighting@Robin Spiider.gdtf");
+    let gdtf_entry = resources.get(&gdtf_key).expect("Expected GDTF resource entry");
+    assert_eq!(gdtf_entry.kind, ResourceKind::Gdtf);
+
+    let xml_key = ResourceKey::new("GeneralSceneDescription.xml");
+    let xml_entry = resources.get(&xml_key).expect("Expected XML resource entry");
+    assert_eq!(xml_entry.kind, ResourceKind::Other);
+
+    let missing_key = ResourceKey::new("nonexistent.glb");
+    assert!(!resources.contains_key(&missing_key));
 }
