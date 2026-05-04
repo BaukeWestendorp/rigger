@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     net::{Ipv4Addr, Ipv6Addr},
-    str::FromStr,
+    str::FromStr as _,
 };
 
 use uuid::Uuid;

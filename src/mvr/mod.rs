@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fmt, path::PathBuf, str};
 
 use uuid::Uuid;
 
@@ -280,7 +280,7 @@ impl<T> From<Uuid> for NodeId<T> {
     }
 }
 
-impl<T> FromStr for NodeId<T> {
+impl<T> str::FromStr for NodeId<T> {
     type Err = uuid::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -288,7 +288,7 @@ impl<T> FromStr for NodeId<T> {
     }
 }
 
-impl<T> Debug for NodeId<T> {
+impl<T> fmt::Debug for NodeId<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "NodeId<{}>({:?})", std::any::type_name::<T>(), self.uuid)
     }
