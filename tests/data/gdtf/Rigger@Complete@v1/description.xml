@@ -1,36 +1,364 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no" ?>
 <GDTF DataVersion="1.2">
-  <FixtureType
+	<FixtureType
 		CanHaveChildren="Yes"
 		Description="Description"
 		FixtureTypeID="ab128988-6cf0-4a87-93de-e0b2d6c7aa19"
 		ShortName="Short Name"
 		LongName="Long Name"
-		Manufacturer="Manufacturer"
+		Manufacturer="Rigger"
 		Name="Name"
 		RefFT="f0a9b846-1051-4016-a054-b1d4ff90539e"
 		Thumbnail="thumbnail"
 		ThumbnailOffsetX="197"
 		ThumbnailOffsetY="142"
 	>
-    <AttributeDefinitions>
-      <FeatureGroups />
-      <Attributes />
-    </AttributeDefinitions>
-    <Wheels>
-    </Wheels>
-    <PhysicalDescriptions>
-    </PhysicalDescriptions>
-    <Models>
-    </Models>
-    <Geometries>
-    </Geometries>
-    <DMXModes>
-    </DMXModes>
-    <Revisions>
-    </Revisions>
-    <FTPresets />
-    <Protocols>
-    </Protocols>
-  </FixtureType>
+		<AttributeDefinitions>
+			<ActivationGroups>
+				<ActivationGroup Name="PanTilt" />
+				<ActivationGroup Name="XYZ" />
+				<ActivationGroup Name="Rot_XYZ" />
+				<ActivationGroup Name="Scale_XYZ" />
+				<ActivationGroup Name="ColorRGB" />
+				<ActivationGroup Name="ColorHSB" />
+				<ActivationGroup Name="ColorCIE" />
+				<ActivationGroup Name="ColorIndirect" />
+				<ActivationGroup Name="Prism" />
+				<ActivationGroup Name="BeamShaper" />
+				<ActivationGroup Name="Shaper" />
+				<ActivationGroup Name="Gobo1" />
+				<ActivationGroup Name="Gobo1Pos" />
+				<ActivationGroup Name="AnimationWheel1" />
+				<ActivationGroup Name="AnimationWheel1Pos" />
+				<ActivationGroup Name="AnimationSystem1" />
+				<ActivationGroup Name="AnimationSystem1Pos" />
+			</ActivationGroups>
+			<FeatureGroups>
+				<FeatureGroup Name="Position" Pretty="Position">
+					<Feature Name="PanTilt" />
+				</FeatureGroup>
+				<FeatureGroup Name="Dimmer" Pretty="Dimmer">
+					<Feature Name="Dimmer" />
+				</FeatureGroup>
+				<FeatureGroup Name="Color" Pretty="Color">
+					<Feature Name="Color" />
+				</FeatureGroup>
+				<FeatureGroup Name="Gobo" Pretty="Gobo">
+					<Feature Name="Gobo" />
+				</FeatureGroup>
+				<FeatureGroup Name="Beam" Pretty="Beam">
+					<Feature Name="Beam" />
+				</FeatureGroup>
+				<FeatureGroup Name="Focus" Pretty="Focus">
+					<Feature Name="Focus" />
+				</FeatureGroup>
+				<FeatureGroup Name="Control" Pretty="Control">
+					<Feature Name="Control" />
+				</FeatureGroup>
+			</FeatureGroups>
+			<Attributes>
+				<Attribute Name="Pan" Pretty="Pan" ActivationGroup="PanTilt" Feature="Position.PanTilt" PhysicalUnit="Angle" />
+				<Attribute Name="Tilt" Pretty="Tilt" ActivationGroup="PanTilt" Feature="Position.PanTilt" PhysicalUnit="Angle" />
+				<Attribute Name="Dimmer" Pretty="Dimmer" Feature="Dimmer.Dimmer" PhysicalUnit="LuminousIntensity" />
+				<Attribute Name="ColorAdd_R" Pretty="R" Feature="Color.Color" PhysicalUnit="ColorComponent" Color="0.7347,0.2653,0.2126" />
+				<Attribute Name="ColorAdd_G" Pretty="G" Feature="Color.Color" PhysicalUnit="ColorComponent" Color="0.1596,0.8404,0.7152" />
+				<Attribute Name="ColorAdd_B" Pretty="B" Feature="Color.Color" PhysicalUnit="ColorComponent" Color="0.0366,0.0001,0.0722" />
+				<Attribute Name="Gobo1" Pretty="Gobo 1" Feature="Gobo.Gobo" PhysicalUnit="None" />
+				<Attribute Name="Zoom" Pretty="Zoom" Feature="Beam.Beam" PhysicalUnit="Angle" />
+				<Attribute Name="Focus1" Pretty="Focus" Feature="Focus.Focus" PhysicalUnit="Length" />
+				<Attribute Name="Shutter1" Pretty="Shutter" Feature="Control.Control" PhysicalUnit="Frequency">
+					<SubPhysicalUnit Type="Duration" PhysicalUnit="Time" PhysicalFrom="0" PhysicalTo="1" />
+					<SubPhysicalUnit Type="DutyCycle" PhysicalUnit="Percent" PhysicalFrom="0" PhysicalTo="100" />
+				</Attribute>
+			</Attributes>
+		</AttributeDefinitions>
+
+		<Wheels>
+			<Wheel Name="ColorWheel">
+				<Slot Name="Open" Color="{0.3127,0.3290,100.0}" BeamInfluence="Open" />
+				<Slot Name="Red" Color="{0.7347,0.2653,25.0}" Filter="RedFilter" />
+				<Slot Name="Green" Color="{0.1596,0.8404,70.0}" Filter="GreenFilter" />
+				<Slot Name="Blue" Color="{0.1500,0.0600,5.0}" />
+			</Wheel>
+			<Wheel Name="GoboWheel">
+				<Slot Name="Open" Color="{0.3127,0.3290,100.0}" BeamInfluence="Open" />
+				<Slot Name="Gobo1" MediaFileName="gobo1" />
+				<Slot Name="Closed" Color="{0.3127,0.3290,0.0}" BeamInfluence="Closed" />
+				<Slot Name="Prism" Color="{0.3127,0.3290,100.0}">
+					<Facet Color="{0.3127,0.3290,100.0}" Rotation="{0.866025,0.500000,0.000000,-0.500000,0.866025,0.000000,0.000000,0.000000,1.000000}" />
+					<Facet Color="{0.3127,0.3290,100.0}" Rotation="{0.866025,-0.500000,0.000000,0.500000,0.866025,0.000000,0.000000,0.000000,1.000000}" />
+					<Facet Color="{0.3127,0.3290,100.0}" Rotation="{-1.000000,0.000000,0.000000,0.000000,-1.000000,0.000000,0.000000,0.000000,1.000000}" />
+				</Slot>
+				<Slot Name="AnimWheel" MediaFileName="animwheel">
+					<AnimationSystem P1="-0.5,0" P2="0,0.5" P3="0.5,0" Radius="0.3" />
+				</Slot>
+			</Wheel>
+		</Wheels>
+
+		<PhysicalDescriptions>
+			<Emitters>
+				<Emitter Name="WhiteLight" Color="{0.3127,0.3290,100.0}" DiodePart="LED-WW-3000K">
+					<Measurement Physical="100" LuminousIntensity="800" InterpolationTo="Linear">
+						<MeasurementPoint WaveLength="400" Energy="0.02" />
+						<MeasurementPoint WaveLength="500" Energy="0.15" />
+						<MeasurementPoint WaveLength="600" Energy="0.18" />
+						<MeasurementPoint WaveLength="700" Energy="0.05" />
+					</Measurement>
+					<Measurement Physical="50" LuminousIntensity="380" InterpolationTo="Step" />
+				</Emitter>
+				<Emitter Name="RedLED" DominantWaveLength="630" DiodePart="LED-R-630nm">
+					<Measurement Physical="100" LuminousIntensity="200" InterpolationTo="Linear">
+						<MeasurementPoint WaveLength="600" Energy="0.05" />
+						<MeasurementPoint WaveLength="630" Energy="0.95" />
+						<MeasurementPoint WaveLength="660" Energy="0.10" />
+					</Measurement>
+				</Emitter>
+				<Emitter Name="GreenLED" DominantWaveLength="525">
+					<Measurement Physical="100" LuminousIntensity="600" InterpolationTo="Log" />
+				</Emitter>
+				<Emitter Name="BlueLED" DominantWaveLength="465">
+					<Measurement Physical="100" LuminousIntensity="100" InterpolationTo="Linear" />
+				</Emitter>
+			</Emitters>
+			<Filters>
+				<Filter Name="RedFilter" Color="{0.7347,0.2653,25.0}">
+					<Measurement Physical="100" Transmission="0.25" InterpolationTo="Linear">
+						<MeasurementPoint WaveLength="620" Energy="0.80" />
+						<MeasurementPoint WaveLength="650" Energy="0.95" />
+					</Measurement>
+					<Measurement Physical="50" Transmission="0.12" InterpolationTo="Linear" />
+				</Filter>
+				<Filter Name="GreenFilter" Color="{0.1596,0.8404,70.0}">
+					<Measurement Physical="100" Transmission="0.70" InterpolationTo="Linear" />
+				</Filter>
+			</Filters>
+			<ColorSpace Name="Default" Mode="sRGB" />
+			<AdditionalColorSpaces>
+				<ColorSpace Name="CustomSpace" Mode="Custom" Red="{0.7000,0.3000,0.2126}" Green="{0.2000,0.7000,0.7152}" Blue="{0.1500,0.0600,0.0722}" WhitePoint="{0.3127,0.3290,1.0000}" />
+				<ColorSpace Name="ProPhotoSpace" Mode="ProPhoto" />
+			</AdditionalColorSpaces>
+			<Gamuts>
+				<Gamut Name="FullGamut" Points="{0.7347,0.2653,0.2126},{0.1596,0.8404,0.7152},{0.0366,0.0001,0.0722}" />
+			</Gamuts>
+			<DMXProfiles>
+				<DMXProfile Name="DimmerCurve">
+					<Point DMXPercentage="0" CFC0="0" CFC1="0" CFC2="0" CFC3="0" />
+					<Point DMXPercentage="50" CFC0="0.2" CFC1="0.8" CFC2="0.001" CFC3="0" />
+					<Point DMXPercentage="100" CFC0="1.0" CFC1="0" CFC2="0" CFC3="0" />
+				</DMXProfile>
+			</DMXProfiles>
+			<CRIs>
+				<CRIGroup ColorTemperature="6000">
+					<CRI CES="CES01" ColorRenderingIndex="95" />
+					<CRI CES="CES02" ColorRenderingIndex="93" />
+					<CRI CES="CES03" ColorRenderingIndex="97" />
+					<CRI CES="CES99" ColorRenderingIndex="90" />
+				</CRIGroup>
+				<CRIGroup ColorTemperature="3200">
+					<CRI CES="CES01" ColorRenderingIndex="99" />
+					<CRI CES="CES02" ColorRenderingIndex="98" />
+				</CRIGroup>
+			</CRIs>
+			<Properties>
+				<OperatingTemperature Low="-10" High="45" />
+				<Weight Value="15.5" />
+				<LegHeight Value="0.12" />
+			</Properties>
+		</PhysicalDescriptions>
+
+		<Models>
+			<!-- <Model Name="BaseModel" Length="0.400" Width="0.300" Height="0.200" PrimitiveType="Base" File="base" SVGOffsetX="100" SVGOffsetY="150" SVGBottomOffsetX="100" SVGBottomOffsetY="150" SVGSideOffsetX="50" SVGSideOffsetY="75" SVGFrontOffsetX="50" SVGFrontOffsetY="75" />
+      <Model Name="YokeModel" Length="0.350" Width="0.100" Height="0.300" PrimitiveType="Yoke" />
+      <Model Name="HeadModel" Length="0.300" Width="0.300" Height="0.350" PrimitiveType="Head" File="head" />
+      <Model Name="BeamModel" Length="0.050" Width="0.050" Height="0.050" PrimitiveType="Conventional" />
+      <Model Name="PixelModel" Length="0.020" Width="0.020" Height="0.020" PrimitiveType="Cube" />
+      <Model Name="ConventionalModel" Length="0.200" Width="0.200" Height="0.400" PrimitiveType="Conventional1_1" />
+      <Model Name="ScannerModel" Length="0.300" Width="0.200" Height="0.250" PrimitiveType="Scanner1_1" /> -->
+		</Models>
+
+		<Geometries>
+			<!-- <Geometry Name="Body" Model="BaseModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,0,1}">
+        <Axis Name="Yoke" Model="YokeModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,-0.3,1}">
+          <Axis Name="Head" Model="HeadModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,-0.15,1}">
+            <FilterBeam Name="BarnDoor" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,0,1}" /> <FilterColor Name="FilterColor1" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,-0.05,1}" /> <FilterGobo Name="FilterGobo1" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,-0.10,1}" /> <FilterShaper Name="Shaper" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,-0.15,1}" /> <Beam Name="Beam1" Model="BeamModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,-0.20,1}" LampType="LED" PowerConsumption="350" LuminousFlux="15000" ColorTemperature="6000" BeamAngle="5.0" FieldAngle="8.0" ThrowRatio="2.5" RectangleRatio="1.7777" BeamRadius="0.05" BeamType="Spot" ColorRenderingIndex="95" EmitterSpectrum="WhiteLight" Photometric="fixture_beam" />
+          </Axis>
+        </Axis>
+
+        <Geometry Name="Pixel" Model="PixelModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0.05,0,0,1}"> <Beam Name="PixelBeam" Model="BeamModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,0,1}" LampType="LED" PowerConsumption="5" LuminousFlux="500" ColorTemperature="6500" BeamAngle="15.0" FieldAngle="20.0" BeamRadius="0.01" BeamType="Wash" ColorRenderingIndex="90" />
+        </Geometry>
+
+        <GeometryReference Name="PixelRef1" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0.05,0.05,0,1}" Geometry="Pixel">
+          <Break DMXBreak="2" DMXOffset="1" />
+        </GeometryReference> <GeometryReference Name="PixelRef2" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{-0.05,0.05,0,1}" Geometry="Pixel" Model="PixelModel" Photometric="pixel_overwrite">
+          <Break DMXBreak="2" DMXOffset="4" />
+          <Break DMXBreak="3" DMXOffset="1" />
+        </GeometryReference> <MediaServerLayer Name="MediaLayer" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0.1,0,1}" /> <MediaServerCamera Name="MediaCamera" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0.2,0,1}" /> <MediaServerMaster Name="MediaMaster" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0.3,0,1}" /> <Display Name="Display1" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0.4,0,1}" Texture="screen_texture" /> <Laser Name="Laser1" Model="BeamModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0.1,0,0,1}" ColorType="SingleWaveLength" Color="532" OutputStrength="2.5" Emitter="GreenLED" BeamDiameter="0.003" BeamDivergenceMin="0.5" BeamDivergenceMax="1.5" ScanAnglePan="60" ScanAngleTilt="45" ScanSpeed="30">
+          <Protocol Name="ILDA" />
+        </Laser> <WiringObject Name="PowerInput" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{-0.15,0,0.05,1}" ConnectorType="powerCON TRUE1" ComponentType="Input" SignalType="Power" PinCount="3" ElectricalPayLoad="350" VoltageRangeMin="100" VoltageRangeMax="240" FrequencyRangeMin="50" FrequencyRangeMax="60" CosPhi="0.95" SignalLayer="1" Orientation="Left" WireGroup="MainPower" /> <WiringObject Name="DMXInput" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{-0.10,0,0.05,1}" ConnectorType="XLR5" ComponentType="NetworkInput" SignalType="DMX512" PinCount="5" SignalLayer="2" Orientation="Left" WireGroup="DMXData">
+          <PinPatch ToWiringObject="DMXOutput" FromPin="1" ToPin="1" />
+          <PinPatch ToWiringObject="DMXOutput" FromPin="2" ToPin="2" />
+        </WiringObject> <WiringObject Name="DMXOutput" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{-0.05,0,0.05,1}" ConnectorType="XLR5" ComponentType="NetworkOutput" SignalType="DMX512" PinCount="5" SignalLayer="2" Orientation="Right" WireGroup="DMXData" /> <WiringObject Name="Fuse1" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{-0.20,0,0.05,1}" ComponentType="Fuse" SignalType="Power" PinCount="2" FuseCurrent="6.3" FuseRating="B" SignalLayer="1" Orientation="Top" WireGroup="MainPower" /> <WiringObject Name="NetworkProvider1" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0.20,0,0.05,1}" ConnectorType="RJ45" ComponentType="NetworkProvider" SignalType="Protocol" PinCount="8" MaxPayLoad="1000" Voltage="48" SignalLayer="3" Orientation="Bottom" WireGroup="Network" /> <Inventory Name="RainCover" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,0.1,1}" Count="1" /> <Structure Name="BodyFrame" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,0,1}" LinkedGeometry="Body" StructureType="CenterLineBased" CrossSectionType="Tube" CrossSectionHeight="0.050" CrossSectionWallThickness="0.003" /> <Support Name="RopeSupport" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0,0.2,1}" SupportType="Rope" RopeCrossSection="6mm Steel Wire" RopeOffset="0,0,3" CapacityX="1000" CapacityY="1000" CapacityZ="5000" CapacityXX="100" CapacityYY="100" CapacityZZ="50" /> <Support Name="GroundSupport" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,-0.5,0,1}" SupportType="GroundSupport" CapacityX="5000" CapacityY="5000" CapacityZ="10000" CapacityXX="200" CapacityYY="200" CapacityZZ="100" ResistanceX="1000" ResistanceY="1000" ResistanceZ="5000" ResistanceXX="50" ResistanceYY="50" ResistanceZZ="25" />
+
+        <Magnet Name="MagnetPoint" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,0.15,0,1}" /> <Speaker Name="Speaker1" Model="ConventionalModel" Position="{1.000000,0.000000,0.000000,0.000000}{0.000000,1.000000,0.000000,0.000000}{0.000000,0.000000,1.000000,0.000000}{0,-0.1,0,1}" FrequencyMin="80" FrequencyMax="18000" AngleVertical="60" AngleHorizontal="90" MaxSPL="115" Impedance="8" />
+      </Geometry> -->
+		</Geometries>
+
+		<DMXModes>
+			<!-- <DMXMode Name="Standard" Description="Standard 12-channel mode" Geometry="Body">
+        <DMXChannels>
+          <DMXChannel DMXBreak="1" Offset="1,2" InitialFunction="Yoke_Pan.Pan.Pan 1" Highlight="32767/2" Geometry="Yoke">
+            <LogicalChannel Attribute="Pan" Snap="No" Master="None" MibFade="0" DMXChangeTimeLimit="0">
+              <ChannelFunction Name="Pan 1" Attribute="Pan" DMXFrom="0/2" Default="32767/2" PhysicalFrom="-270" PhysicalTo="270" RealFade="2.5" RealAcceleration="0.5" CustomName="pan">
+                <ChannelSet Name="Left" DMXFrom="0/2" PhysicalFrom="-270" PhysicalTo="0" />
+                <ChannelSet Name="Center" DMXFrom="32767/2" PhysicalFrom="0" PhysicalTo="0" />
+                <ChannelSet Name="Right" DMXFrom="32768/2" PhysicalFrom="0" PhysicalTo="270" />
+              </ChannelFunction>
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="1" Offset="3,4" Highlight="32767/2" Geometry="Yoke">
+            <LogicalChannel Attribute="Tilt" Snap="No" Master="None" MibFade="0" DMXChangeTimeLimit="0">
+              <ChannelFunction Name="Tilt 1" Attribute="Tilt" DMXFrom="0/2" Default="32767/2" PhysicalFrom="-135" PhysicalTo="135" RealFade="1.8" RealAcceleration="0.3" CustomName="tilt">
+                <ChannelSet Name="Up" DMXFrom="0/2" PhysicalFrom="-135" PhysicalTo="0" />
+                <ChannelSet Name="Center" DMXFrom="32767/2" PhysicalFrom="0" PhysicalTo="0" />
+                <ChannelSet Name="Down" DMXFrom="32768/2" PhysicalFrom="0" PhysicalTo="135" />
+              </ChannelFunction>
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="1" Offset="5" Highlight="255/1" Geometry="Head">
+            <LogicalChannel Attribute="Dimmer" Master="Grand" MibFade="0.2" DMXChangeTimeLimit="0"> <ChannelFunction Name="Dimmer 1" Attribute="Dimmer" DMXFrom="0/1" Default="255/1" PhysicalFrom="0" PhysicalTo="1" DMXProfile="DimmerCurve" Min="0" Max="1" CustomName="dimmer" PhotometricFrom="fixture_dim_00" PhotometricTo="fixture_dim_100">
+                <ChannelSet Name="Closed" DMXFrom="0/1" PhysicalFrom="0" PhysicalTo="0" />
+                <ChannelSet DMXFrom="1/1" />
+                <ChannelSet Name="Full" DMXFrom="255/1" PhysicalFrom="1" PhysicalTo="1" />
+                <SubChannelSet Name="Duration" PhysicalFrom="0" PhysicalTo="1" SubPhysicalUnit="Shutter1.Duration" DMXProfile="DimmerCurve" />
+                <SubChannelSet Name="DutyCycle" PhysicalFrom="0" PhysicalTo="100" SubPhysicalUnit="Shutter1.DutyCycle" />
+                <PhotometricSet DMXFrom="0/1" Beam="Beam1" PhotometricFrom="fixture_dim_00" PhotometricTo="fixture_dim_100" />
+              </ChannelFunction>
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="1" Offset="6" Highlight="255/1" Geometry="Head">
+            <LogicalChannel Attribute="ColorAdd_R"> <ChannelFunction Name="ColorAdd_R 1" Attribute="ColorAdd_R" DMXFrom="0/1" Default="255/1" PhysicalFrom="0" PhysicalTo="1" Emitter="RedLED" ColorSpace="AdditionalColorSpaces.CustomSpace" Gamut="FullGamut" OriginalAttribute="RED" />
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="1" Offset="7" Highlight="255/1" Geometry="Head">
+            <LogicalChannel Attribute="ColorAdd_G">
+              <ChannelFunction Name="ColorAdd_G 1" Attribute="ColorAdd_G" DMXFrom="0/1" Default="255/1" PhysicalFrom="0" PhysicalTo="1" Emitter="GreenLED" OriginalAttribute="GREEN" />
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="1" Offset="8" Highlight="255/1" Geometry="Head">
+            <LogicalChannel Attribute="ColorAdd_B">
+              <ChannelFunction Name="ColorAdd_B 1" Attribute="ColorAdd_B" DMXFrom="0/1" Default="255/1" PhysicalFrom="0" PhysicalTo="1" Emitter="BlueLED" Filter="RedFilter" OriginalAttribute="BLUE" />
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="1" Offset="9" Highlight="1/1" Geometry="FilterGobo1">
+            <LogicalChannel Attribute="Gobo1" Snap="Yes" Master="Group">
+              <ChannelFunction Name="Gobo1 1" Attribute="Gobo1" DMXFrom="0/1" Default="0/1" Wheel="GoboWheel" ModeMaster="Head_Dimmer" ModeFrom="1/1" ModeTo="255/1">
+                <ChannelSet Name="Open" DMXFrom="0/1" WheelSlotIndex="1" />
+                <ChannelSet Name="Gobo1" DMXFrom="64/1" WheelSlotIndex="2" />
+                <ChannelSet Name="Closed" DMXFrom="96/1" WheelSlotIndex="3" />
+                <ChannelSet Name="Prism" DMXFrom="128/1" WheelSlotIndex="4" />
+                <ChannelSet Name="AnimWheel" DMXFrom="192/1" WheelSlotIndex="5" />
+              </ChannelFunction>
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="1" Offset="10" Highlight="128/1" Geometry="Beam1">
+            <LogicalChannel Attribute="Zoom">
+              <ChannelFunction Name="Zoom 1" Attribute="Zoom" DMXFrom="0/1" Default="128/1" PhysicalFrom="5.0" PhysicalTo="60.0" CustomName="zoom" />
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="1" Offset="11" Highlight="128/1" Geometry="Head">
+            <LogicalChannel Attribute="Focus1">
+              <ChannelFunction Name="Focus1 1" Attribute="Focus1" DMXFrom="0/1" Default="128/1" PhysicalFrom="1.0" PhysicalTo="30.0" />
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="1" Offset="12" Highlight="255/1" Geometry="Head">
+            <LogicalChannel Attribute="Shutter1" Snap="Yes">
+              <ChannelFunction Name="Shutter1 1" Attribute="Shutter1" DMXFrom="0/1" Default="255/1" PhysicalFrom="0" PhysicalTo="0" OriginalAttribute="SHUTTER">
+                <ChannelSet Name="Closed" DMXFrom="0/1" />
+                <ChannelSet Name="Open" DMXFrom="32/1" PhysicalFrom="0" PhysicalTo="0" />
+              </ChannelFunction>
+              <ChannelFunction Name="Shutter1 2" Attribute="Shutter1" DMXFrom="64/1" Default="128/1" PhysicalFrom="0.5" PhysicalTo="25" OriginalAttribute="STROBE">
+                <ChannelSet Name="Slow" DMXFrom="64/1" PhysicalFrom="0.5" PhysicalTo="5" />
+                <ChannelSet Name="Fast" DMXFrom="192/1" PhysicalFrom="5" PhysicalTo="25" />
+              </ChannelFunction>
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="Overwrite" Offset="1" Default="255/1" Highlight="255/1" Geometry="Pixel">
+            <LogicalChannel Attribute="ColorAdd_R">
+              <ChannelFunction Name="ColorAdd_R 1" Attribute="ColorAdd_R" DMXFrom="0/1" />
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="Overwrite" Offset="2" Default="255/1" Highlight="255/1" Geometry="Pixel">
+            <LogicalChannel Attribute="ColorAdd_G">
+              <ChannelFunction Name="ColorAdd_G 1" Attribute="ColorAdd_G" DMXFrom="0/1" />
+            </LogicalChannel>
+          </DMXChannel>
+          <DMXChannel DMXBreak="Overwrite" Offset="3" Default="255/1" Highlight="255/1" Geometry="Pixel">
+            <LogicalChannel Attribute="ColorAdd_B">
+              <ChannelFunction Name="ColorAdd_B 1" Attribute="ColorAdd_B" DMXFrom="0/1" />
+            </LogicalChannel>
+          </DMXChannel>
+        </DMXChannels>
+        <Relations>
+          <Relation Name="VirtualDimmer_R" Master="Head_Dimmer" Follower="Pixel_ColorAdd_R.ColorAdd_R.ColorAdd_R 1" Type="Multiply" />
+          <Relation Name="VirtualDimmer_G" Master="Head_Dimmer" Follower="Pixel_ColorAdd_G.ColorAdd_G.ColorAdd_G 1" Type="Multiply" />
+          <Relation Name="VirtualDimmer_B" Master="Head_Dimmer" Follower="Pixel_ColorAdd_B.ColorAdd_B.ColorAdd_B 1" Type="Multiply" />
+          <Relation Name="GoboModeOverride" Master="Head_Dimmer" Follower="FilterGobo1_Gobo1.Gobo1.Gobo1 1" Type="Override" />
+        </Relations>
+        <FTMacros>
+          <FTMacro Name="Reset" ChannelFunction="Head_Dimmer.Dimmer.Dimmer 1">
+            <MacroDMX>
+              <MacroDMXStep Duration="2.0">
+                <MacroDMXValue Value="0/1" DMXChannel="Head_Dimmer" />
+                <MacroDMXValue Value="32767/2" DMXChannel="Yoke_Pan" />
+                <MacroDMXValue Value="32767/2" DMXChannel="Yoke_Tilt" />
+              </MacroDMXStep>
+              <MacroDMXStep Duration="1.0">
+                <MacroDMXValue Value="255/1" DMXChannel="Head_Dimmer" />
+              </MacroDMXStep>
+            </MacroDMX>
+          </FTMacro>
+          <FTMacro Name="FullOn">
+            <MacroDMX>
+              <MacroDMXStep Duration="0.5">
+                <MacroDMXValue Value="255/1" DMXChannel="Head_Dimmer" />
+                <MacroDMXValue Value="255/1" DMXChannel="Head_ColorAdd_R" />
+                <MacroDMXValue Value="255/1" DMXChannel="Head_ColorAdd_G" />
+                <MacroDMXValue Value="255/1" DMXChannel="Head_ColorAdd_B" />
+              </MacroDMXStep>
+            </MacroDMX>
+          </FTMacro>
+        </FTMacros>
+      </DMXMode> -->
+		</DMXModes>
+
+		<Revisions>
+			<!-- <Revision Text="Initial release" Date="2024-01-15T10:00:00" UserID="0" ModifiedBy="Rigger" />
+      <Revision Text="Added pixel support and wiring objects" Date="2024-06-01T14:30:00" UserID="1042" ModifiedBy="Rigger v2" /> -->
+		</Revisions>
+
+		<FTPresets />
+
+		<Protocols>
+			<!-- <FTRDM ManufacturerID="0x5249" DeviceModelID="0x0001">
+        <SoftwareVersionID Value="0x00010001">
+          <DMXPersonality Value="0x01" DMXMode="Standard" />
+        </SoftwareVersionID>
+        <SoftwareVersionID Value="0x00010002">
+          <DMXPersonality Value="0x01" DMXMode="Standard" />
+        </SoftwareVersionID>
+      </FTRDM>
+      <Art-Net>
+        <Map Key="0" Value="0" />
+        <Map Key="255" Value="255" />
+      </Art-Net>
+      <sACN>
+        <Map Key="0" Value="0" />
+        <Map Key="255" Value="255" />
+      </sACN>
+      <PosiStageNet />
+      <OpenSoundControl />
+      <CITP /> -->
+		</Protocols>
+
+	</FixtureType>
 </GDTF>

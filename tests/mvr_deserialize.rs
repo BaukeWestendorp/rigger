@@ -1,7 +1,7 @@
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     path::Path,
-    str::FromStr,
+    str::FromStr as _,
 };
 
 use rigger::mvr::{
