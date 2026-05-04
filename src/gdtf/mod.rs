@@ -1,12 +1,17 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    str::{self, FromStr},
+};
 
 use uuid::Uuid;
 
 use crate::gdtf::bundle::ResourceKey;
 
+pub mod attr;
 pub mod bundle;
 
-mod builder;
+pub use attr::{ActivationGroup, Attribute, Feature, FeatureGroup, SubPhysicalUnit};
 
 pub struct Gdtf {
     bundle: bundle::Bundle,
@@ -25,11 +30,15 @@ pub struct Gdtf {
     thumbnail: Thumbnail,
 
     can_have_children: bool,
+
+    activation_groups: HashMap<String, ActivationGroup>,
+    feature_groups: HashMap<String, FeatureGroup>,
+    attributes: HashMap<String, Attribute>,
 }
 
 impl Gdtf {
     pub fn new(bundle: bundle::Bundle) -> Self {
-        builder::GdtfBuilder::new(bundle).build()
+        bundle.into()
     }
 
     pub fn from_folder(path: impl Into<PathBuf>) -> Self {
@@ -83,6 +92,133 @@ impl Gdtf {
     pub fn can_have_children(&self) -> bool {
         self.can_have_children
     }
+
+    pub fn activation_groups(&self) -> impl Iterator<Item = &ActivationGroup> {
+        self.activation_groups.values()
+    }
+
+    pub fn activation_group(&self, name: &str) -> Option<&ActivationGroup> {
+        self.activation_groups.get(name)
+    }
+
+    pub fn feature_groups(&self) -> impl Iterator<Item = &FeatureGroup> {
+        self.feature_groups.values()
+    }
+
+    pub fn feature_group(&self, name: &str) -> Option<&FeatureGroup> {
+        self.feature_groups.get(name)
+    }
+
+    pub fn attributes(&self) -> impl Iterator<Item = &Attribute> {
+        self.attributes.values()
+    }
+
+    pub fn attribute(&self, name: &str) -> Option<&Attribute> {
+        self.attributes.get(name)
+    }
+}
+
+impl From<bundle::Bundle> for Gdtf {
+    fn from(bundle: bundle::Bundle) -> Self {
+        let desc = bundle.description();
+        let ft = &desc.fixture_type;
+
+        let version: Version = desc.data_version.as_str().into();
+
+        let fixture_type_id = FixtureTypeId::from_str(&ft.fixture_type_id).unwrap();
+
+        let reference_fixture_type_id =
+            ft.ref_ft.as_deref().and_then(|s| FixtureTypeId::from_str(s).ok());
+
+        let thumbnail = Thumbnail {
+            resources: bundle
+                .resources()
+                .entries()
+                .filter(|r| r.kind == bundle::ResourceKind::Thumbnail)
+                .map(|r| r.key.clone())
+                .collect(),
+            offset_x: ft.thumbnail_offset_x.unwrap_or(0),
+            offset_y: ft.thumbnail_offset_y.unwrap_or(0),
+        };
+
+        let activation_groups: HashMap<String, ActivationGroup> = desc
+            .fixture_type
+            .attribute_definitions
+            .activation_groups
+            .as_ref()
+            .map(|ags| {
+                ags.activation_groups
+                    .iter()
+                    .map(|ag| {
+                        let name = ag.name.as_str();
+                        let ag = ActivationGroup::from_str(name).unwrap();
+                        (name.to_owned(), ag)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let feature_groups: HashMap<String, FeatureGroup> = desc
+            .fixture_type
+            .attribute_definitions
+            .feature_groups
+            .feature_groups
+            .iter()
+            .map(|fg| {
+                let fg: FeatureGroup = fg.into();
+                (fg.name.to_string(), fg)
+            })
+            .collect();
+
+        let attributes: HashMap<String, Attribute> = desc
+            .fixture_type
+            .attribute_definitions
+            .attributes
+            .attributes
+            .iter()
+            .map(|attr| {
+                let attr: Attribute = attr.into();
+                (attr.name.to_string(), attr)
+            })
+            .collect();
+
+        Self {
+            version,
+            name: ft.name.clone(),
+            short_name: ft.short_name.clone(),
+            long_name: ft.long_name.clone(),
+            manufacturer: ft.manufacturer.clone(),
+            description: ft.description.clone(),
+            fixture_type_id,
+            reference_fixture_type_id,
+            thumbnail,
+            can_have_children: ft.can_have_children.clone().into(),
+            activation_groups,
+            feature_groups,
+            attributes,
+            bundle,
+        }
+    }
+}
+
+impl std::fmt::Debug for Gdtf {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Gdtf")
+            .field("version", &self.version)
+            .field("name", &self.name)
+            .field("short_name", &self.short_name)
+            .field("long_name", &self.long_name)
+            .field("manufacturer", &self.manufacturer)
+            .field("description", &self.description)
+            .field("fixture_type_id", &self.fixture_type_id)
+            .field("reference_fixture_type_id", &self.reference_fixture_type_id)
+            .field("thumbnail", &self.thumbnail)
+            .field("can_have_children", &self.can_have_children)
+            .field("activation_groups", &self.activation_groups)
+            .field("feature_groups", &self.feature_groups)
+            .field("attributes", &self.attributes)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -104,7 +240,7 @@ impl From<Uuid> for FixtureTypeId {
     }
 }
 
-impl FromStr for FixtureTypeId {
+impl str::FromStr for FixtureTypeId {
     type Err = uuid::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -118,6 +254,21 @@ pub struct Version {
     minor: u32,
 }
 
+impl From<(u32, u32)> for Version {
+    fn from((major, minor): (u32, u32)) -> Self {
+        Self { major, minor }
+    }
+}
+
+impl From<&str> for Version {
+    fn from(value: &str) -> Self {
+        let mut parts = value.splitn(2, '.');
+        let major = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+        let minor = parts.next().and_then(|p| p.parse().ok()).unwrap_or(0);
+        Self { major, minor }
+    }
+}
+
 impl Version {
     pub fn major(&self) -> u32 {
         self.major
@@ -128,15 +279,16 @@ impl Version {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Thumbnail {
-    pub(crate) resource: ResourceKey,
+    pub(crate) resources: Vec<ResourceKey>,
     pub(crate) offset_x: i32,
     pub(crate) offset_y: i32,
 }
 
 impl Thumbnail {
-    pub fn resource(&self) -> &ResourceKey {
-        &self.resource
+    pub fn resources(&self) -> &[ResourceKey] {
+        &self.resources
     }
 
     pub fn offset_x(&self) -> i32 {
@@ -171,7 +323,7 @@ impl std::fmt::Display for Node {
     }
 }
 
-impl std::str::FromStr for Node {
+impl str::FromStr for Node {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -180,5 +332,25 @@ impl std::str::FromStr for Node {
         }
         let parts: Vec<String> = s.split('.').map(|part| part.trim().to_string()).collect();
         Ok(Node(parts))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Name(String);
+
+impl Name {
+    pub fn new(value: impl Into<String>) -> Self {
+        // FIXME: Validate name.
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl std::fmt::Display for Name {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

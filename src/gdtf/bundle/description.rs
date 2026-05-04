@@ -660,7 +660,7 @@ pub struct Connector {
     #[serde(rename = "@Name")]
     pub name: String,
     #[serde(rename = "@Type")]
-    pub type_: String,
+    pub r#type: String,
     #[serde(default, rename = "@DMXBreak")]
     pub dmx_break: Option<i32>,
     #[serde(default, rename = "@Gender")]
@@ -763,7 +763,7 @@ pub struct DmxProfile {
     #[serde(default, rename = "@Name")]
     pub name: Option<String>,
     #[serde(rename = "Point")]
-    pub point: Point,
+    pub points: Vec<Point>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1549,9 +1549,10 @@ pub struct PhysicalDescriptions {
     pub properties: Option<Properties>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum PhysicalUnit {
+    #[default]
     #[serde(rename = "None")]
     None,
     #[serde(rename = "Percent")]
@@ -1728,7 +1729,7 @@ pub struct Relation {
     #[serde(rename = "@Follower")]
     pub follower: String,
     #[serde(rename = "@Type")]
-    pub type_: RelationTypes,
+    pub r#type: RelationTypes,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1966,8 +1967,8 @@ pub enum SubPhysicalType {
 #[derive(Debug, Clone, PartialEq)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct SubPhysicalUnit {
-    #[serde(default, rename = "@Type")]
-    pub type_: Option<SubPhysicalType>,
+    #[serde(rename = "@Type")]
+    pub r#type: SubPhysicalType,
     #[serde(default, rename = "@PhysicalUnit")]
     pub physical_unit: Option<PhysicalUnit>,
     #[serde(default, rename = "@PhysicalFrom")]
@@ -2258,4 +2259,13 @@ pub enum YesNo {
     Yes,
     #[serde(rename = "No")]
     No,
+}
+
+impl From<YesNo> for bool {
+    fn from(value: YesNo) -> Self {
+        match value {
+            YesNo::Yes => true,
+            YesNo::No => false,
+        }
+    }
 }
