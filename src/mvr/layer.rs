@@ -1,11 +1,14 @@
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::{
+    net::{Ipv4Addr, Ipv6Addr},
+    str::FromStr as _,
+};
 
 use crate::{
     CieColor, gdtf,
     mvr::{
         self,
         aux::{Class, MappingDefinition, Position},
-        bundle::ResourceKey,
+        bundle,
         geo::Geometry,
     },
 };
@@ -955,12 +958,18 @@ impl Connection {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Gobo {
-    pub(crate) resource: ResourceKey,
+    pub(crate) resource: bundle::ResourceKey,
     pub(crate) rotation: f32,
 }
 
+impl From<&bundle::Gobo> for Gobo {
+    fn from(value: &bundle::Gobo) -> Self {
+        Self { resource: bundle::ResourceKey::new(&value.file_name), rotation: value.rotation }
+    }
+}
+
 impl Gobo {
-    pub fn resource(&self) -> &ResourceKey {
+    pub fn resource(&self) -> &bundle::ResourceKey {
         &self.resource
     }
 
@@ -1007,6 +1016,17 @@ pub enum Transmission {
     Multicast,
     Broadcast,
     Anycast,
+}
+
+impl From<&bundle::Transmission> for Transmission {
+    fn from(value: &bundle::Transmission) -> Self {
+        match value {
+            bundle::Transmission::Unicast => Transmission::Unicast,
+            bundle::Transmission::Multicast => Transmission::Multicast,
+            bundle::Transmission::Broadcast => Transmission::Broadcast,
+            bundle::Transmission::Anycast => Transmission::Anycast,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1075,6 +1095,23 @@ pub enum SourceType {
     CaptureDevice,
 }
 
+impl From<&bundle::SourceType> for SourceType {
+    fn from(value: &bundle::SourceType) -> Self {
+        match value {
+            bundle::SourceType::Ndi => SourceType::Ndi,
+            bundle::SourceType::File => SourceType::File,
+            bundle::SourceType::Citp => SourceType::Citp,
+            bundle::SourceType::CaptureDevice => SourceType::CaptureDevice,
+        }
+    }
+}
+
+impl From<bundle::SourceType> for SourceType {
+    fn from(value: bundle::SourceType) -> Self {
+        (&value).into()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ScaleHandling {
     #[default]
@@ -1083,10 +1120,153 @@ pub enum ScaleHandling {
     KeepSizeCenter,
 }
 
+impl From<&bundle::Scale> for ScaleHandling {
+    fn from(value: &bundle::Scale) -> Self {
+        match value {
+            bundle::Scale::ScaleKeepRatio => ScaleHandling::ScaleKeepRatio,
+            bundle::Scale::ScaleIgnoreRatio => ScaleHandling::ScaleIgnoreRatio,
+            bundle::Scale::KeepSizeCenter => ScaleHandling::KeepSizeCenter,
+        }
+    }
+}
+
+impl From<&bundle::ScaleHandeling> for ScaleHandling {
+    fn from(value: &bundle::ScaleHandeling) -> Self {
+        (&value.r#enum).into()
+    }
+}
+
+impl From<bundle::ScaleHandeling> for ScaleHandling {
+    fn from(value: bundle::ScaleHandeling) -> Self {
+        (&value).into()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Projection {
     pub(crate) source: Source,
     pub(crate) scale_handling: ScaleHandling,
+}
+
+impl From<&bundle::Address> for DmxAddress {
+    fn from(value: &bundle::Address) -> Self {
+        let absolute_value = if let Some(dot) = value.content.find('.') {
+            let (universe_str, channel_str) = value.content.split_at(dot);
+            let universe = universe_str.parse::<u32>().unwrap();
+            let channel = channel_str[1..].parse::<u32>().unwrap();
+            (universe - 1) * 512 + channel
+        } else {
+            value.content.parse::<u32>().unwrap()
+        };
+
+        Self { r#break: value.r#break as u32, absolute_value }
+    }
+}
+
+impl From<&bundle::Network> for NetworkAddress {
+    fn from(value: &bundle::Network) -> Self {
+        Self {
+            geometry: gdtf::Node::from_str(&value.geometry).unwrap(),
+            ipv4: value.ipv_4.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
+            subnetmask: value.subnetmask.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
+            ipv6: value.ipv_6.as_ref().map(|s| Ipv6Addr::from_str(s).unwrap()),
+            dhcp: value.dhcp.as_ref().is_some_and(|s| s == "on"),
+            hostname: value.hostname.to_owned(),
+        }
+    }
+}
+
+impl From<&bundle::Alignment> for Alignment {
+    fn from(value: &bundle::Alignment) -> Self {
+        Self {
+            geometry: gdtf::Node::from_str(
+                value.geometry.as_ref().expect("FIXME: handle missing geometry"),
+            )
+            .unwrap(),
+            up: parse_vec3(&value.up),
+            direction: parse_vec3(&value.direction),
+        }
+    }
+}
+
+impl From<&String> for CustomCommand {
+    fn from(value: &String) -> Self {
+        CustomCommand(value.to_owned())
+    }
+}
+
+impl From<&bundle::Overwrite> for Overwrite {
+    fn from(value: &bundle::Overwrite) -> Self {
+        Self {
+            universal: gdtf::Node::from_str(&value.universal).unwrap(),
+            target: Some(gdtf::Node::from_str(&value.target).unwrap()),
+        }
+    }
+}
+
+impl From<&bundle::Connection> for Connection {
+    fn from(value: &bundle::Connection) -> Self {
+        Self {
+            own: gdtf::Node::from_str(&value.own).unwrap(),
+            other: gdtf::Node::from_str(&value.other).unwrap(),
+            to_object: mvr::NodeId::from_str(&value.to_object).unwrap(),
+        }
+    }
+}
+
+impl From<&bundle::Source> for Source {
+    fn from(value: &bundle::Source) -> Self {
+        Self {
+            linked_geometry: gdtf::Node::from_str(&value.linked_geometry).unwrap(),
+            r#type: (&value.r#type).into(),
+            value: value.content.clone(),
+        }
+    }
+}
+
+impl From<&bundle::Mapping> for Mapping {
+    fn from(value: &bundle::Mapping) -> Self {
+        Self {
+            linked_def: mvr::NodeId::from_str(&value.linked_def).unwrap(),
+            ux: value.ux.unwrap_or_default(),
+            uy: value.uy.unwrap_or_default(),
+            ox: value.ox.unwrap_or_default(),
+            oy: value.oy.unwrap_or_default(),
+            rz: value.rz.unwrap_or_default(),
+        }
+    }
+}
+
+impl From<&bundle::Protocol> for Protocol {
+    fn from(value: &bundle::Protocol) -> Self {
+        Self {
+            geometry: gdtf::Node::from_str(&value.geometry)
+                .unwrap_or_else(|_| gdtf::Node::from_str("NetworkInOut_1").unwrap()),
+            name: value.name.clone(),
+            r#type: if value.r#type.is_empty() { None } else { Some(value.r#type.clone()) },
+            version: if value.version.is_empty() { None } else { Some(value.version.clone()) },
+            transmission: value.transmission.as_ref().map(Into::into),
+        }
+    }
+}
+
+impl TryFrom<&bundle::Projection> for Projection {
+    type Error = ();
+
+    fn try_from(value: &bundle::Projection) -> Result<Self, Self::Error> {
+        let source = value.source.first().ok_or(())?;
+        let source: Source = source.into();
+
+        let scale_handling =
+            value.scale_handeling.first().map(|sh| (&sh.r#enum).into()).unwrap_or_default();
+
+        Ok(Self { source, scale_handling })
+    }
+}
+
+fn parse_vec3(s: &str) -> glam::Vec3A {
+    let vals: Vec<f32> = s.split(',').map(|v| v.trim().parse().unwrap()).collect();
+    glam::Vec3A::new(vals[0], vals[1], vals[2])
 }
 
 impl Projection {

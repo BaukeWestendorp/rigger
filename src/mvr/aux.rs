@@ -1,5 +1,5 @@
 use crate::mvr::{
-    self as mvr,
+    self as mvr, bundle,
     geo::Geometry,
     layer::{ScaleHandling, Source},
 };
@@ -8,6 +8,13 @@ use crate::mvr::{
 pub struct Class {
     pub(crate) name: String,
     pub(crate) id: mvr::NodeId<Class>,
+}
+
+impl From<&bundle::BasicChildListAttribute> for Class {
+    fn from(value: &bundle::BasicChildListAttribute) -> Self {
+        let id: mvr::NodeId<Class> = uuid::Uuid::parse_str(&value.uuid).unwrap().into();
+        Self { name: value.name.clone(), id }
+    }
 }
 
 impl Class {
@@ -24,6 +31,13 @@ impl Class {
 pub struct Position {
     pub(crate) name: String,
     pub(crate) id: mvr::NodeId<Position>,
+}
+
+impl From<&bundle::BasicChildListAttribute> for Position {
+    fn from(value: &bundle::BasicChildListAttribute) -> Self {
+        let id: mvr::NodeId<Position> = uuid::Uuid::parse_str(&value.uuid).unwrap().into();
+        Self { name: value.name.clone(), id }
+    }
 }
 
 impl Position {
@@ -63,6 +77,25 @@ pub struct MappingDefinition {
     pub(crate) size_y: u32,
     pub(crate) source: Source,
     pub(crate) scale_handling: ScaleHandling,
+}
+
+impl From<&bundle::MappingDefinition> for MappingDefinition {
+    fn from(value: &bundle::MappingDefinition) -> Self {
+        let id: mvr::NodeId<MappingDefinition> = uuid::Uuid::parse_str(&value.uuid).unwrap().into();
+
+        Self {
+            name: value.name.clone(),
+            id,
+            size_x: value.size_x as u32,
+            size_y: value.size_y as u32,
+            source: (&value.source).into(),
+            scale_handling: value
+                .scale_handeling
+                .as_ref()
+                .map(|sh| (&sh.r#enum).into())
+                .unwrap_or_default(),
+        }
+    }
 }
 
 impl MappingDefinition {
