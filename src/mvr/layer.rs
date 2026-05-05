@@ -11,6 +11,7 @@ use crate::{
         bundle,
         geo::Geometry,
     },
+    util,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1183,8 +1184,8 @@ impl From<&bundle::Alignment> for Alignment {
                 value.geometry.as_ref().expect("FIXME: handle missing geometry"),
             )
             .unwrap(),
-            up: parse_vec3(&value.up),
-            direction: parse_vec3(&value.direction),
+            up: util::parse_vec3(&value.up),
+            direction: util::parse_vec3(&value.direction),
         }
     }
 }
@@ -1262,11 +1263,6 @@ impl TryFrom<&bundle::Projection> for Projection {
 
         Ok(Self { source, scale_handling })
     }
-}
-
-fn parse_vec3(s: &str) -> glam::Vec3A {
-    let vals: Vec<f32> = s.split(',').map(|v| v.trim().parse().unwrap()).collect();
-    glam::Vec3A::new(vals[0], vals[1], vals[2])
 }
 
 impl Projection {

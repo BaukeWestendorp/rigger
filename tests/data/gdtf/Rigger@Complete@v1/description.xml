@@ -75,15 +75,15 @@
 
 		<Wheels>
 			<Wheel Name="ColorWheel">
-				<Slot Name="Open" Color="{0.3127,0.3290,100.0}" BeamInfluence="Open" />
+				<Slot Name="Open" Color="{0.3127,0.3290,100.0}" />
 				<Slot Name="Red" Color="{0.7347,0.2653,25.0}" Filter="RedFilter" />
 				<Slot Name="Green" Color="{0.1596,0.8404,70.0}" Filter="GreenFilter" />
 				<Slot Name="Blue" Color="{0.1500,0.0600,5.0}" />
 			</Wheel>
 			<Wheel Name="GoboWheel">
-				<Slot Name="Open" Color="{0.3127,0.3290,100.0}" BeamInfluence="Open" />
+				<Slot Name="Open" Color="{0.3127,0.3290,100.0}" />
 				<Slot Name="Gobo1" MediaFileName="gobo1" />
-				<Slot Name="Closed" Color="{0.3127,0.3290,0.0}" BeamInfluence="Closed" />
+				<Slot Name="Closed" Color="{0.3127,0.3290,0.0}" />
 				<Slot Name="Prism" Color="{0.3127,0.3290,100.0}">
 					<Facet Color="{0.3127,0.3290,100.0}" Rotation="{0.866025,0.500000,0.000000,-0.500000,0.866025,0.000000,0.000000,0.000000,1.000000}" />
 					<Facet Color="{0.3127,0.3290,100.0}" Rotation="{0.866025,-0.500000,0.000000,0.500000,0.866025,0.000000,0.000000,0.000000,1.000000}" />

@@ -3,8 +3,9 @@ use std::{path::Path, str::FromStr as _};
 use rigger::{
     CieColor,
     gdtf::{
-        ActivationGroup, Gdtf, Node,
-        attr::{AttributeName, PhysicalUnit, SubPhysicalUnitType},
+        Gdtf, Node,
+        attr::{ActivationGroup, AttributeName, PhysicalUnit, SubPhysicalUnitType},
+        wheel::{SlotColor, WheelSlotContent},
     },
 };
 use uuid::Uuid;
@@ -270,4 +271,89 @@ fn assert_color(actual: CieColor, expected: CieColor) {
     assert!((actual.x - expected.x).abs() <= 1e-4);
     assert!((actual.y - expected.y).abs() <= 1e-4);
     assert!((actual.yy - expected.yy).abs() <= 1e-4);
+}
+
+#[test]
+fn test_gdtf_wheel_count() {
+    let gdtf = load_complete_gdtf();
+    assert_eq!(gdtf.wheels().count(), 2);
+    assert!(gdtf.wheel("ColorWheel").is_some());
+    assert!(gdtf.wheel("GoboWheel").is_some());
+}
+
+#[test]
+fn test_gdtf_color_wheel_slots() {
+    let gdtf = load_complete_gdtf();
+    let wheel = gdtf.wheel("ColorWheel").unwrap();
+    assert_eq!(wheel.slots().count(), 4);
+
+    let open = wheel.slot("Open").unwrap();
+    assert_eq!(open.color(), &SlotColor::Cie(CieColor { x: 0.3127, y: 0.3290, yy: 100.0 }));
+    assert_eq!(open.content(), None);
+    assert_eq!(open.media_file(), None);
+
+    let red = wheel.slot("Red").unwrap();
+    assert_eq!(red.color(), &SlotColor::Filter(Node::from_str("RedFilter").unwrap()));
+    assert_eq!(red.content(), None);
+
+    let green = wheel.slot("Green").unwrap();
+    assert_eq!(green.color(), &SlotColor::Filter(Node::from_str("GreenFilter").unwrap()));
+    assert_eq!(green.content(), None);
+
+    let blue = wheel.slot("Blue").unwrap();
+    assert_eq!(blue.color(), &SlotColor::Cie(CieColor { x: 0.1500, y: 0.0600, yy: 5.0 }));
+    assert_eq!(blue.content(), None);
+}
+
+#[test]
+fn test_gdtf_gobo_wheel_open_and_closed_slots() {
+    let gdtf = load_complete_gdtf();
+    let wheel = gdtf.wheel("GoboWheel").unwrap();
+
+    let open = wheel.slot("Open").unwrap();
+    assert_eq!(open.content(), None);
+    assert_eq!(open.media_file(), None);
+
+    let closed = wheel.slot("Closed").unwrap();
+    assert_eq!(closed.content(), None);
+    assert_eq!(closed.media_file(), None);
+}
+
+#[test]
+fn test_gdtf_gobo_wheel_gobo_slot() {
+    let gdtf = load_complete_gdtf();
+    let wheel = gdtf.wheel("GoboWheel").unwrap();
+
+    let gobo = wheel.slot("Gobo1").unwrap();
+    assert_eq!(gobo.media_file().map(|k| k.as_str()), Some("gobo1"));
+    assert_eq!(gobo.content(), None);
+}
+
+#[test]
+fn test_gdtf_gobo_wheel_prism_slot() {
+    let gdtf = load_complete_gdtf();
+    let wheel = gdtf.wheel("GoboWheel").unwrap();
+
+    let prism = wheel.slot("Prism").unwrap();
+    let WheelSlotContent::Prism(facets) = prism.content().unwrap() else {
+        panic!("expected Prism content");
+    };
+    assert_eq!(facets.len(), 3);
+}
+
+#[test]
+fn test_gdtf_gobo_wheel_animation_slot() {
+    let gdtf = load_complete_gdtf();
+    let wheel = gdtf.wheel("GoboWheel").unwrap();
+
+    let anim = wheel.slot("AnimWheel").unwrap();
+    assert_eq!(anim.media_file().map(|k| k.as_str()), Some("animwheel"));
+
+    let WheelSlotContent::AnimationSystem(sys) = anim.content().unwrap() else {
+        panic!("expected AnimationSystem content");
+    };
+    assert_eq!(sys.p1(), rigger::glam::Vec2::new(-0.5, 0.0));
+    assert_eq!(sys.p2(), rigger::glam::Vec2::new(0.0, 0.5));
+    assert_eq!(sys.p3(), rigger::glam::Vec2::new(0.5, 0.0));
+    assert_eq!(sys.radius(), 0.3);
 }

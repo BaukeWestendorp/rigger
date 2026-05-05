@@ -1794,6 +1794,8 @@ pub struct Slot {
     pub filter: Option<String>,
     #[serde(default = "Slot::default_media_file_name", rename = "@MediaFileName")]
     pub media_file_name: String,
+    #[serde(default, rename = "@BeamInfluence")]
+    pub beam_influence: Option<String>,
     #[serde(default, rename = "$value")]
     pub content: Vec<SlotContent>,
 }

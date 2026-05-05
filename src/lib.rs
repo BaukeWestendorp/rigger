@@ -1,5 +1,6 @@
 pub mod gdtf;
 pub mod mvr;
+pub(crate) mod util;
 
 use std::str;
 
@@ -23,6 +24,7 @@ impl str::FromStr for CieColor {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.trim().trim_start_matches('{').trim_end_matches('}');
         let parts: Vec<&str> = s.split(',').collect();
         if parts.len() != 3 {
             return Err(());

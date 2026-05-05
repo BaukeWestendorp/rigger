@@ -158,6 +158,24 @@ impl Attribute {
     }
 }
 
+impl From<bundle::Attribute> for Attribute {
+    fn from(value: bundle::Attribute) -> Self {
+        Self {
+            name: AttributeName::from_str(&value.name).unwrap(),
+            pretty: value.pretty.to_string(),
+            activation_group: value
+                .activation_group
+                .as_deref()
+                .map(|ag| Node::from_str(ag).unwrap()),
+            feature: Node::from_str(&value.feature).unwrap(),
+            main_attribute: value.main_attribute.as_deref().map(|ma| Node::from_str(ma).unwrap()),
+            physical_unit: value.physical_unit.into(),
+            color: value.color.as_deref().map(|c| CieColor::from_str(c).unwrap()),
+            sub_physical_units: value.sub_physical_units.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AttributeName {
     /// Controls the intensity of a fixture.
@@ -1460,12 +1478,6 @@ impl Feature {
 
 impl From<bundle::Feature> for Feature {
     fn from(value: bundle::Feature) -> Self {
-        (&value).into()
-    }
-}
-
-impl From<&bundle::Feature> for Feature {
-    fn from(value: &bundle::Feature) -> Self {
         Self { name: Name::new(&value.name) }
     }
 }
@@ -1497,65 +1509,18 @@ impl FeatureGroup {
 
 impl From<bundle::FeatureGroup> for FeatureGroup {
     fn from(value: bundle::FeatureGroup) -> Self {
-        (&value).into()
-    }
-}
-
-impl From<&bundle::FeatureGroup> for FeatureGroup {
-    fn from(value: &bundle::FeatureGroup) -> Self {
         let name = Name::new(&value.name);
         Self {
             name: name.clone(),
             pretty: value.pretty.to_string(),
             features: value
                 .features
-                .iter()
+                .into_iter()
                 .map(|f| {
                     let feature: Feature = f.into();
                     (feature.name.to_string(), feature)
                 })
                 .collect(),
-        }
-    }
-}
-
-impl From<bundle::Attribute> for Attribute {
-    fn from(value: bundle::Attribute) -> Self {
-        (&value).into()
-    }
-}
-
-impl From<&bundle::Attribute> for Attribute {
-    fn from(value: &bundle::Attribute) -> Self {
-        Self {
-            name: AttributeName::from_str(&value.name).unwrap(),
-            pretty: value.pretty.to_string(),
-            activation_group: value
-                .activation_group
-                .as_deref()
-                .map(|ag| Node::from_str(ag).unwrap()),
-            feature: Node::from_str(&value.feature).unwrap(),
-            main_attribute: value.main_attribute.as_deref().map(|ma| Node::from_str(ma).unwrap()),
-            physical_unit: (&value.physical_unit).into(),
-            color: value.color.as_deref().map(|c| CieColor::from_str(c).unwrap()),
-            sub_physical_units: value.sub_physical_units.iter().map(Into::into).collect(),
-        }
-    }
-}
-
-impl From<bundle::SubPhysicalUnit> for SubPhysicalUnit {
-    fn from(value: bundle::SubPhysicalUnit) -> Self {
-        (&value).into()
-    }
-}
-
-impl From<&bundle::SubPhysicalUnit> for SubPhysicalUnit {
-    fn from(value: &bundle::SubPhysicalUnit) -> Self {
-        Self {
-            r#type: (&value.r#type).into(),
-            physical_unit: value.physical_unit.as_ref().and_then(|pu| pu.into()),
-            physical_from: value.physical_from.unwrap_or(0.0),
-            physical_to: value.physical_to.unwrap_or(1.0),
         }
     }
 }
@@ -1585,55 +1550,8 @@ pub enum PhysicalUnit {
     ColorComponent,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct SubPhysicalUnit {
-    pub(crate) r#type: SubPhysicalUnitType,
-    pub(crate) physical_unit: Option<PhysicalUnit>,
-    pub(crate) physical_from: f32,
-    pub(crate) physical_to: f32,
-}
-
-impl SubPhysicalUnit {
-    pub fn r#type(&self) -> SubPhysicalUnitType {
-        self.r#type
-    }
-
-    pub fn physical_unit(&self) -> Option<PhysicalUnit> {
-        self.physical_unit
-    }
-
-    pub fn physical_from(&self) -> f32 {
-        self.physical_from
-    }
-
-    pub fn physical_to(&self) -> f32 {
-        self.physical_to
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum SubPhysicalUnitType {
-    PlacementOffset,
-    Amplitude,
-    AmplitudeMin,
-    AmplitudeMax,
-    Duration,
-    DutyCycle,
-    TimeOffset,
-    MinimumOpening,
-    Value,
-    RatioHorizontal,
-    RatioVertical,
-}
-
 impl From<bundle::PhysicalUnit> for Option<PhysicalUnit> {
     fn from(value: bundle::PhysicalUnit) -> Self {
-        (&value).into()
-    }
-}
-
-impl From<&bundle::PhysicalUnit> for Option<PhysicalUnit> {
-    fn from(value: &bundle::PhysicalUnit) -> Self {
         match value {
             bundle::PhysicalUnit::None => None,
             bundle::PhysicalUnit::Percent => Some(PhysicalUnit::Percent),
@@ -1661,14 +1579,60 @@ impl From<&bundle::PhysicalUnit> for Option<PhysicalUnit> {
     }
 }
 
-impl From<bundle::SubPhysicalType> for SubPhysicalUnitType {
-    fn from(value: bundle::SubPhysicalType) -> Self {
-        (&value).into()
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubPhysicalUnit {
+    pub(crate) r#type: SubPhysicalUnitType,
+    pub(crate) physical_unit: Option<PhysicalUnit>,
+    pub(crate) physical_from: f32,
+    pub(crate) physical_to: f32,
+}
+
+impl SubPhysicalUnit {
+    pub fn r#type(&self) -> SubPhysicalUnitType {
+        self.r#type
+    }
+
+    pub fn physical_unit(&self) -> Option<PhysicalUnit> {
+        self.physical_unit
+    }
+
+    pub fn physical_from(&self) -> f32 {
+        self.physical_from
+    }
+
+    pub fn physical_to(&self) -> f32 {
+        self.physical_to
     }
 }
 
-impl From<&bundle::SubPhysicalType> for SubPhysicalUnitType {
-    fn from(value: &bundle::SubPhysicalType) -> Self {
+impl From<bundle::SubPhysicalUnit> for SubPhysicalUnit {
+    fn from(value: bundle::SubPhysicalUnit) -> Self {
+        Self {
+            r#type: value.r#type.into(),
+            physical_unit: value.physical_unit.and_then(|pu| pu.into()),
+            physical_from: value.physical_from.unwrap_or(0.0),
+            physical_to: value.physical_to.unwrap_or(1.0),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum SubPhysicalUnitType {
+    PlacementOffset,
+    Amplitude,
+    AmplitudeMin,
+    AmplitudeMax,
+    Duration,
+    DutyCycle,
+    TimeOffset,
+    MinimumOpening,
+    Value,
+    RatioHorizontal,
+    RatioVertical,
+}
+
+impl From<bundle::SubPhysicalType> for SubPhysicalUnitType {
+    fn from(value: bundle::SubPhysicalType) -> Self {
         match value {
             bundle::SubPhysicalType::PlacementOffset => SubPhysicalUnitType::PlacementOffset,
             bundle::SubPhysicalType::Amplitude => SubPhysicalUnitType::Amplitude,

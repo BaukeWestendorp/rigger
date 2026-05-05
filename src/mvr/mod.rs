@@ -7,7 +7,7 @@ use std::{
 
 use uuid::Uuid;
 
-use crate::{CieColor, gdtf};
+use crate::{CieColor, gdtf, util};
 
 pub mod aux;
 pub mod bundle;
@@ -329,13 +329,13 @@ impl Mvr {
 
         for geo3d in geometry_3ds {
             geometries.push(Geometry {
-                local_transform: build_transform_optional(geo3d.matrix.as_deref()),
+                local_transform: util::parse_affine3a_or_identity(geo3d.matrix.as_deref()),
                 model: bundle::ResourceKey::new(&geo3d.file_name),
             });
         }
 
         for symbol in symbols {
-            let symbol_transform = build_transform_optional(symbol.matrix.as_deref());
+            let symbol_transform = util::parse_affine3a_or_identity(symbol.matrix.as_deref());
             let nested_symdef = Self::build_symdef(&symbol.symdef, aux_data);
             for mut geo in nested_symdef.geometries {
                 geo.local_transform *= symbol_transform;
@@ -381,7 +381,7 @@ impl Mvr {
             layers.push(Layer {
                 id: uuid.into(),
                 name: layer_data.name.clone(),
-                local_transform: build_transform_optional(layer_data.matrix.as_deref()),
+                local_transform: util::parse_affine3a_or_identity(layer_data.matrix.as_deref()),
                 objects,
             });
         }
@@ -458,7 +458,7 @@ impl Mvr {
                 .map(|id| Uuid::from_str(id).unwrap())
                 .and_then(|id| classes.get(&id.into()))
                 .map(|class| class.id()),
-            local_transform: build_transform_optional(matrix),
+            local_transform: util::parse_affine3a_or_identity(matrix),
             kind,
         }
     }
@@ -851,42 +851,6 @@ impl std::fmt::Debug for Mvr {
             .field("layers", &self.layers)
             .finish()
     }
-}
-
-fn build_transform_optional(s: Option<&str>) -> glam::Affine3A {
-    s.map(build_transform).unwrap_or(glam::Affine3A::IDENTITY)
-}
-
-fn build_transform(s: &str) -> glam::Affine3A {
-    let rows = s
-        .split('}')
-        .filter_map(|row| {
-            let row = row.trim_start_matches('{').trim();
-            if row.is_empty() { None } else { Some(row) }
-        })
-        .collect::<Vec<_>>();
-
-    assert!(rows.len() == 4, "Matrix string must have 4 rows");
-
-    let parse_row =
-        |row: &str| row.split(',').map(|v| v.trim().parse::<f32>().unwrap()).collect::<Vec<_>>();
-
-    let m1 = parse_row(rows[0]);
-    let m2 = parse_row(rows[1]);
-    let m3 = parse_row(rows[2]);
-    let t = parse_row(rows[3]);
-
-    assert!(m1.len() == 3 && m2.len() == 3 && m3.len() == 3 && t.len() == 3);
-
-    #[rustfmt::skip]
-    let cols_array = [
-        m1[0], m1[1], m1[2],
-        m2[0], m2[1], m2[2],
-        m3[0], m3[1], m3[2],
-        t[0] / 1000.0, t[1] / 1000.0, t[2] / 1000.0,
-    ];
-
-    glam::Affine3A::from_cols_array(&cols_array)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

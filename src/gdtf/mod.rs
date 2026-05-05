@@ -10,8 +10,7 @@ use crate::gdtf::bundle::ResourceKey;
 
 pub mod attr;
 pub mod bundle;
-
-pub use attr::{ActivationGroup, Attribute, Feature, FeatureGroup, SubPhysicalUnit};
+pub mod wheel;
 
 pub struct Gdtf {
     bundle: bundle::Bundle,
@@ -31,9 +30,10 @@ pub struct Gdtf {
 
     can_have_children: bool,
 
-    activation_groups: HashMap<String, ActivationGroup>,
-    feature_groups: HashMap<String, FeatureGroup>,
-    attributes: HashMap<String, Attribute>,
+    activation_groups: HashMap<String, attr::ActivationGroup>,
+    feature_groups: HashMap<String, attr::FeatureGroup>,
+    attributes: HashMap<String, attr::Attribute>,
+    wheels: HashMap<String, wheel::Wheel>,
 }
 
 impl Gdtf {
@@ -93,28 +93,36 @@ impl Gdtf {
         self.can_have_children
     }
 
-    pub fn activation_groups(&self) -> impl Iterator<Item = &ActivationGroup> {
+    pub fn activation_groups(&self) -> impl Iterator<Item = &attr::ActivationGroup> {
         self.activation_groups.values()
     }
 
-    pub fn activation_group(&self, name: &str) -> Option<&ActivationGroup> {
+    pub fn activation_group(&self, name: &str) -> Option<&attr::ActivationGroup> {
         self.activation_groups.get(name)
     }
 
-    pub fn feature_groups(&self) -> impl Iterator<Item = &FeatureGroup> {
+    pub fn feature_groups(&self) -> impl Iterator<Item = &attr::FeatureGroup> {
         self.feature_groups.values()
     }
 
-    pub fn feature_group(&self, name: &str) -> Option<&FeatureGroup> {
+    pub fn feature_group(&self, name: &str) -> Option<&attr::FeatureGroup> {
         self.feature_groups.get(name)
     }
 
-    pub fn attributes(&self) -> impl Iterator<Item = &Attribute> {
+    pub fn attributes(&self) -> impl Iterator<Item = &attr::Attribute> {
         self.attributes.values()
     }
 
-    pub fn attribute(&self, name: &str) -> Option<&Attribute> {
+    pub fn attribute(&self, name: &str) -> Option<&attr::Attribute> {
         self.attributes.get(name)
+    }
+
+    pub fn wheels(&self) -> impl Iterator<Item = &wheel::Wheel> {
+        self.wheels.values()
+    }
+
+    pub fn wheel(&self, name: &str) -> Option<&wheel::Wheel> {
+        self.wheels.get(name)
     }
 }
 
@@ -141,7 +149,7 @@ impl From<bundle::Bundle> for Gdtf {
             offset_y: ft.thumbnail_offset_y.unwrap_or(0),
         };
 
-        let activation_groups: HashMap<String, ActivationGroup> = desc
+        let activation_groups: HashMap<String, attr::ActivationGroup> = desc
             .fixture_type
             .attribute_definitions
             .activation_groups
@@ -151,36 +159,54 @@ impl From<bundle::Bundle> for Gdtf {
                     .iter()
                     .map(|ag| {
                         let name = ag.name.as_str();
-                        let ag = ActivationGroup::from_str(name).unwrap();
+                        let ag = attr::ActivationGroup::from_str(name).unwrap();
                         (name.to_owned(), ag)
                     })
                     .collect()
             })
             .unwrap_or_default();
 
-        let feature_groups: HashMap<String, FeatureGroup> = desc
+        let feature_groups: HashMap<String, attr::FeatureGroup> = desc
             .fixture_type
             .attribute_definitions
             .feature_groups
             .feature_groups
-            .iter()
+            .clone()
+            .into_iter()
             .map(|fg| {
-                let fg: FeatureGroup = fg.into();
+                let fg: attr::FeatureGroup = fg.into();
                 (fg.name.to_string(), fg)
             })
             .collect();
 
-        let attributes: HashMap<String, Attribute> = desc
+        let attributes: HashMap<String, attr::Attribute> = desc
             .fixture_type
             .attribute_definitions
             .attributes
             .attributes
-            .iter()
+            .clone()
+            .into_iter()
             .map(|attr| {
-                let attr: Attribute = attr.into();
+                let attr: attr::Attribute = attr.into();
                 (attr.name.to_string(), attr)
             })
             .collect();
+
+        let wheels: HashMap<String, wheel::Wheel> = desc
+            .fixture_type
+            .wheels
+            .clone()
+            .map(|wheels| {
+                wheels
+                    .wheels
+                    .into_iter()
+                    .map(|wheel| {
+                        let wheel: wheel::Wheel = wheel.into();
+                        (wheel.name.to_string(), wheel)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
 
         Self {
             version,
@@ -196,6 +222,7 @@ impl From<bundle::Bundle> for Gdtf {
             activation_groups,
             feature_groups,
             attributes,
+            wheels,
             bundle,
         }
     }
@@ -217,6 +244,7 @@ impl std::fmt::Debug for Gdtf {
             .field("activation_groups", &self.activation_groups)
             .field("feature_groups", &self.feature_groups)
             .field("attributes", &self.attributes)
+            .field("wheels", &self.wheels)
             .finish()
     }
 }
