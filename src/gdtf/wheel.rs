@@ -39,7 +39,7 @@ impl From<&bundle::Wheel> for Wheel {
 pub struct WheelSlot {
     pub(crate) name: Name,
     pub(crate) color: SlotColor,
-    pub(crate) media_file: Option<bundle::ResourceKey>,
+    pub(crate) file: Option<bundle::ResourceKey>,
     pub(crate) content: Option<WheelSlotContent>,
 }
 
@@ -58,8 +58,8 @@ impl WheelSlot {
         &self.color
     }
 
-    pub fn media_file(&self) -> Option<&bundle::ResourceKey> {
-        self.media_file.as_ref()
+    pub fn file(&self) -> Option<&bundle::ResourceKey> {
+        self.file.as_ref()
     }
 
     pub fn content(&self) -> Option<&WheelSlotContent> {
@@ -87,7 +87,7 @@ impl From<&bundle::Slot> for WheelSlot {
             None
         };
 
-        let media_file = if value.media_file_name.is_empty() {
+        let file = if value.media_file_name.is_empty() {
             None
         } else {
             // FIXME: This only gets the file name. The key should contain the path and extension too. This
@@ -105,7 +105,7 @@ impl From<&bundle::Slot> for WheelSlot {
             )
         };
 
-        Self { name: Name::new(value.name.clone()), color, media_file, content }
+        Self { name: Name::new(value.name.clone()), color, file, content }
     }
 }
 

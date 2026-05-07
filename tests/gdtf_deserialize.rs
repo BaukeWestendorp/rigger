@@ -289,7 +289,7 @@ fn test_gdtf_color_wheel_slots() {
     let open = wheel.slot("Open").unwrap();
     assert_eq!(open.color(), &SlotColor::Cie(CieColor::new(0.3127, 0.3290, 100.0)));
     assert_eq!(open.content(), None);
-    assert_eq!(open.media_file(), None);
+    assert_eq!(open.file(), None);
 
     let red = wheel.slot("Red").unwrap();
     assert_eq!(red.color(), &SlotColor::Filter(Node::from_str("RedFilter").unwrap()));
@@ -311,11 +311,11 @@ fn test_gdtf_gobo_wheel_open_and_closed_slots() {
 
     let open = wheel.slot("Open").unwrap();
     assert_eq!(open.content(), None);
-    assert_eq!(open.media_file(), None);
+    assert_eq!(open.file(), None);
 
     let closed = wheel.slot("Closed").unwrap();
     assert_eq!(closed.content(), None);
-    assert_eq!(closed.media_file(), None);
+    assert_eq!(closed.file(), None);
 }
 
 #[test]
@@ -324,7 +324,7 @@ fn test_gdtf_gobo_wheel_gobo_slot() {
     let wheel = gdtf.wheel("GoboWheel").unwrap();
 
     let gobo = wheel.slot("Gobo1").unwrap();
-    assert_eq!(gobo.media_file().map(|k| k.as_str()), Some("gobo1"));
+    assert_eq!(gobo.file().map(|k| k.as_str()), Some("gobo1"));
     assert_eq!(gobo.content(), None);
 }
 
@@ -346,7 +346,7 @@ fn test_gdtf_gobo_wheel_animation_slot() {
     let wheel = gdtf.wheel("GoboWheel").unwrap();
 
     let anim = wheel.slot("AnimWheel").unwrap();
-    assert_eq!(anim.media_file().map(|k| k.as_str()), Some("animwheel"));
+    assert_eq!(anim.file().map(|k| k.as_str()), Some("animwheel"));
 
     let WheelSlotContent::AnimationSystem(sys) = anim.content().unwrap() else {
         panic!("expected AnimationSystem content");

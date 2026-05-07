@@ -9,6 +9,7 @@ use crate::gdtf::bundle::ResourceKey;
 
 pub mod attr;
 pub mod bundle;
+pub mod model;
 pub mod phys;
 pub mod wheel;
 
@@ -35,14 +36,16 @@ pub struct Gdtf {
     attributes: Vec<attr::Attribute>,
     wheels: Vec<wheel::Wheel>,
 
-    pub(crate) emitters: Vec<phys::Emitter>,
-    pub(crate) filters: Vec<phys::Filter>,
-    pub(crate) color_space: Option<phys::ColorSpace>,
-    pub(crate) additional_color_spaces: Vec<phys::ColorSpace>,
-    pub(crate) gamuts: Vec<phys::Gamut>,
-    pub(crate) dmx_profiles: Vec<phys::DmxProfile>,
-    pub(crate) cri_groups: Vec<phys::CriGroup>,
-    pub(crate) properties: Option<phys::Properties>,
+    emitters: Vec<phys::Emitter>,
+    filters: Vec<phys::Filter>,
+    color_space: Option<phys::ColorSpace>,
+    additional_color_spaces: Vec<phys::ColorSpace>,
+    gamuts: Vec<phys::Gamut>,
+    dmx_profiles: Vec<phys::DmxProfile>,
+    cri_groups: Vec<phys::CriGroup>,
+    properties: Option<phys::Properties>,
+
+    models: Vec<model::Model>,
 }
 
 impl Gdtf {
@@ -184,6 +187,14 @@ impl Gdtf {
 
     pub fn properties(&self) -> Option<&phys::Properties> {
         self.properties.as_ref()
+    }
+
+    pub fn models(&self) -> &[model::Model] {
+        &self.models
+    }
+
+    pub fn model(&self, name: &str) -> Option<&model::Model> {
+        self.models.iter().find(|o| o.name().as_str() == name)
     }
 }
 
@@ -329,6 +340,12 @@ impl From<bundle::Bundle> for Gdtf {
             .map(|pd| pd.properties.as_ref().map(Into::into))
             .unwrap_or_default();
 
+        let models = ft
+            .models
+            .as_ref()
+            .map(|models| models.models.iter().map(Into::into).collect())
+            .unwrap_or_default();
+
         Self {
             version,
             name: ft.name.clone(),
@@ -354,6 +371,8 @@ impl From<bundle::Bundle> for Gdtf {
             dmx_profiles,
             cri_groups,
             properties,
+
+            models,
 
             bundle,
         }
@@ -385,6 +404,7 @@ impl std::fmt::Debug for Gdtf {
             .field("dmx_profiles", &self.dmx_profiles)
             .field("cri_groups", &self.cri_groups)
             .field("properties", &self.properties)
+            .field("models", &self.models)
             .finish()
     }
 }
