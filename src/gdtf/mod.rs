@@ -1,7 +1,6 @@
 use std::{
-    collections::HashMap,
     path::PathBuf,
-    str::{self, FromStr},
+    str::{self, FromStr as _},
 };
 
 use uuid::Uuid;
@@ -10,6 +9,7 @@ use crate::gdtf::bundle::ResourceKey;
 
 pub mod attr;
 pub mod bundle;
+pub mod phys;
 pub mod wheel;
 
 pub struct Gdtf {
@@ -30,10 +30,19 @@ pub struct Gdtf {
 
     can_have_children: bool,
 
-    activation_groups: HashMap<String, attr::ActivationGroup>,
-    feature_groups: HashMap<String, attr::FeatureGroup>,
-    attributes: HashMap<String, attr::Attribute>,
-    wheels: HashMap<String, wheel::Wheel>,
+    activation_groups: Vec<attr::ActivationGroup>,
+    feature_groups: Vec<attr::FeatureGroup>,
+    attributes: Vec<attr::Attribute>,
+    wheels: Vec<wheel::Wheel>,
+
+    pub(crate) emitters: Vec<phys::Emitter>,
+    pub(crate) filters: Vec<phys::Filter>,
+    pub(crate) color_space: Option<phys::ColorSpace>,
+    pub(crate) additional_color_spaces: Vec<phys::ColorSpace>,
+    pub(crate) gamuts: Vec<phys::Gamut>,
+    pub(crate) dmx_profiles: Vec<phys::DmxProfile>,
+    pub(crate) cri_groups: Vec<phys::CriGroup>,
+    pub(crate) properties: Option<phys::Properties>,
 }
 
 impl Gdtf {
@@ -58,7 +67,7 @@ impl Gdtf {
     }
 
     pub fn name(&self) -> &str {
-        &self.name
+        self.name.as_str()
     }
 
     pub fn short_name(&self) -> Option<&str> {
@@ -93,36 +102,88 @@ impl Gdtf {
         self.can_have_children
     }
 
-    pub fn activation_groups(&self) -> impl Iterator<Item = &attr::ActivationGroup> {
-        self.activation_groups.values()
+    pub fn activation_groups(&self) -> &[attr::ActivationGroup] {
+        &self.activation_groups
     }
 
     pub fn activation_group(&self, name: &str) -> Option<&attr::ActivationGroup> {
-        self.activation_groups.get(name)
+        self.activation_groups.iter().find(|o| &o.to_string() == name)
     }
 
-    pub fn feature_groups(&self) -> impl Iterator<Item = &attr::FeatureGroup> {
-        self.feature_groups.values()
+    pub fn feature_groups(&self) -> &[attr::FeatureGroup] {
+        &self.feature_groups
     }
 
     pub fn feature_group(&self, name: &str) -> Option<&attr::FeatureGroup> {
-        self.feature_groups.get(name)
+        self.feature_groups.iter().find(|o| o.name.as_str() == name)
     }
 
-    pub fn attributes(&self) -> impl Iterator<Item = &attr::Attribute> {
-        self.attributes.values()
+    pub fn attributes(&self) -> &[attr::Attribute] {
+        &self.attributes
     }
 
     pub fn attribute(&self, name: &str) -> Option<&attr::Attribute> {
-        self.attributes.get(name)
+        self.attributes.iter().find(|o| &o.name().to_string() == name)
     }
 
-    pub fn wheels(&self) -> impl Iterator<Item = &wheel::Wheel> {
-        self.wheels.values()
+    pub fn wheels(&self) -> &[wheel::Wheel] {
+        &self.wheels
     }
 
     pub fn wheel(&self, name: &str) -> Option<&wheel::Wheel> {
-        self.wheels.get(name)
+        self.wheels.iter().find(|o| o.name().is_some_and(|n| n.as_str() == name))
+    }
+
+    pub fn emitters(&self) -> &[phys::Emitter] {
+        &self.emitters
+    }
+
+    pub fn emitter(&self, name: &str) -> Option<&phys::Emitter> {
+        self.emitters.iter().find(|o| o.name().as_str() == name)
+    }
+
+    pub fn filters(&self) -> &[phys::Filter] {
+        &self.filters
+    }
+
+    pub fn filter(&self, name: &str) -> Option<&phys::Filter> {
+        self.filters.iter().find(|o| o.name().as_str() == name)
+    }
+
+    pub fn color_space(&self) -> Option<&phys::ColorSpace> {
+        self.color_space.as_ref()
+    }
+
+    pub fn additional_color_spaces(&self) -> &[phys::ColorSpace] {
+        &self.additional_color_spaces
+    }
+
+    pub fn additional_color_space(&self, name: &str) -> Option<&phys::ColorSpace> {
+        self.additional_color_spaces.iter().find(|o| o.name().is_some_and(|n| n.as_str() == name))
+    }
+
+    pub fn gamuts(&self) -> &[phys::Gamut] {
+        &self.gamuts
+    }
+
+    pub fn gamut(&self, name: &str) -> Option<&phys::Gamut> {
+        self.gamuts.iter().find(|o| o.name().is_some_and(|n| n.as_str() == name))
+    }
+
+    pub fn dmx_profiles(&self) -> &[phys::DmxProfile] {
+        &self.dmx_profiles
+    }
+
+    pub fn dmx_profile(&self, name: &str) -> Option<&phys::DmxProfile> {
+        self.dmx_profiles.iter().find(|o| o.name().is_some_and(|n| n.as_str() == name))
+    }
+
+    pub fn cri_groups(&self) -> &[phys::CriGroup] {
+        &self.cri_groups
+    }
+
+    pub fn properties(&self) -> Option<&phys::Properties> {
+        self.properties.as_ref()
     }
 }
 
@@ -149,7 +210,7 @@ impl From<bundle::Bundle> for Gdtf {
             offset_y: ft.thumbnail_offset_y.unwrap_or(0),
         };
 
-        let activation_groups: HashMap<String, attr::ActivationGroup> = desc
+        let activation_groups: Vec<attr::ActivationGroup> = desc
             .fixture_type
             .attribute_definitions
             .activation_groups
@@ -158,54 +219,114 @@ impl From<bundle::Bundle> for Gdtf {
                 ags.activation_groups
                     .iter()
                     .map(|ag| {
-                        let name = ag.name.as_str();
-                        let ag = attr::ActivationGroup::from_str(name).unwrap();
-                        (name.to_owned(), ag)
+                        let name = Name::new(&ag.name);
+                        attr::ActivationGroup::from_str(name.as_str()).unwrap()
                     })
                     .collect()
             })
             .unwrap_or_default();
 
-        let feature_groups: HashMap<String, attr::FeatureGroup> = desc
+        let feature_groups: Vec<attr::FeatureGroup> = desc
             .fixture_type
             .attribute_definitions
             .feature_groups
             .feature_groups
-            .clone()
-            .into_iter()
-            .map(|fg| {
-                let fg: attr::FeatureGroup = fg.into();
-                (fg.name.to_string(), fg)
-            })
+            .iter()
+            .map(Into::into)
             .collect();
 
-        let attributes: HashMap<String, attr::Attribute> = desc
+        let attributes: Vec<attr::Attribute> = desc
             .fixture_type
             .attribute_definitions
             .attributes
             .attributes
-            .clone()
-            .into_iter()
-            .map(|attr| {
-                let attr: attr::Attribute = attr.into();
-                (attr.name.to_string(), attr)
-            })
+            .iter()
+            .map(Into::into)
             .collect();
 
-        let wheels: HashMap<String, wheel::Wheel> = desc
+        let wheels: Vec<wheel::Wheel> = desc
             .fixture_type
             .wheels
-            .clone()
-            .map(|wheels| {
-                wheels
-                    .wheels
-                    .into_iter()
-                    .map(|wheel| {
-                        let wheel: wheel::Wheel = wheel.into();
-                        (wheel.name.to_string(), wheel)
-                    })
-                    .collect()
+            .as_ref()
+            .map(|wheels| wheels.wheels.iter().map(Into::into).collect())
+            .unwrap_or_default();
+
+        let emitters = ft
+            .physical_descriptions
+            .as_ref()
+            .map(|pd| {
+                pd.emitters
+                    .as_ref()
+                    .map(|e| e.emitters.iter().map(Into::into).collect())
+                    .unwrap_or_default()
             })
+            .unwrap_or_default();
+
+        let filters = ft
+            .physical_descriptions
+            .as_ref()
+            .map(|pd| {
+                pd.filters
+                    .as_ref()
+                    .map(|f| f.filters.iter().map(Into::into).collect())
+                    .unwrap_or_default()
+            })
+            .unwrap_or_default();
+
+        let color_space = ft
+            .physical_descriptions
+            .as_ref()
+            .map(|pd| pd.color_space.as_ref().map(Into::into))
+            .unwrap_or_default();
+
+        let additional_color_spaces = ft
+            .physical_descriptions
+            .as_ref()
+            .map(|pd| {
+                pd.additional_color_spaces
+                    .as_ref()
+                    .map(|acs| acs.color_spaces.iter().map(Into::into).collect())
+                    .unwrap_or_default()
+            })
+            .unwrap_or_default();
+
+        let gamuts = ft
+            .physical_descriptions
+            .as_ref()
+            .map(|pd| {
+                pd.gamuts
+                    .as_ref()
+                    .map(|g| g.gamuts.iter().map(Into::into).collect())
+                    .unwrap_or_default()
+            })
+            .unwrap_or_default();
+
+        let dmx_profiles = ft
+            .physical_descriptions
+            .as_ref()
+            .map(|pd| {
+                pd.dmx_profiles
+                    .as_ref()
+                    .map(|d| d.dmx_profiles.iter().map(Into::into).collect())
+                    .unwrap_or_default()
+            })
+            .unwrap_or_default();
+
+        let cri_groups = ft
+            .physical_descriptions
+            .as_ref()
+            .map(|pd| {
+                pd.cr_is
+                    .as_ref()
+                    .map(|c| c.cri_groups.iter().map(Into::into).collect())
+                    .unwrap_or_default()
+            })
+            .unwrap_or_default();
+
+        let properties = ft
+            .physical_descriptions
+            .as_ref()
+            .map(|pd| pd.properties.as_ref().map(Into::into))
             .unwrap_or_default();
 
         Self {
@@ -219,10 +340,21 @@ impl From<bundle::Bundle> for Gdtf {
             reference_fixture_type_id,
             thumbnail,
             can_have_children: ft.can_have_children.clone().into(),
+
             activation_groups,
             feature_groups,
             attributes,
             wheels,
+
+            emitters,
+            filters,
+            color_space,
+            additional_color_spaces,
+            gamuts,
+            dmx_profiles,
+            cri_groups,
+            properties,
+
             bundle,
         }
     }
@@ -245,6 +377,14 @@ impl std::fmt::Debug for Gdtf {
             .field("feature_groups", &self.feature_groups)
             .field("attributes", &self.attributes)
             .field("wheels", &self.wheels)
+            .field("emitters", &self.emitters)
+            .field("filters", &self.filters)
+            .field("color_space", &self.color_space)
+            .field("additional_color_spaces", &self.additional_color_spaces)
+            .field("gamuts", &self.gamuts)
+            .field("dmx_profiles", &self.dmx_profiles)
+            .field("cri_groups", &self.cri_groups)
+            .field("properties", &self.properties)
             .finish()
     }
 }
@@ -380,5 +520,14 @@ impl Name {
 impl std::fmt::Display for Name {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+pub(crate) fn parse_optional_name(s: Option<&str>) -> Option<Name> {
+    let name = s.as_ref().map(|s| s.trim());
+    match &name {
+        Some(s) if s.is_empty() => None,
+        Some(s) => Some(Name::new(*s)),
+        None => None,
     }
 }

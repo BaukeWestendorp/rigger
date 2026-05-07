@@ -297,6 +297,17 @@ impl Mvr {
         }
     }
 
+    fn build_symdef(symdef_uuid: &str, aux_data: &bundle::AuxData) -> Symdef {
+        let symdef = aux_data.symdef.iter().find(|s| s.uuid == symdef_uuid).unwrap();
+        let id: NodeId<Symdef> = Uuid::parse_str(symdef_uuid).unwrap().into();
+        let geometries = Self::build_geometries(
+            &symdef.child_list.geometry_3d,
+            &symdef.child_list.symbol,
+            aux_data,
+        );
+        Symdef { name: symdef.name.clone(), id, geometries }
+    }
+
     fn build_mapping_definitions(
         aux_data: &bundle::AuxData,
         mapping_definitions: &mut HashMap<NodeId<MappingDefinition>, MappingDefinition>,
@@ -307,17 +318,6 @@ impl Mvr {
             mapping_definitions
                 .insert(id, Self::build_mapping_definition(&mapping_definition.uuid, aux_data));
         }
-    }
-
-    fn build_symdef(symdef_uuid: &str, aux_data: &bundle::AuxData) -> Symdef {
-        let symdef = aux_data.symdef.iter().find(|s| s.uuid == symdef_uuid).unwrap();
-        let id: NodeId<Symdef> = Uuid::parse_str(symdef_uuid).unwrap().into();
-        let geometries = Self::build_geometries(
-            &symdef.child_list.geometry_3d,
-            &symdef.child_list.symbol,
-            aux_data,
-        );
-        Symdef { name: symdef.name.clone(), id, geometries }
     }
 
     fn build_geometries(
@@ -788,7 +788,7 @@ impl Mvr {
         commands: Option<&bundle::CustomCommands>,
     ) -> Vec<layer::CustomCommand> {
         commands
-            .map(|commands| commands.custom_command.iter().map(Into::into).collect())
+            .map(|commands| commands.custom_command.iter().map(|c| c.parse().unwrap()).collect())
             .unwrap_or_default()
     }
 

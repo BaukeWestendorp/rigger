@@ -594,9 +594,9 @@ fn test_fixture_function_and_color() {
     let f = obj.as_fixture_object().unwrap();
     assert_eq!(f.function(), Some("This fixture is meant for testing"));
     let color = f.color().expect("Expected color");
-    assert!((color.x - 0.314303).abs() < 1e-5);
-    assert!((color.y - 0.328065).abs() < 1e-5);
-    assert!((color.yy - 87.699166).abs() < 1e-3);
+    assert!((color.x() - 0.314303).abs() < 1e-5);
+    assert!((color.y() - 0.328065).abs() < 1e-5);
+    assert!((color.yy() - 87.699166).abs() < 1e-3);
 }
 
 #[test]

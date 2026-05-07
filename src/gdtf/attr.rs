@@ -1,7 +1,6 @@
 use std::{
-    collections::HashMap,
     fmt,
-    str::{self, FromStr},
+    str::{self, FromStr as _},
 };
 
 fn extract_attr_n<T: str::FromStr>(s: &str, prefix: &str, suffix: Option<&str>) -> Option<T> {
@@ -70,6 +69,30 @@ pub enum ActivationGroup {
     Prism,
     BeamShaper,
     Shaper,
+}
+
+impl fmt::Display for ActivationGroup {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ActivationGroup::PanTilt => write!(f, "PanTilt"),
+            ActivationGroup::Xyz => write!(f, "XYZ"),
+            ActivationGroup::RotXyz => write!(f, "Rot_XYZ"),
+            ActivationGroup::ScaleXyz => write!(f, "Scale_XYZ"),
+            ActivationGroup::ColorRgb => write!(f, "ColorRGB"),
+            ActivationGroup::ColorHsb => write!(f, "ColorHSB"),
+            ActivationGroup::ColorCie => write!(f, "ColorCIE"),
+            ActivationGroup::ColorIndirect => write!(f, "ColorIndirect"),
+            ActivationGroup::Gobo(n) => write!(f, "Gobo{n}"),
+            ActivationGroup::GoboPos(n) => write!(f, "Gobo{n}Pos"),
+            ActivationGroup::AnimationWheel(n) => write!(f, "AnimationWheel{n}"),
+            ActivationGroup::AnimationWheelPos(n) => write!(f, "AnimationWheel{n}Pos"),
+            ActivationGroup::AnimationSystem(n) => write!(f, "AnimationSystem{n}"),
+            ActivationGroup::AnimationSystemPos(n) => write!(f, "AnimationSystem{n}Pos"),
+            ActivationGroup::Prism => write!(f, "Prism"),
+            ActivationGroup::BeamShaper => write!(f, "BeamShaper"),
+            ActivationGroup::Shaper => write!(f, "Shaper"),
+        }
+    }
 }
 
 impl str::FromStr for ActivationGroup {
@@ -158,8 +181,8 @@ impl Attribute {
     }
 }
 
-impl From<bundle::Attribute> for Attribute {
-    fn from(value: bundle::Attribute) -> Self {
+impl From<&bundle::Attribute> for Attribute {
+    fn from(value: &bundle::Attribute) -> Self {
         Self {
             name: AttributeName::from_str(&value.name).unwrap(),
             pretty: value.pretty.to_string(),
@@ -169,9 +192,9 @@ impl From<bundle::Attribute> for Attribute {
                 .map(|ag| Node::from_str(ag).unwrap()),
             feature: Node::from_str(&value.feature).unwrap(),
             main_attribute: value.main_attribute.as_deref().map(|ma| Node::from_str(ma).unwrap()),
-            physical_unit: value.physical_unit.into(),
+            physical_unit: (&value.physical_unit).into(),
             color: value.color.as_deref().map(|c| CieColor::from_str(c).unwrap()),
-            sub_physical_units: value.sub_physical_units.into_iter().map(Into::into).collect(),
+            sub_physical_units: value.sub_physical_units.iter().map(Into::into).collect(),
         }
     }
 }
@@ -1476,8 +1499,8 @@ impl Feature {
     }
 }
 
-impl From<bundle::Feature> for Feature {
-    fn from(value: bundle::Feature) -> Self {
+impl From<&bundle::Feature> for Feature {
+    fn from(value: &bundle::Feature) -> Self {
         Self { name: Name::new(&value.name) }
     }
 }
@@ -1486,7 +1509,7 @@ impl From<bundle::Feature> for Feature {
 pub struct FeatureGroup {
     pub(crate) name: Name,
     pub(crate) pretty: String,
-    pub(crate) features: HashMap<String, Feature>,
+    pub(crate) features: Vec<Feature>,
 }
 
 impl FeatureGroup {
@@ -1498,29 +1521,22 @@ impl FeatureGroup {
         &self.pretty
     }
 
-    pub fn features(&self) -> impl Iterator<Item = &Feature> {
-        self.features.values()
+    pub fn features(&self) -> &[Feature] {
+        &self.features
     }
 
     pub fn feature(&self, name: &str) -> Option<&Feature> {
-        self.features.get(name)
+        self.features.iter().find(|f| f.name().as_str() == name)
     }
 }
 
-impl From<bundle::FeatureGroup> for FeatureGroup {
-    fn from(value: bundle::FeatureGroup) -> Self {
+impl From<&bundle::FeatureGroup> for FeatureGroup {
+    fn from(value: &bundle::FeatureGroup) -> Self {
         let name = Name::new(&value.name);
         Self {
             name: name.clone(),
             pretty: value.pretty.to_string(),
-            features: value
-                .features
-                .into_iter()
-                .map(|f| {
-                    let feature: Feature = f.into();
-                    (feature.name.to_string(), feature)
-                })
-                .collect(),
+            features: value.features.iter().map(Into::into).collect(),
         }
     }
 }
@@ -1550,8 +1566,8 @@ pub enum PhysicalUnit {
     ColorComponent,
 }
 
-impl From<bundle::PhysicalUnit> for Option<PhysicalUnit> {
-    fn from(value: bundle::PhysicalUnit) -> Self {
+impl From<&bundle::PhysicalUnit> for Option<PhysicalUnit> {
+    fn from(value: &bundle::PhysicalUnit) -> Self {
         match value {
             bundle::PhysicalUnit::None => None,
             bundle::PhysicalUnit::Percent => Some(PhysicalUnit::Percent),
@@ -1605,11 +1621,11 @@ impl SubPhysicalUnit {
     }
 }
 
-impl From<bundle::SubPhysicalUnit> for SubPhysicalUnit {
-    fn from(value: bundle::SubPhysicalUnit) -> Self {
+impl From<&bundle::SubPhysicalUnit> for SubPhysicalUnit {
+    fn from(value: &bundle::SubPhysicalUnit) -> Self {
         Self {
-            r#type: value.r#type.into(),
-            physical_unit: value.physical_unit.and_then(|pu| pu.into()),
+            r#type: (&value.r#type).into(),
+            physical_unit: value.physical_unit.as_ref().and_then(|pu| pu.into()),
             physical_from: value.physical_from.unwrap_or(0.0),
             physical_to: value.physical_to.unwrap_or(1.0),
         }
@@ -1631,8 +1647,8 @@ pub enum SubPhysicalUnitType {
     RatioVertical,
 }
 
-impl From<bundle::SubPhysicalType> for SubPhysicalUnitType {
-    fn from(value: bundle::SubPhysicalType) -> Self {
+impl From<&bundle::SubPhysicalType> for SubPhysicalUnitType {
+    fn from(value: &bundle::SubPhysicalType) -> Self {
         match value {
             bundle::SubPhysicalType::PlacementOffset => SubPhysicalUnitType::PlacementOffset,
             bundle::SubPhysicalType::Amplitude => SubPhysicalUnitType::Amplitude,

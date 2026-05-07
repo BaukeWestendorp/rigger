@@ -9,9 +9,27 @@ pub use glam;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct CieColor {
-    pub x: f32,
-    pub y: f32,
-    pub yy: f32,
+    x: f32,
+    y: f32,
+    yy: f32,
+}
+
+impl CieColor {
+    pub fn new(x: f32, y: f32, yy: f32) -> Self {
+        Self { x, y, yy }
+    }
+
+    pub fn x(&self) -> f32 {
+        self.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.y
+    }
+
+    pub fn yy(&self) -> f32 {
+        self.yy
+    }
 }
 
 impl Default for CieColor {

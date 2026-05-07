@@ -1,51 +1,43 @@
-use std::{
-    collections::HashMap,
-    str::{self, FromStr},
+use std::str::{self, FromStr as _};
+
+use crate::{
+    CieColor,
+    gdtf::{Name, Node, bundle, parse_optional_name},
+    util,
 };
-
-use crate::{CieColor, gdtf::bundle, util};
-
-use super::Node;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Wheel {
-    pub(crate) name: String,
-    pub(crate) slots: HashMap<String, WheelSlot>,
+    pub(crate) name: Option<Name>,
+    pub(crate) slots: Vec<WheelSlot>,
 }
 
 impl Wheel {
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn name(&self) -> Option<&Name> {
+        self.name.as_ref()
     }
 
-    pub fn slots(&self) -> impl Iterator<Item = &WheelSlot> {
-        self.slots.values()
+    pub fn slots(&self) -> &[WheelSlot] {
+        &self.slots
     }
 
     pub fn slot(&self, name: &str) -> Option<&WheelSlot> {
-        self.slots.get(name)
+        self.slots.iter().find(|slot| slot.name().as_str() == name)
     }
 }
 
-impl From<bundle::Wheel> for Wheel {
-    fn from(value: bundle::Wheel) -> Self {
+impl From<&bundle::Wheel> for Wheel {
+    fn from(value: &bundle::Wheel) -> Self {
         Self {
-            name: value.name.clone().unwrap_or_default(),
-            slots: value
-                .slots
-                .into_iter()
-                .map(|s| {
-                    let slot: WheelSlot = s.into();
-                    (slot.name.to_string(), slot)
-                })
-                .collect(),
+            name: parse_optional_name(value.name.as_deref()),
+            slots: value.slots.iter().map(Into::into).collect(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WheelSlot {
-    pub(crate) name: String,
+    pub(crate) name: Name,
     pub(crate) color: SlotColor,
     pub(crate) media_file: Option<bundle::ResourceKey>,
     pub(crate) content: Option<WheelSlotContent>,
@@ -58,7 +50,7 @@ pub enum SlotColor {
 }
 
 impl WheelSlot {
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &Name {
         &self.name
     }
 
@@ -72,6 +64,48 @@ impl WheelSlot {
 
     pub fn content(&self) -> Option<&WheelSlotContent> {
         self.content.as_ref()
+    }
+}
+
+impl From<&bundle::Slot> for WheelSlot {
+    fn from(value: &bundle::Slot) -> Self {
+        let facets: Vec<_> = value
+            .content
+            .iter()
+            .filter_map(|c| if let bundle::SlotContent::Facet(f) = c { Some(f) } else { None })
+            .collect();
+
+        let animation = value.content.iter().find_map(|c| {
+            if let bundle::SlotContent::AnimationSystem(a) = c { Some(a) } else { None }
+        });
+
+        let content = if !facets.is_empty() {
+            Some(WheelSlotContent::Prism(facets.into_iter().map(|f| f.into()).collect()))
+        } else if let Some(anim) = animation {
+            Some(WheelSlotContent::AnimationSystem(anim.into()))
+        } else {
+            None
+        };
+
+        let media_file = if value.media_file_name.is_empty() {
+            None
+        } else {
+            // FIXME: This only gets the file name. The key should contain the path and extension too. This
+            // is not directly possible to do without a reference to the bundle's resources, so this would
+            // have to be moved out of a From impl.
+            // (Or we could From<(&Bundle, &bundle::Slot)> but that is cursed as fuck)
+            Some(bundle::ResourceKey::new(value.media_file_name.clone()))
+        };
+
+        let color = if let Some(f) = value.filter.as_deref().filter(|f| !f.is_empty()) {
+            SlotColor::Filter(Node::from_str(f).unwrap())
+        } else {
+            SlotColor::Cie(
+                value.color.as_deref().and_then(|c| CieColor::from_str(c).ok()).unwrap_or_default(),
+            )
+        };
+
+        Self { name: Name::new(value.name.clone()), color, media_file, content }
     }
 }
 
@@ -143,55 +177,6 @@ impl From<&bundle::AnimationSystem> for AnimationSystem {
             p2: util::parse_vec2(&value.p2),
             p3: util::parse_vec2(&value.p3),
             radius: value.radius,
-        }
-    }
-}
-
-impl From<bundle::Slot> for WheelSlot {
-    fn from(value: bundle::Slot) -> Self {
-        (&value).into()
-    }
-}
-
-impl From<&bundle::Slot> for WheelSlot {
-    fn from(value: &bundle::Slot) -> Self {
-        let facets: Vec<_> = value
-            .content
-            .iter()
-            .filter_map(|c| if let bundle::SlotContent::Facet(f) = c { Some(f) } else { None })
-            .collect();
-
-        let animation = value.content.iter().find_map(|c| {
-            if let bundle::SlotContent::AnimationSystem(a) = c { Some(a) } else { None }
-        });
-
-        let content = if !facets.is_empty() {
-            Some(WheelSlotContent::Prism(facets.iter().map(|f| (*f).into()).collect()))
-        } else if let Some(anim) = animation {
-            Some(WheelSlotContent::AnimationSystem(anim.into()))
-        } else {
-            None
-        };
-
-        let media_file_name = if value.media_file_name.is_empty() {
-            None
-        } else {
-            Some(value.media_file_name.clone())
-        };
-
-        let color = if let Some(f) = value.filter.as_deref().filter(|f| !f.is_empty()) {
-            SlotColor::Filter(Node::from_str(f).unwrap())
-        } else {
-            SlotColor::Cie(
-                value.color.as_deref().and_then(|c| CieColor::from_str(c).ok()).unwrap_or_default(),
-            )
-        };
-
-        Self {
-            name: value.name.clone(),
-            color,
-            media_file: media_file_name.map(|mfn| bundle::ResourceKey::new(mfn)),
-            content,
         }
     }
 }

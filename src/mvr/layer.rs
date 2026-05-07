@@ -1,3 +1,4 @@
+use core::str;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
     str::FromStr as _,
@@ -848,6 +849,21 @@ impl DmxAddress {
     }
 }
 
+impl From<&bundle::Address> for DmxAddress {
+    fn from(value: &bundle::Address) -> Self {
+        let absolute_value = if let Some(dot) = value.content.find('.') {
+            let (universe_str, channel_str) = value.content.split_at(dot);
+            let universe = universe_str.parse::<u32>().unwrap();
+            let channel = channel_str[1..].parse::<u32>().unwrap();
+            (universe - 1) * 512 + channel
+        } else {
+            value.content.parse::<u32>().unwrap()
+        };
+
+        Self { r#break: value.r#break as u32, absolute_value }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct NetworkAddress {
     pub(crate) geometry: gdtf::Node,
@@ -885,6 +901,19 @@ impl NetworkAddress {
     }
 }
 
+impl From<&bundle::Network> for NetworkAddress {
+    fn from(value: &bundle::Network) -> Self {
+        Self {
+            geometry: gdtf::Node::from_str(&value.geometry).unwrap(),
+            ipv4: value.ipv_4.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
+            subnetmask: value.subnetmask.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
+            ipv6: value.ipv_6.as_ref().map(|s| Ipv6Addr::from_str(s).unwrap()),
+            dhcp: value.dhcp.as_ref().is_some_and(|s| s == "on"),
+            hostname: value.hostname.to_owned(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Alignment {
     pub(crate) geometry: gdtf::Node,
@@ -907,12 +936,33 @@ impl Alignment {
     }
 }
 
+impl From<&bundle::Alignment> for Alignment {
+    fn from(value: &bundle::Alignment) -> Self {
+        Self {
+            geometry: gdtf::Node::from_str(
+                value.geometry.as_ref().expect("FIXME: handle missing geometry"),
+            )
+            .unwrap(),
+            up: util::parse_vec3(&value.up),
+            direction: util::parse_vec3(&value.direction),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CustomCommand(pub(crate) String);
 
 impl CustomCommand {
     pub fn command(&self) -> &str {
         &self.0
+    }
+}
+
+impl str::FromStr for CustomCommand {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(CustomCommand(s.to_owned()))
     }
 }
 
@@ -931,6 +981,15 @@ impl Overwrite {
     // FIXME: Add direct getter from `Mvr` for this.
     pub fn target(&self) -> Option<&gdtf::Node> {
         self.target.as_ref()
+    }
+}
+
+impl From<&bundle::Overwrite> for Overwrite {
+    fn from(value: &bundle::Overwrite) -> Self {
+        Self {
+            universal: gdtf::Node::from_str(&value.universal).unwrap(),
+            target: Some(gdtf::Node::from_str(&value.target).unwrap()),
+        }
     }
 }
 
@@ -954,6 +1013,16 @@ impl Connection {
 
     pub fn to_object(&self) -> mvr::NodeId<Object> {
         self.to_object
+    }
+}
+
+impl From<&bundle::Connection> for Connection {
+    fn from(value: &bundle::Connection) -> Self {
+        Self {
+            own: gdtf::Node::from_str(&value.own).unwrap(),
+            other: gdtf::Node::from_str(&value.other).unwrap(),
+            to_object: mvr::NodeId::from_str(&value.to_object).unwrap(),
+        }
     }
 }
 
@@ -1008,6 +1077,19 @@ impl Protocol {
 
     pub fn transmission(&self) -> Option<Transmission> {
         self.transmission
+    }
+}
+
+impl From<&bundle::Protocol> for Protocol {
+    fn from(value: &bundle::Protocol) -> Self {
+        Self {
+            geometry: gdtf::Node::from_str(&value.geometry)
+                .unwrap_or_else(|_| gdtf::Node::from_str("NetworkInOut_1").unwrap()),
+            name: value.name.clone(),
+            r#type: if value.r#type.is_empty() { None } else { Some(value.r#type.clone()) },
+            version: if value.version.is_empty() { None } else { Some(value.version.clone()) },
+            transmission: value.transmission.as_ref().map(Into::into),
+        }
     }
 }
 
@@ -1066,6 +1148,19 @@ impl Mapping {
     }
 }
 
+impl From<&bundle::Mapping> for Mapping {
+    fn from(value: &bundle::Mapping) -> Self {
+        Self {
+            linked_def: mvr::NodeId::from_str(&value.linked_def).unwrap(),
+            ux: value.ux.unwrap_or_default(),
+            uy: value.uy.unwrap_or_default(),
+            ox: value.ox.unwrap_or_default(),
+            oy: value.oy.unwrap_or_default(),
+            rz: value.rz.unwrap_or_default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Source {
     pub(crate) linked_geometry: gdtf::Node,
@@ -1088,6 +1183,16 @@ impl Source {
     }
 }
 
+impl From<&bundle::Source> for Source {
+    fn from(value: &bundle::Source) -> Self {
+        Self {
+            linked_geometry: gdtf::Node::from_str(&value.linked_geometry).unwrap(),
+            r#type: (&value.r#type).into(),
+            value: value.content.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SourceType {
     Ndi,
@@ -1107,18 +1212,18 @@ impl From<&bundle::SourceType> for SourceType {
     }
 }
 
-impl From<bundle::SourceType> for SourceType {
-    fn from(value: bundle::SourceType) -> Self {
-        (&value).into()
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ScaleHandling {
     #[default]
     ScaleKeepRatio,
     ScaleIgnoreRatio,
     KeepSizeCenter,
+}
+
+impl From<&bundle::ScaleHandeling> for ScaleHandling {
+    fn from(value: &bundle::ScaleHandeling) -> Self {
+        (&value.r#enum).into()
+    }
 }
 
 impl From<&bundle::Scale> for ScaleHandling {
@@ -1131,138 +1236,10 @@ impl From<&bundle::Scale> for ScaleHandling {
     }
 }
 
-impl From<&bundle::ScaleHandeling> for ScaleHandling {
-    fn from(value: &bundle::ScaleHandeling) -> Self {
-        (&value.r#enum).into()
-    }
-}
-
-impl From<bundle::ScaleHandeling> for ScaleHandling {
-    fn from(value: bundle::ScaleHandeling) -> Self {
-        (&value).into()
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Projection {
     pub(crate) source: Source,
     pub(crate) scale_handling: ScaleHandling,
-}
-
-impl From<&bundle::Address> for DmxAddress {
-    fn from(value: &bundle::Address) -> Self {
-        let absolute_value = if let Some(dot) = value.content.find('.') {
-            let (universe_str, channel_str) = value.content.split_at(dot);
-            let universe = universe_str.parse::<u32>().unwrap();
-            let channel = channel_str[1..].parse::<u32>().unwrap();
-            (universe - 1) * 512 + channel
-        } else {
-            value.content.parse::<u32>().unwrap()
-        };
-
-        Self { r#break: value.r#break as u32, absolute_value }
-    }
-}
-
-impl From<&bundle::Network> for NetworkAddress {
-    fn from(value: &bundle::Network) -> Self {
-        Self {
-            geometry: gdtf::Node::from_str(&value.geometry).unwrap(),
-            ipv4: value.ipv_4.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
-            subnetmask: value.subnetmask.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
-            ipv6: value.ipv_6.as_ref().map(|s| Ipv6Addr::from_str(s).unwrap()),
-            dhcp: value.dhcp.as_ref().is_some_and(|s| s == "on"),
-            hostname: value.hostname.to_owned(),
-        }
-    }
-}
-
-impl From<&bundle::Alignment> for Alignment {
-    fn from(value: &bundle::Alignment) -> Self {
-        Self {
-            geometry: gdtf::Node::from_str(
-                value.geometry.as_ref().expect("FIXME: handle missing geometry"),
-            )
-            .unwrap(),
-            up: util::parse_vec3(&value.up),
-            direction: util::parse_vec3(&value.direction),
-        }
-    }
-}
-
-impl From<&String> for CustomCommand {
-    fn from(value: &String) -> Self {
-        CustomCommand(value.to_owned())
-    }
-}
-
-impl From<&bundle::Overwrite> for Overwrite {
-    fn from(value: &bundle::Overwrite) -> Self {
-        Self {
-            universal: gdtf::Node::from_str(&value.universal).unwrap(),
-            target: Some(gdtf::Node::from_str(&value.target).unwrap()),
-        }
-    }
-}
-
-impl From<&bundle::Connection> for Connection {
-    fn from(value: &bundle::Connection) -> Self {
-        Self {
-            own: gdtf::Node::from_str(&value.own).unwrap(),
-            other: gdtf::Node::from_str(&value.other).unwrap(),
-            to_object: mvr::NodeId::from_str(&value.to_object).unwrap(),
-        }
-    }
-}
-
-impl From<&bundle::Source> for Source {
-    fn from(value: &bundle::Source) -> Self {
-        Self {
-            linked_geometry: gdtf::Node::from_str(&value.linked_geometry).unwrap(),
-            r#type: (&value.r#type).into(),
-            value: value.content.clone(),
-        }
-    }
-}
-
-impl From<&bundle::Mapping> for Mapping {
-    fn from(value: &bundle::Mapping) -> Self {
-        Self {
-            linked_def: mvr::NodeId::from_str(&value.linked_def).unwrap(),
-            ux: value.ux.unwrap_or_default(),
-            uy: value.uy.unwrap_or_default(),
-            ox: value.ox.unwrap_or_default(),
-            oy: value.oy.unwrap_or_default(),
-            rz: value.rz.unwrap_or_default(),
-        }
-    }
-}
-
-impl From<&bundle::Protocol> for Protocol {
-    fn from(value: &bundle::Protocol) -> Self {
-        Self {
-            geometry: gdtf::Node::from_str(&value.geometry)
-                .unwrap_or_else(|_| gdtf::Node::from_str("NetworkInOut_1").unwrap()),
-            name: value.name.clone(),
-            r#type: if value.r#type.is_empty() { None } else { Some(value.r#type.clone()) },
-            version: if value.version.is_empty() { None } else { Some(value.version.clone()) },
-            transmission: value.transmission.as_ref().map(Into::into),
-        }
-    }
-}
-
-impl TryFrom<&bundle::Projection> for Projection {
-    type Error = ();
-
-    fn try_from(value: &bundle::Projection) -> Result<Self, Self::Error> {
-        let source = value.source.first().ok_or(())?;
-        let source: Source = source.into();
-
-        let scale_handling =
-            value.scale_handeling.first().map(|sh| (&sh.r#enum).into()).unwrap_or_default();
-
-        Ok(Self { source, scale_handling })
-    }
 }
 
 impl Projection {
@@ -1272,5 +1249,17 @@ impl Projection {
 
     pub fn scale_handling(&self) -> ScaleHandling {
         self.scale_handling
+    }
+}
+
+impl From<&bundle::Projection> for Projection {
+    fn from(value: &bundle::Projection) -> Self {
+        let source = value.source.first().unwrap();
+        let source: Source = source.into();
+
+        let scale_handling =
+            value.scale_handeling.first().map(|sh| (&sh.r#enum).into()).unwrap_or_default();
+
+        Self { source, scale_handling }
     }
 }
