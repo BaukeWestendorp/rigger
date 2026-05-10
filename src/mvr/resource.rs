@@ -18,48 +18,48 @@ impl Resources {
         self.gdtfs.iter()
     }
 
-    pub fn gdtf(&self, path: &ResourceKey) -> Option<&Gdtf> {
-        self.gdtfs.get(path)
+    pub fn gdtf(&self, key: &ResourceKey) -> Option<&Gdtf> {
+        self.gdtfs.get(key)
     }
 
-    pub fn add_gdtf(&mut self, path: ResourceKey, gdtf: Gdtf) {
-        self.gdtfs.insert(path, gdtf);
+    pub fn add_gdtf(&mut self, key: ResourceKey, gdtf: Gdtf) {
+        self.gdtfs.insert(key, gdtf);
     }
 
-    pub fn remove_gdtf(&mut self, path: &ResourceKey) -> Option<Gdtf> {
-        self.gdtfs.remove(path)
+    pub fn remove_gdtf(&mut self, key: &ResourceKey) -> Option<Gdtf> {
+        self.gdtfs.remove(key)
     }
 
     pub fn models(&self) -> impl Iterator<Item = (&ResourceKey, &ModelResource)> {
         self.models.iter()
     }
 
-    pub fn model(&self, path: &ResourceKey) -> Option<&ModelResource> {
-        self.models.get(path)
+    pub fn model(&self, key: &ResourceKey) -> Option<&ModelResource> {
+        self.models.get(key)
     }
 
-    pub fn add_model(&mut self, path: ResourceKey, data: ModelResource) {
-        self.models.insert(path, data);
+    pub fn add_model(&mut self, key: ResourceKey, data: ModelResource) {
+        self.models.insert(key, data);
     }
 
-    pub fn remove_model(&mut self, path: &ResourceKey) -> Option<ModelResource> {
-        self.models.remove(path)
+    pub fn remove_model(&mut self, key: &ResourceKey) -> Option<ModelResource> {
+        self.models.remove(key)
     }
 
     pub fn textures(&self) -> impl Iterator<Item = (&ResourceKey, &TextureResource)> {
         self.textures.iter()
     }
 
-    pub fn texture(&self, path: &ResourceKey) -> Option<&TextureResource> {
-        self.textures.get(path)
+    pub fn texture(&self, key: &ResourceKey) -> Option<&TextureResource> {
+        self.textures.get(key)
     }
 
-    pub fn add_texture(&mut self, path: ResourceKey, data: TextureResource) {
-        self.textures.insert(path, data);
+    pub fn add_texture(&mut self, key: ResourceKey, data: TextureResource) {
+        self.textures.insert(key, data);
     }
 
-    pub fn remove_texture(&mut self, path: &ResourceKey) -> Option<TextureResource> {
-        self.textures.remove(path)
+    pub fn remove_texture(&mut self, key: &ResourceKey) -> Option<TextureResource> {
+        self.textures.remove(key)
     }
 }
 

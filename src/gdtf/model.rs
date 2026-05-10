@@ -7,7 +7,7 @@ pub struct Model {
     width: f32,
     height: f32,
     primitive_type: PrimitiveType,
-    files: Vec<ResourceKey>,
+    resources: Vec<ResourceKey>,
     svg_offset: glam::Vec2,
     svg_side_offset: glam::Vec2,
     svg_front_offset: glam::Vec2,
@@ -34,8 +34,8 @@ impl Model {
         &self.primitive_type
     }
 
-    pub fn files(&self) -> &[ResourceKey] {
-        &self.files
+    pub fn resources(&self) -> &[ResourceKey] {
+        &self.resources
     }
 
     pub fn svg_offset(&self) -> glam::Vec2 {
@@ -77,7 +77,7 @@ impl bundle::FromBundle for Model {
             width: source.width,
             height: source.height,
             primitive_type: (&source.primitive_type).into(),
-            files,
+            resources: files,
             svg_offset: glam::Vec2::new(
                 source.svg_offset_x.unwrap_or(0.0),
                 source.svg_offset_y.unwrap_or(0.0),

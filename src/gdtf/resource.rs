@@ -26,32 +26,32 @@ impl Resources {
         self.models.iter()
     }
 
-    pub fn model(&self, path: &ResourceKey) -> Option<&ModelResource> {
-        self.models.get(path)
+    pub fn model(&self, key: &ResourceKey) -> Option<&ModelResource> {
+        self.models.get(key)
     }
 
-    pub fn add_model(&mut self, path: ResourceKey, data: ModelResource) {
-        self.models.insert(path, data);
+    pub fn add_model(&mut self, key: ResourceKey, data: ModelResource) {
+        self.models.insert(key, data);
     }
 
-    pub fn remove_model(&mut self, path: &ResourceKey) -> Option<ModelResource> {
-        self.models.remove(path)
+    pub fn remove_model(&mut self, key: &ResourceKey) -> Option<ModelResource> {
+        self.models.remove(key)
     }
 
     pub fn wheels(&self) -> impl Iterator<Item = (&ResourceKey, &WheelResource)> {
         self.wheels.iter()
     }
 
-    pub fn wheel(&self, path: &ResourceKey) -> Option<&WheelResource> {
-        self.wheels.get(path)
+    pub fn wheel(&self, key: &ResourceKey) -> Option<&WheelResource> {
+        self.wheels.get(key)
     }
 
-    pub fn add_wheel(&mut self, path: ResourceKey, data: WheelResource) {
-        self.wheels.insert(path, data);
+    pub fn add_wheel(&mut self, key: ResourceKey, data: WheelResource) {
+        self.wheels.insert(key, data);
     }
 
-    pub fn remove_wheel(&mut self, path: &ResourceKey) -> Option<WheelResource> {
-        self.wheels.remove(path)
+    pub fn remove_wheel(&mut self, key: &ResourceKey) -> Option<WheelResource> {
+        self.wheels.remove(key)
     }
 
     pub fn thumbnail_png(&self) -> Option<&ThumbnailResource> {
