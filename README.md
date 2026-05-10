@@ -14,7 +14,7 @@ Because these formats support thousands of devices across multiple manufacturers
 
 ## Preview
 
-Preview of the `mvr_viewer` exampl that uses Raylib to preview the contents of an MVR file. Currently it does not show the fixtures yet, as reading of the GDTF geometry tree is not yet implemented.
+Preview of the `mvr_viewer` examplw that uses Raylib to preview the contents of an MVR file. Currently it does not show the fixtures yet, as reading of the GDTF geometry tree is not yet implemented.
 
 To run the example use `cargo run --example mvr_viewer <PATH_TO_MVR>`.
 
