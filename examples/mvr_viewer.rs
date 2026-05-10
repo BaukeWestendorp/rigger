@@ -36,7 +36,6 @@ fn run(mvr: Mvr) {
     let (mut rl, mut thread) = raylib::init()
         .size(1080, 720)
         .title("MVR Viewer")
-        .vsync()
         .msaa_4x()
         .resizable()
         .log_level(TraceLogLevel::LOG_ERROR)

@@ -2,7 +2,7 @@
 
 A Rust library for reading [MVR](https://www.gdtf.eu/mvr/prologue/introduction/) and [GDTF](https://www.gdtf.eu/gdtf/prologue/introduction/) files.
 
-> ⚠️ **Warning** > This library is in early development. APIs, features, and behavior may change frequently and without notice.
+> ⚠️ **Warning** > This library is in early development and incomplete. APIs, features, and behavior may change frequently and without notice.
 
 ## Overview
 
@@ -12,21 +12,28 @@ Because these formats support thousands of devices across multiple manufacturers
 
 `rigger` abstracts this complexity by providing lookup tables and high-level helper functions. The goal is to let you extract the data you actually need without navigating the deep, nested specifications of the underlying XML. Though, if you want to manually find anything defined in the description files, you can.
 
+## Preview
+
+Preview of the `mvr_viewer` exampl that uses Raylib to preview the contents of an MVR file. Currently it does not show the fixtures yet, as reading of the GDTF geometry tree is not yet implemented.
+
+To run the example use `cargo run --example mvr_viewer <PATH_TO_MVR>`.
+
+![Preview of the MVR Viewer example](mvr_example.png)
+
 ## Progress
 ### MVR
 - [x] Load bundle from folder
 - [x] Load bundle from `.mvr` archive
-- [x] Verify deserialization of `bundle` description
-- [ ] Verify deserialization of `bundle` resources
+- [x] Load bundle from bytes.
 - [x] Verify higher level `Mvr` type and its children
 - [ ] Implement error handling
 - [ ] Add tests for invalid or malformed inputs
+- [ ] Local to world transforms
 - [ ] Write documentation
 ### GDTF
 - [x] Load bundle from folder
 - [x] Load bundle from `.gdtf` archive
-- [ ] Verify deserialization of `bundle` description
-- [ ] Verify deserialization of `bundle` resources
+- [x] Load bundle from bytes
 - [ ] Verify higher level `Gdtf` type and its children
 - [ ] Implement error handling
 - [ ] Add tests for invalid or malformed inputs
