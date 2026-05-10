@@ -3,8 +3,10 @@ use std::{path::Path, str::FromStr as _};
 use rigger::{
     CieColor,
     gdtf::{
-        ActivationGroup, AttributeName, Ces, ColorSpaceMode, EmitterColor, Gdtf, InterpolationTo,
-        Name, NodePath, PhysicalUnit, SlotColor, SubPhysicalUnitType, WheelSlotContent,
+        Gdtf, Name, NodePath,
+        attr::{ActivationGroup, AttributeName, PhysicalUnit, SubPhysicalUnitType},
+        phys::{Ces, ColorSpaceMode, EmitterColor, InterpolationTo},
+        wheel::{SlotColor, WheelSlotContent},
     },
 };
 use uuid::Uuid;

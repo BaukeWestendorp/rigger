@@ -5,8 +5,9 @@ use std::{
 };
 
 use rigger::mvr::{
-    Layer, Mvr, Node as _, NodeId, Object, ObjectIdentifier, ObjectKind, ResourceKey,
-    ScaleHandling, SourceType, Transmission,
+    Mvr, Node as _, NodeId,
+    layer::{Layer, Object, ObjectIdentifier, ObjectKind, ScaleHandling, SourceType, Transmission},
+    resource::ResourceKey,
 };
 
 fn load_complete_mvr() -> Mvr {
@@ -715,10 +716,12 @@ fn test_gdtf_loading() {
 
     assert_eq!(mvr.resources().gdtfs().count(), 1);
 
-    let gdtf = mvr
-        .resources()
-        .gdtf(&ResourceKey::new("Robe Lighting@Robin Spiider.gdtf"))
-        .expect("Should have GDTF file");
+    let gdtf = {
+        let this = &mvr.resources();
+        let path = &ResourceKey::new("Robe Lighting@Robin Spiider.gdtf");
+        this.gdtf(path)
+    }
+    .expect("Should have GDTF file");
 
     assert_eq!(gdtf.version().major(), 1);
     assert_eq!(gdtf.version().minor(), 2);

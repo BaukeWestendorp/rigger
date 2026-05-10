@@ -13,6 +13,15 @@ pub struct Resources {
 }
 
 impl Resources {
+    pub fn new() -> Self {
+        Self {
+            models: HashMap::new(),
+            wheels: HashMap::new(),
+            thumbnail_png: None,
+            thumbnail_svg: None,
+        }
+    }
+
     pub fn models(&self) -> impl Iterator<Item = (&ResourceKey, &ModelResource)> {
         self.models.iter()
     }

@@ -3,33 +3,37 @@ use std::{
     str,
 };
 
-use crate::{gdtf::Gdtf, mvr::bundle::FromBundle, util};
+use crate::{
+    gdtf::Gdtf,
+    mvr::{
+        bundle::FromBundle,
+        resource::{ModelResource, ResourceKey, Resources, TextureResource},
+    },
+    util,
+};
 
 pub mod bundle;
 
-mod aux;
-mod geo;
-mod layer;
-mod node;
-mod resource;
+pub mod aux;
+pub mod geo;
+pub mod layer;
+pub mod resource;
 
-pub use aux::*;
-pub use geo::*;
-pub use layer::*;
+mod node;
+
 pub use node::*;
-pub use resource::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Mvr {
     version: Version,
     provider: Provider,
 
-    symdefs: NodeContainer<Symdef>,
-    classes: NodeContainer<Class>,
-    mapping_definitions: NodeContainer<MappingDefinition>,
-    positions: NodeContainer<Position>,
+    symdefs: NodeContainer<aux::Symdef>,
+    classes: NodeContainer<aux::Class>,
+    mapping_definitions: NodeContainer<aux::MappingDefinition>,
+    positions: NodeContainer<aux::Position>,
 
-    layers: NodeContainer<Layer>,
+    layers: NodeContainer<layer::Layer>,
 
     path: Option<PathBuf>,
     resources: Resources,
@@ -68,43 +72,43 @@ impl Mvr {
         self.provider = provider;
     }
 
-    pub fn symdefs(&self) -> &NodeContainer<Symdef> {
+    pub fn symdefs(&self) -> &NodeContainer<aux::Symdef> {
         &self.symdefs
     }
 
-    pub fn symdefs_mut(&mut self) -> &mut NodeContainer<Symdef> {
+    pub fn symdefs_mut(&mut self) -> &mut NodeContainer<aux::Symdef> {
         &mut self.symdefs
     }
 
-    pub fn classes(&self) -> &NodeContainer<Class> {
+    pub fn classes(&self) -> &NodeContainer<aux::Class> {
         &self.classes
     }
 
-    pub fn classes_mut(&mut self) -> &mut NodeContainer<Class> {
+    pub fn classes_mut(&mut self) -> &mut NodeContainer<aux::Class> {
         &mut self.classes
     }
 
-    pub fn positions(&self) -> &NodeContainer<Position> {
+    pub fn positions(&self) -> &NodeContainer<aux::Position> {
         &self.positions
     }
 
-    pub fn positions_mut(&mut self) -> &mut NodeContainer<Position> {
+    pub fn positions_mut(&mut self) -> &mut NodeContainer<aux::Position> {
         &mut self.positions
     }
 
-    pub fn mapping_definitions(&self) -> &NodeContainer<MappingDefinition> {
+    pub fn mapping_definitions(&self) -> &NodeContainer<aux::MappingDefinition> {
         &self.mapping_definitions
     }
 
-    pub fn mapping_definitions_mut(&mut self) -> &mut NodeContainer<MappingDefinition> {
+    pub fn mapping_definitions_mut(&mut self) -> &mut NodeContainer<aux::MappingDefinition> {
         &mut self.mapping_definitions
     }
 
-    pub fn layers(&self) -> &NodeContainer<Layer> {
+    pub fn layers(&self) -> &NodeContainer<layer::Layer> {
         &self.layers
     }
 
-    pub fn layers_mut(&mut self) -> &mut NodeContainer<Layer> {
+    pub fn layers_mut(&mut self) -> &mut NodeContainer<layer::Layer> {
         &mut self.layers
     }
 
@@ -166,27 +170,28 @@ impl From<&bundle::Bundle> for Mvr {
         });
 
         for class in &aux_data.class {
-            let class = Class::from_bundle(&class, &bundle);
+            let class = aux::Class::from_bundle(&class, &bundle);
             mvr.classes_mut().add(class);
         }
 
         for position in &aux_data.position {
-            let position = Position::from_bundle(&position, &bundle);
+            let position = aux::Position::from_bundle(&position, &bundle);
             mvr.positions_mut().add(position);
         }
 
         for symdef in &aux_data.symdef {
-            let symdef = Symdef::from_bundle(&symdef, &bundle);
+            let symdef = aux::Symdef::from_bundle(&symdef, &bundle);
             mvr.symdefs_mut().add(symdef);
         }
 
         for mapping_definition in &aux_data.mapping_definition {
-            let mapping_definition = MappingDefinition::from_bundle(&mapping_definition, &bundle);
+            let mapping_definition =
+                aux::MappingDefinition::from_bundle(&mapping_definition, &bundle);
             mvr.mapping_definitions_mut().add(mapping_definition);
         }
 
         for layer in &bundle.description().scene.layers.layer {
-            let layer = Layer::from_bundle(&layer, &bundle);
+            let layer = layer::Layer::from_bundle(&layer, &bundle);
             mvr.layers_mut().add(layer);
         }
 
@@ -264,11 +269,11 @@ fn build_geometries(
     geometry_3ds: &[bundle::Geometry3D],
     symbols: &[bundle::Symbol],
     bundle: &bundle::Bundle,
-) -> Vec<Geometry> {
+) -> Vec<geo::Geometry> {
     let mut geometries = Vec::new();
 
     for geo3d in geometry_3ds {
-        geometries.push(Geometry::from_bundle(geo3d, bundle));
+        geometries.push(geo::Geometry::from_bundle(geo3d, bundle));
     }
 
     let Some(aux_data) = &bundle.description().scene.aux_data else {
@@ -278,7 +283,7 @@ fn build_geometries(
     for symbol in symbols {
         let symbol_transform = util::parse_affine3a_or_identity(symbol.matrix.as_deref());
         let symdef = aux_data.symdef.iter().find(|s| s.uuid == symbol.symdef).unwrap();
-        let nested_symdef = Symdef::from_bundle(&symdef, bundle);
+        let nested_symdef = aux::Symdef::from_bundle(&symdef, bundle);
         for mut geo in nested_symdef.geometries().to_owned() {
             geo.set_local_transform(geo.local_transform() * symbol_transform);
             geometries.push(geo);

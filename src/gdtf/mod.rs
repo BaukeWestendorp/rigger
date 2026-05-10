@@ -6,21 +6,18 @@ use std::{
 
 use uuid::Uuid;
 
-use crate::gdtf::bundle::FromBundle as _;
+use crate::gdtf::{
+    bundle::FromBundle as _,
+    resource::{ModelResource, ResourceKey, Resources, ThumbnailResource, WheelResource},
+};
 
 pub mod bundle;
 
-mod attr;
-mod model;
-mod phys;
-mod resource;
-mod wheel;
-
-pub use attr::*;
-pub use model::*;
-pub use phys::*;
-pub use resource::*;
-pub use wheel::*;
+pub mod attr;
+pub mod model;
+pub mod phys;
+pub mod resource;
+pub mod wheel;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Gdtf {
@@ -84,9 +81,9 @@ impl Gdtf {
             gamuts: NodeContainer::new(),
             dmx_profiles: NodeContainer::new(),
             cri_groups: Vec::new(),
-            properties: Properties::new(),
+            properties: phys::Properties::new(),
             models: NodeContainer::new(),
-            resources: Resources::default(),
+            resources: Resources::new(),
         }
     }
 
@@ -237,7 +234,7 @@ impl Gdtf {
         self.color_space.as_ref()
     }
 
-    pub fn set_color_space(&mut self, color_space: Option<ColorSpace>) {
+    pub fn set_color_space(&mut self, color_space: Option<phys::ColorSpace>) {
         self.color_space = color_space
     }
 

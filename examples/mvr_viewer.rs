@@ -1,7 +1,11 @@
 use std::{collections::HashMap, io::Write as _};
 
 use raylib::prelude::*;
-use rigger::mvr::{Layer, Mvr, Object, ResourceKey};
+use rigger::mvr::{
+    Mvr,
+    layer::{Layer, Object},
+    resource::ResourceKey,
+};
 
 struct State {
     pub mvr: Mvr,
