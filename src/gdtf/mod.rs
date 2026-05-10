@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     str::{self, FromStr as _},
 };
 
@@ -407,6 +407,18 @@ impl From<&bundle::Bundle> for Gdtf {
                 gdtf.models_mut().add(model::Model::from_bundle(model, bundle));
             }
         };
+
+        for (path, bytes) in bundle.resources() {
+            if let Some(first_component) = path.components().next() {
+                if first_component == Component::Normal("wheels".as_ref()) {
+                    gdtf.resources_mut()
+                        .add_wheel(ResourceKey::new(path), WheelResource::new(bytes.clone()));
+                } else if first_component == Component::Normal("models".as_ref()) {
+                    gdtf.resources_mut()
+                        .add_model(ResourceKey::new(path), ModelResource::new(path, bytes.clone()));
+                }
+            }
+        }
 
         if let Some(thumbnail_png) = bundle.resources().get(Path::new("thumbnail.png")) {
             gdtf.resources_mut().set_thumbnail_png(ThumbnailResource::new(thumbnail_png.clone()));
