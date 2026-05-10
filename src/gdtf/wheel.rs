@@ -1,15 +1,15 @@
-use std::str::{self, FromStr as _};
+use std::str::FromStr as _;
 
 use crate::{
     CieColor,
-    gdtf::{Name, Node, bundle, parse_optional_name},
+    gdtf::{Name, Node, NodeContainer, NodePath, ResourceKey, bundle, parse_optional_name},
     util,
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Wheel {
-    pub(crate) name: Option<Name>,
-    pub(crate) slots: Vec<WheelSlot>,
+    name: Option<Name>,
+    slots: NodeContainer<WheelSlot>,
 }
 
 impl Wheel {
@@ -17,36 +17,36 @@ impl Wheel {
         self.name.as_ref()
     }
 
-    pub fn slots(&self) -> &[WheelSlot] {
+    pub fn slots(&self) -> &NodeContainer<WheelSlot> {
         &self.slots
-    }
-
-    pub fn slot(&self, name: &str) -> Option<&WheelSlot> {
-        self.slots.iter().find(|slot| slot.name().as_str() == name)
     }
 }
 
-impl From<&bundle::Wheel> for Wheel {
-    fn from(value: &bundle::Wheel) -> Self {
-        Self {
-            name: parse_optional_name(value.name.as_deref()),
-            slots: value.slots.iter().map(Into::into).collect(),
+impl Node for Wheel {
+    fn name(&self) -> Option<Name> {
+        self.name.clone()
+    }
+}
+
+impl bundle::FromBundle for Wheel {
+    type Source = bundle::Wheel;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let mut slots = NodeContainer::default();
+        for slot in &source.slots {
+            slots.add(WheelSlot::from_bundle(slot, bundle));
         }
+
+        Self { name: parse_optional_name(source.name.as_deref()), slots }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct WheelSlot {
-    pub(crate) name: Name,
-    pub(crate) color: SlotColor,
-    pub(crate) file: Option<bundle::ResourceKey>,
-    pub(crate) content: Option<WheelSlotContent>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SlotColor {
-    Filter(Node),
-    Cie(CieColor),
+    name: Name,
+    color: SlotColor,
+    file: Option<ResourceKey>,
+    content: Option<WheelSlotContent>,
 }
 
 impl WheelSlot {
@@ -58,7 +58,7 @@ impl WheelSlot {
         &self.color
     }
 
-    pub fn file(&self) -> Option<&bundle::ResourceKey> {
+    pub fn file(&self) -> Option<&ResourceKey> {
         self.file.as_ref()
     }
 
@@ -67,46 +67,71 @@ impl WheelSlot {
     }
 }
 
-impl From<&bundle::Slot> for WheelSlot {
-    fn from(value: &bundle::Slot) -> Self {
-        let facets: Vec<_> = value
+impl Node for WheelSlot {
+    fn name(&self) -> Option<Name> {
+        Some(self.name.clone())
+    }
+}
+
+impl bundle::FromBundle for WheelSlot {
+    type Source = bundle::Slot;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let facets = source
             .content
             .iter()
             .filter_map(|c| if let bundle::SlotContent::Facet(f) = c { Some(f) } else { None })
-            .collect();
+            .collect::<Vec<_>>();
 
-        let animation = value.content.iter().find_map(|c| {
+        let animation = source.content.iter().find_map(|c| {
             if let bundle::SlotContent::AnimationSystem(a) = c { Some(a) } else { None }
         });
 
         let content = if !facets.is_empty() {
-            Some(WheelSlotContent::Prism(facets.into_iter().map(|f| f.into()).collect()))
+            Some(WheelSlotContent::Prism(
+                facets.iter().map(|f| PrismFacet::from_bundle(f, bundle)).collect(),
+            ))
         } else if let Some(anim) = animation {
-            Some(WheelSlotContent::AnimationSystem(anim.into()))
+            Some(WheelSlotContent::AnimationSystem(AnimationSystem::from_bundle(&anim, bundle)))
         } else {
             None
         };
 
-        let file = if value.media_file_name.is_empty() {
+        let file = if source.media_file_name.is_empty() {
             None
         } else {
-            // FIXME: This only gets the file name. The key should contain the path and extension too. This
-            // is not directly possible to do without a reference to the bundle's resources, so this would
-            // have to be moved out of a From impl.
-            // (Or we could From<(&Bundle, &bundle::Slot)> but that is cursed as fuck)
-            Some(bundle::ResourceKey::new(value.media_file_name.clone()))
+            bundle
+                .resources()
+                .keys()
+                .find(|path| {
+                    path.starts_with("wheels")
+                        && path
+                            .file_name()
+                            .is_some_and(|f| f.to_string_lossy().contains(&source.media_file_name))
+                })
+                .map(|path| ResourceKey::new(path))
         };
 
-        let color = if let Some(f) = value.filter.as_deref().filter(|f| !f.is_empty()) {
-            SlotColor::Filter(Node::from_str(f).unwrap())
+        let color = if let Some(f) = source.filter.as_deref().filter(|f| !f.is_empty()) {
+            SlotColor::Filter(NodePath::from_str(f).unwrap())
         } else {
             SlotColor::Cie(
-                value.color.as_deref().and_then(|c| CieColor::from_str(c).ok()).unwrap_or_default(),
+                source
+                    .color
+                    .as_deref()
+                    .and_then(|c| CieColor::from_str(c).ok())
+                    .unwrap_or_default(),
             )
         };
 
-        Self { name: Name::new(value.name.clone()), color, file, content }
+        Self { name: Name::new(source.name.clone()), color, file, content }
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SlotColor {
+    Filter(NodePath),
+    Cie(CieColor),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -117,8 +142,8 @@ pub enum WheelSlotContent {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrismFacet {
-    pub(crate) color: CieColor,
-    pub(crate) rotation: glam::Mat3,
+    color: CieColor,
+    rotation: glam::Mat3,
 }
 
 impl PrismFacet {
@@ -126,30 +151,32 @@ impl PrismFacet {
         self.color
     }
 
-    pub fn rotation(&self) -> &glam::Mat3 {
-        &self.rotation
+    pub fn rotation(&self) -> glam::Mat3 {
+        self.rotation
     }
 }
 
-impl From<&bundle::Facet> for PrismFacet {
-    fn from(value: &bundle::Facet) -> Self {
+impl bundle::FromBundle for PrismFacet {
+    type Source = bundle::Facet;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            color: value
+            color: source
                 .color
                 .as_deref()
                 .and_then(|c| CieColor::from_str(c).ok())
                 .unwrap_or_default(),
-            rotation: util::parse_mat3(&value.rotation),
+            rotation: util::parse_mat3(&source.rotation),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnimationSystem {
-    pub(crate) p1: glam::Vec2,
-    pub(crate) p2: glam::Vec2,
-    pub(crate) p3: glam::Vec2,
-    pub(crate) radius: f32,
+    p1: glam::Vec2,
+    p2: glam::Vec2,
+    p3: glam::Vec2,
+    radius: f32,
 }
 
 impl AnimationSystem {
@@ -170,13 +197,15 @@ impl AnimationSystem {
     }
 }
 
-impl From<&bundle::AnimationSystem> for AnimationSystem {
-    fn from(value: &bundle::AnimationSystem) -> Self {
+impl bundle::FromBundle for AnimationSystem {
+    type Source = bundle::AnimationSystem;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            p1: util::parse_vec2(&value.p1),
-            p2: util::parse_vec2(&value.p2),
-            p3: util::parse_vec2(&value.p3),
-            radius: value.radius,
+            p1: util::parse_vec2(&source.p1),
+            p2: util::parse_vec2(&source.p2),
+            p3: util::parse_vec2(&source.p3),
+            radius: source.radius,
         }
     }
 }

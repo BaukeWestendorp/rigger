@@ -2,15 +2,15 @@ use std::str::FromStr as _;
 
 use crate::{
     CieColor,
-    gdtf::{Name, bundle, parse_optional_name},
+    gdtf::{Name, Node, bundle, parse_optional_name},
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Emitter {
-    pub(crate) name: Name,
-    pub(crate) color: EmitterColor,
-    pub(crate) diode_part: Option<String>,
-    pub(crate) measurements: Vec<EmitterMeasurement>,
+    name: Name,
+    color: EmitterColor,
+    diode_part: Option<String>,
+    measurements: Vec<EmitterMeasurement>,
 }
 
 impl Emitter {
@@ -31,19 +31,32 @@ impl Emitter {
     }
 }
 
-impl From<&bundle::Emitter> for Emitter {
-    fn from(value: &bundle::Emitter) -> Self {
-        let color = if let Some(c) = value.color.as_deref() {
-            EmitterColor::Color(CieColor::from_str(c).unwrap())
-        } else {
-            EmitterColor::DominantWaveLength(value.dominant_wave_length.unwrap())
-        };
+impl Node for Emitter {
+    fn name(&self) -> Option<Name> {
+        Some(self.name.clone())
+    }
+}
 
+impl bundle::FromBundle for Emitter {
+    type Source = bundle::Emitter;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            name: Name::new(value.name.clone()),
-            color,
-            diode_part: value.diode_part.clone(),
-            measurements: value.measurements.iter().map(Into::into).collect(),
+            name: Name::new(source.name.clone()),
+            color: if let Some(c) = source.color.as_deref() {
+                EmitterColor::Color(CieColor::from_str(c).unwrap())
+            } else {
+                EmitterColor::DominantWaveLength(source.dominant_wave_length.unwrap())
+            },
+            diode_part: match source.diode_part.as_deref() {
+                Some("") | None => None,
+                Some(part) => Some(part.to_string()),
+            },
+            measurements: source
+                .measurements
+                .iter()
+                .map(|m| EmitterMeasurement::from_bundle(m, bundle))
+                .collect(),
         }
     }
 }
@@ -56,10 +69,10 @@ pub enum EmitterColor {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EmitterMeasurement {
-    pub(crate) physical: f32,
-    pub(crate) luminous_intensity: f32,
-    pub(crate) interpolation_to: InterpolationTo,
-    pub(crate) points: Vec<MeasurementPoint>,
+    physical: f32,
+    luminous_intensity: f32,
+    interpolation_to: InterpolationTo,
+    points: Vec<MeasurementPoint>,
 }
 
 impl EmitterMeasurement {
@@ -80,22 +93,28 @@ impl EmitterMeasurement {
     }
 }
 
-impl From<&bundle::EmitterMeasurement> for EmitterMeasurement {
-    fn from(value: &bundle::EmitterMeasurement) -> Self {
+impl bundle::FromBundle for EmitterMeasurement {
+    type Source = bundle::EmitterMeasurement;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            physical: value.physical,
-            luminous_intensity: value.luminous_intensity,
-            interpolation_to: (&value.interpolation_to).into(),
-            points: value.measurement_points.iter().map(Into::into).collect(),
+            physical: source.physical,
+            luminous_intensity: source.luminous_intensity,
+            interpolation_to: InterpolationTo::from_bundle(&source.interpolation_to, bundle),
+            points: source
+                .measurement_points
+                .iter()
+                .map(|mp| MeasurementPoint::from_bundle(mp, bundle))
+                .collect(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Filter {
-    pub(crate) name: Name,
-    pub(crate) color: CieColor,
-    pub(crate) measurements: Vec<FilterMeasurement>,
+    name: Name,
+    color: CieColor,
+    measurements: Vec<FilterMeasurement>,
 }
 
 impl Filter {
@@ -112,26 +131,38 @@ impl Filter {
     }
 }
 
-impl From<&bundle::Filter> for Filter {
-    fn from(value: &bundle::Filter) -> Self {
+impl Node for Filter {
+    fn name(&self) -> Option<Name> {
+        Some(self.name.clone())
+    }
+}
+
+impl bundle::FromBundle for Filter {
+    type Source = bundle::Filter;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            name: Name::new(value.name.clone()),
-            color: value
+            name: Name::new(source.name.clone()),
+            color: source
                 .color
                 .as_deref()
                 .map(|c| CieColor::from_str(c).unwrap())
                 .unwrap_or_default(),
-            measurements: value.measurements.iter().map(Into::into).collect(),
+            measurements: source
+                .measurements
+                .iter()
+                .map(|m| FilterMeasurement::from_bundle(m, bundle))
+                .collect(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FilterMeasurement {
-    pub(crate) physical: f32,
-    pub(crate) transmission: f32,
-    pub(crate) interpolation_to: InterpolationTo,
-    pub(crate) points: Vec<MeasurementPoint>,
+    physical: f32,
+    transmission: f32,
+    interpolation_to: InterpolationTo,
+    points: Vec<MeasurementPoint>,
 }
 
 impl FilterMeasurement {
@@ -152,21 +183,27 @@ impl FilterMeasurement {
     }
 }
 
-impl From<&bundle::FilterMeasurement> for FilterMeasurement {
-    fn from(value: &bundle::FilterMeasurement) -> Self {
+impl bundle::FromBundle for FilterMeasurement {
+    type Source = bundle::FilterMeasurement;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            physical: value.physical,
-            transmission: value.transmission,
-            interpolation_to: (&value.interpolation_to).into(),
-            points: value.measurement_points.iter().map(Into::into).collect(),
+            physical: source.physical,
+            transmission: source.transmission,
+            interpolation_to: InterpolationTo::from_bundle(&source.interpolation_to, bundle),
+            points: source
+                .measurement_points
+                .iter()
+                .map(|p| MeasurementPoint::from_bundle(p, bundle))
+                .collect(),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MeasurementPoint {
-    pub(crate) wave_length: f32,
-    pub(crate) energy: f32,
+    wave_length: f32,
+    energy: f32,
 }
 
 impl MeasurementPoint {
@@ -179,9 +216,11 @@ impl MeasurementPoint {
     }
 }
 
-impl From<&bundle::MeasurementPoint> for MeasurementPoint {
-    fn from(value: &bundle::MeasurementPoint) -> Self {
-        Self { wave_length: value.wave_length, energy: value.energy }
+impl bundle::FromBundle for MeasurementPoint {
+    type Source = bundle::MeasurementPoint;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        Self { wave_length: source.wave_length, energy: source.energy }
     }
 }
 
@@ -192,9 +231,11 @@ pub enum InterpolationTo {
     Log,
 }
 
-impl From<&bundle::InterpolationTo> for InterpolationTo {
-    fn from(value: &bundle::InterpolationTo) -> Self {
-        match value {
+impl bundle::FromBundle for InterpolationTo {
+    type Source = bundle::InterpolationTo;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        match source {
             bundle::InterpolationTo::Linear => Self::Linear,
             bundle::InterpolationTo::Step => Self::Step,
             bundle::InterpolationTo::Log => Self::Log,
@@ -204,8 +245,8 @@ impl From<&bundle::InterpolationTo> for InterpolationTo {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColorSpace {
-    pub(crate) name: Option<Name>,
-    pub(crate) mode: ColorSpaceMode,
+    name: Option<Name>,
+    mode: ColorSpaceMode,
 }
 
 impl ColorSpace {
@@ -218,9 +259,17 @@ impl ColorSpace {
     }
 }
 
-impl From<&bundle::ColorSpace> for ColorSpace {
-    fn from(value: &bundle::ColorSpace) -> Self {
-        Self { name: parse_optional_name(value.name.as_deref()), mode: value.into() }
+impl Node for ColorSpace {
+    fn name(&self) -> Option<Name> {
+        self.name.clone()
+    }
+}
+
+impl bundle::FromBundle for ColorSpace {
+    type Source = bundle::ColorSpace;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        Self { name: parse_optional_name(source.name.as_deref()), mode: source.into() }
     }
 }
 
@@ -252,8 +301,8 @@ impl From<&bundle::ColorSpace> for ColorSpaceMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Gamut {
-    pub(crate) name: Option<Name>,
-    pub(crate) points: Vec<CieColor>,
+    name: Option<Name>,
+    points: Vec<CieColor>,
 }
 
 impl Gamut {
@@ -266,10 +315,18 @@ impl Gamut {
     }
 }
 
-impl From<&bundle::Gamut> for Gamut {
-    fn from(value: &bundle::Gamut) -> Self {
-        let points = value.points.as_deref().map(parse_gamut_points).unwrap_or_default();
-        Self { name: parse_optional_name(value.name.as_deref()), points }
+impl Node for Gamut {
+    fn name(&self) -> Option<Name> {
+        self.name.clone()
+    }
+}
+
+impl bundle::FromBundle for Gamut {
+    type Source = bundle::Gamut;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        let points = source.points.as_deref().map(parse_gamut_points).unwrap_or_default();
+        Self { name: parse_optional_name(source.name.as_deref()), points }
     }
 }
 
@@ -284,8 +341,8 @@ fn parse_gamut_points(s: &str) -> Vec<CieColor> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DmxProfile {
-    pub(crate) name: Option<Name>,
-    pub(crate) points: Vec<DmxPoint>,
+    name: Option<Name>,
+    points: Vec<DmxPoint>,
 }
 
 impl DmxProfile {
@@ -298,19 +355,27 @@ impl DmxProfile {
     }
 }
 
-impl From<&bundle::DmxProfile> for DmxProfile {
-    fn from(value: &bundle::DmxProfile) -> Self {
+impl Node for DmxProfile {
+    fn name(&self) -> Option<Name> {
+        self.name.clone()
+    }
+}
+
+impl bundle::FromBundle for DmxProfile {
+    type Source = bundle::DmxProfile;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            name: parse_optional_name(value.name.as_deref()),
-            points: value.points.iter().map(Into::into).collect(),
+            name: parse_optional_name(source.name.as_deref()),
+            points: source.points.iter().map(|p| DmxPoint::from_bundle(p, bundle)).collect(),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DmxPoint {
-    pub(crate) dmx_percentage: f32,
-    pub(crate) cfc: [f32; 4],
+    dmx_percentage: f32,
+    cfc: [f32; 4],
 }
 
 impl DmxPoint {
@@ -323,15 +388,17 @@ impl DmxPoint {
     }
 }
 
-impl From<&bundle::Point> for DmxPoint {
-    fn from(value: &bundle::Point) -> Self {
+impl bundle::FromBundle for DmxPoint {
+    type Source = bundle::Point;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            dmx_percentage: value.dmx_percentage.unwrap_or(0.0),
+            dmx_percentage: source.dmx_percentage.unwrap_or(0.0),
             cfc: [
-                value.cfc_0.unwrap_or(0.0),
-                value.cfc_1.unwrap_or(0.0),
-                value.cfc_2.unwrap_or(0.0),
-                value.cfc_3.unwrap_or(0.0),
+                source.cfc_0.unwrap_or(0.0),
+                source.cfc_1.unwrap_or(0.0),
+                source.cfc_2.unwrap_or(0.0),
+                source.cfc_3.unwrap_or(0.0),
             ],
         }
     }
@@ -339,8 +406,8 @@ impl From<&bundle::Point> for DmxPoint {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CriGroup {
-    pub(crate) color_temperature: f32,
-    pub(crate) cris: Vec<Cri>,
+    color_temperature: f32,
+    cris: Vec<Cri>,
 }
 
 impl CriGroup {
@@ -353,19 +420,21 @@ impl CriGroup {
     }
 }
 
-impl From<&bundle::CriGroup> for CriGroup {
-    fn from(value: &bundle::CriGroup) -> Self {
+impl bundle::FromBundle for CriGroup {
+    type Source = bundle::CriGroup;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            color_temperature: value.color_temperature.unwrap_or(6000.0),
-            cris: value.cris.iter().map(Into::into).collect(),
+            color_temperature: source.color_temperature.unwrap_or(6000.0),
+            cris: source.cris.iter().map(|c| Cri::from_bundle(c, bundle)).collect(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Cri {
-    pub(crate) ces: Ces,
-    pub(crate) color_rendering_index: u8,
+    ces: Ces,
+    color_rendering_index: u8,
 }
 
 impl Cri {
@@ -378,23 +447,29 @@ impl Cri {
     }
 }
 
-impl From<&bundle::Cri> for Cri {
-    fn from(value: &bundle::Cri) -> Self {
+impl bundle::FromBundle for Cri {
+    type Source = bundle::Cri;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            ces: (&value.ces).into(),
-            color_rendering_index: value.color_rendering_index.unwrap_or(100),
+            ces: Ces::from_bundle(&source.ces, bundle),
+            color_rendering_index: source.color_rendering_index.unwrap_or(100),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Properties {
-    pub(crate) operating_temperature: Option<OperatingTemperature>,
-    pub(crate) weight: Option<f32>,
-    pub(crate) leg_height: Option<f32>,
+    operating_temperature: Option<OperatingTemperature>,
+    weight: Option<f32>,
+    leg_height: Option<f32>,
 }
 
 impl Properties {
+    pub fn new() -> Self {
+        Self { operating_temperature: None, weight: None, leg_height: None }
+    }
+
     pub fn operating_temperature(&self) -> Option<&OperatingTemperature> {
         self.operating_temperature.as_ref()
     }
@@ -408,16 +483,18 @@ impl Properties {
     }
 }
 
-impl From<&bundle::Properties> for Properties {
-    fn from(value: &bundle::Properties) -> Self {
+impl bundle::FromBundle for Properties {
+    type Source = bundle::Properties;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         let mut operating_temperature = None;
         let mut weight = None;
         let mut leg_height = None;
 
-        for item in &value.content {
+        for item in &source.content {
             match item {
                 bundle::PropertiesContent::OperatingTemperature(ot) => {
-                    operating_temperature = Some(ot.into());
+                    operating_temperature = Some(OperatingTemperature::from_bundle(ot, bundle));
                 }
                 bundle::PropertiesContent::Weight(w) => {
                     weight = w.value;
@@ -435,8 +512,8 @@ impl From<&bundle::Properties> for Properties {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OperatingTemperature {
-    pub(crate) low: f32,
-    pub(crate) high: f32,
+    low: f32,
+    high: f32,
 }
 
 impl OperatingTemperature {
@@ -449,129 +526,131 @@ impl OperatingTemperature {
     }
 }
 
-impl From<&bundle::OperatingTemperature> for OperatingTemperature {
-    fn from(value: &bundle::OperatingTemperature) -> Self {
-        Self { low: value.low.unwrap_or(0.0), high: value.high.unwrap_or(40.0) }
+impl bundle::FromBundle for OperatingTemperature {
+    type Source = bundle::OperatingTemperature;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        Self { low: source.low.unwrap_or(0.0), high: source.high.unwrap_or(40.0) }
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct Ces(pub u8);
+
+impl Ces {
+    pub fn new(value: u8) -> Option<Self> {
+        if value >= 1 && value <= 99 { Some(Ces(value)) } else { None }
+    }
+
+    pub fn value(self) -> u8 {
+        self.0
     }
 }
 
-#[rustfmt::skip]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Ces {
-    Ces01, Ces02, Ces03, Ces04, Ces05, Ces06, Ces07, Ces08, Ces09, Ces10,
-    Ces11, Ces12, Ces13, Ces14, Ces15, Ces16, Ces17, Ces18, Ces19, Ces20,
-    Ces21, Ces22, Ces23, Ces24, Ces25, Ces26, Ces27, Ces28, Ces29, Ces30,
-    Ces31, Ces32, Ces33, Ces34, Ces35, Ces36, Ces37, Ces38, Ces39, Ces40,
-    Ces41, Ces42, Ces43, Ces44, Ces45, Ces46, Ces47, Ces48, Ces49, Ces50,
-    Ces51, Ces52, Ces53, Ces54, Ces55, Ces56, Ces57, Ces58, Ces59, Ces60,
-    Ces61, Ces62, Ces63, Ces64, Ces65, Ces66, Ces67, Ces68, Ces69, Ces70,
-    Ces71, Ces72, Ces73, Ces74, Ces75, Ces76, Ces77, Ces78, Ces79, Ces80,
-    Ces81, Ces82, Ces83, Ces84, Ces85, Ces86, Ces87, Ces88, Ces89, Ces90,
-    Ces91, Ces92, Ces93, Ces94, Ces95, Ces96, Ces97, Ces98, Ces99,
-}
+impl bundle::FromBundle for Ces {
+    type Source = bundle::Ces;
 
-impl From<&bundle::Ces> for Ces {
-    fn from(value: &bundle::Ces) -> Self {
-        match value {
-            bundle::Ces::Ces01 => Ces::Ces01,
-            bundle::Ces::Ces02 => Ces::Ces02,
-            bundle::Ces::Ces03 => Ces::Ces03,
-            bundle::Ces::Ces04 => Ces::Ces04,
-            bundle::Ces::Ces05 => Ces::Ces05,
-            bundle::Ces::Ces06 => Ces::Ces06,
-            bundle::Ces::Ces07 => Ces::Ces07,
-            bundle::Ces::Ces08 => Ces::Ces08,
-            bundle::Ces::Ces09 => Ces::Ces09,
-            bundle::Ces::Ces10 => Ces::Ces10,
-            bundle::Ces::Ces11 => Ces::Ces11,
-            bundle::Ces::Ces12 => Ces::Ces12,
-            bundle::Ces::Ces13 => Ces::Ces13,
-            bundle::Ces::Ces14 => Ces::Ces14,
-            bundle::Ces::Ces15 => Ces::Ces15,
-            bundle::Ces::Ces16 => Ces::Ces16,
-            bundle::Ces::Ces17 => Ces::Ces17,
-            bundle::Ces::Ces18 => Ces::Ces18,
-            bundle::Ces::Ces19 => Ces::Ces19,
-            bundle::Ces::Ces20 => Ces::Ces20,
-            bundle::Ces::Ces21 => Ces::Ces21,
-            bundle::Ces::Ces22 => Ces::Ces22,
-            bundle::Ces::Ces23 => Ces::Ces23,
-            bundle::Ces::Ces24 => Ces::Ces24,
-            bundle::Ces::Ces25 => Ces::Ces25,
-            bundle::Ces::Ces26 => Ces::Ces26,
-            bundle::Ces::Ces27 => Ces::Ces27,
-            bundle::Ces::Ces28 => Ces::Ces28,
-            bundle::Ces::Ces29 => Ces::Ces29,
-            bundle::Ces::Ces30 => Ces::Ces30,
-            bundle::Ces::Ces31 => Ces::Ces31,
-            bundle::Ces::Ces32 => Ces::Ces32,
-            bundle::Ces::Ces33 => Ces::Ces33,
-            bundle::Ces::Ces34 => Ces::Ces34,
-            bundle::Ces::Ces35 => Ces::Ces35,
-            bundle::Ces::Ces36 => Ces::Ces36,
-            bundle::Ces::Ces37 => Ces::Ces37,
-            bundle::Ces::Ces38 => Ces::Ces38,
-            bundle::Ces::Ces39 => Ces::Ces39,
-            bundle::Ces::Ces40 => Ces::Ces40,
-            bundle::Ces::Ces41 => Ces::Ces41,
-            bundle::Ces::Ces42 => Ces::Ces42,
-            bundle::Ces::Ces43 => Ces::Ces43,
-            bundle::Ces::Ces44 => Ces::Ces44,
-            bundle::Ces::Ces45 => Ces::Ces45,
-            bundle::Ces::Ces46 => Ces::Ces46,
-            bundle::Ces::Ces47 => Ces::Ces47,
-            bundle::Ces::Ces48 => Ces::Ces48,
-            bundle::Ces::Ces49 => Ces::Ces49,
-            bundle::Ces::Ces50 => Ces::Ces50,
-            bundle::Ces::Ces51 => Ces::Ces51,
-            bundle::Ces::Ces52 => Ces::Ces52,
-            bundle::Ces::Ces53 => Ces::Ces53,
-            bundle::Ces::Ces54 => Ces::Ces54,
-            bundle::Ces::Ces55 => Ces::Ces55,
-            bundle::Ces::Ces56 => Ces::Ces56,
-            bundle::Ces::Ces57 => Ces::Ces57,
-            bundle::Ces::Ces58 => Ces::Ces58,
-            bundle::Ces::Ces59 => Ces::Ces59,
-            bundle::Ces::Ces60 => Ces::Ces60,
-            bundle::Ces::Ces61 => Ces::Ces61,
-            bundle::Ces::Ces62 => Ces::Ces62,
-            bundle::Ces::Ces63 => Ces::Ces63,
-            bundle::Ces::Ces64 => Ces::Ces64,
-            bundle::Ces::Ces65 => Ces::Ces65,
-            bundle::Ces::Ces66 => Ces::Ces66,
-            bundle::Ces::Ces67 => Ces::Ces67,
-            bundle::Ces::Ces68 => Ces::Ces68,
-            bundle::Ces::Ces69 => Ces::Ces69,
-            bundle::Ces::Ces70 => Ces::Ces70,
-            bundle::Ces::Ces71 => Ces::Ces71,
-            bundle::Ces::Ces72 => Ces::Ces72,
-            bundle::Ces::Ces73 => Ces::Ces73,
-            bundle::Ces::Ces74 => Ces::Ces74,
-            bundle::Ces::Ces75 => Ces::Ces75,
-            bundle::Ces::Ces76 => Ces::Ces76,
-            bundle::Ces::Ces77 => Ces::Ces77,
-            bundle::Ces::Ces78 => Ces::Ces78,
-            bundle::Ces::Ces79 => Ces::Ces79,
-            bundle::Ces::Ces80 => Ces::Ces80,
-            bundle::Ces::Ces81 => Ces::Ces81,
-            bundle::Ces::Ces82 => Ces::Ces82,
-            bundle::Ces::Ces83 => Ces::Ces83,
-            bundle::Ces::Ces84 => Ces::Ces84,
-            bundle::Ces::Ces85 => Ces::Ces85,
-            bundle::Ces::Ces86 => Ces::Ces86,
-            bundle::Ces::Ces87 => Ces::Ces87,
-            bundle::Ces::Ces88 => Ces::Ces88,
-            bundle::Ces::Ces89 => Ces::Ces89,
-            bundle::Ces::Ces90 => Ces::Ces90,
-            bundle::Ces::Ces91 => Ces::Ces91,
-            bundle::Ces::Ces92 => Ces::Ces92,
-            bundle::Ces::Ces93 => Ces::Ces93,
-            bundle::Ces::Ces94 => Ces::Ces94,
-            bundle::Ces::Ces95 => Ces::Ces95,
-            bundle::Ces::Ces96 => Ces::Ces96,
-            bundle::Ces::Ces97 => Ces::Ces97,
-            bundle::Ces::Ces98 => Ces::Ces98,
-            bundle::Ces::Ces99 => Ces::Ces99,
-        }
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        let n = match source {
+            bundle::Ces::Ces01 => 1,
+            bundle::Ces::Ces02 => 2,
+            bundle::Ces::Ces03 => 3,
+            bundle::Ces::Ces04 => 4,
+            bundle::Ces::Ces05 => 5,
+            bundle::Ces::Ces06 => 6,
+            bundle::Ces::Ces07 => 7,
+            bundle::Ces::Ces08 => 8,
+            bundle::Ces::Ces09 => 9,
+            bundle::Ces::Ces10 => 10,
+            bundle::Ces::Ces11 => 11,
+            bundle::Ces::Ces12 => 12,
+            bundle::Ces::Ces13 => 13,
+            bundle::Ces::Ces14 => 14,
+            bundle::Ces::Ces15 => 15,
+            bundle::Ces::Ces16 => 16,
+            bundle::Ces::Ces17 => 17,
+            bundle::Ces::Ces18 => 18,
+            bundle::Ces::Ces19 => 19,
+            bundle::Ces::Ces20 => 20,
+            bundle::Ces::Ces21 => 21,
+            bundle::Ces::Ces22 => 22,
+            bundle::Ces::Ces23 => 23,
+            bundle::Ces::Ces24 => 24,
+            bundle::Ces::Ces25 => 25,
+            bundle::Ces::Ces26 => 26,
+            bundle::Ces::Ces27 => 27,
+            bundle::Ces::Ces28 => 28,
+            bundle::Ces::Ces29 => 29,
+            bundle::Ces::Ces30 => 30,
+            bundle::Ces::Ces31 => 31,
+            bundle::Ces::Ces32 => 32,
+            bundle::Ces::Ces33 => 33,
+            bundle::Ces::Ces34 => 34,
+            bundle::Ces::Ces35 => 35,
+            bundle::Ces::Ces36 => 36,
+            bundle::Ces::Ces37 => 37,
+            bundle::Ces::Ces38 => 38,
+            bundle::Ces::Ces39 => 39,
+            bundle::Ces::Ces40 => 40,
+            bundle::Ces::Ces41 => 41,
+            bundle::Ces::Ces42 => 42,
+            bundle::Ces::Ces43 => 43,
+            bundle::Ces::Ces44 => 44,
+            bundle::Ces::Ces45 => 45,
+            bundle::Ces::Ces46 => 46,
+            bundle::Ces::Ces47 => 47,
+            bundle::Ces::Ces48 => 48,
+            bundle::Ces::Ces49 => 49,
+            bundle::Ces::Ces50 => 50,
+            bundle::Ces::Ces51 => 51,
+            bundle::Ces::Ces52 => 52,
+            bundle::Ces::Ces53 => 53,
+            bundle::Ces::Ces54 => 54,
+            bundle::Ces::Ces55 => 55,
+            bundle::Ces::Ces56 => 56,
+            bundle::Ces::Ces57 => 57,
+            bundle::Ces::Ces58 => 58,
+            bundle::Ces::Ces59 => 59,
+            bundle::Ces::Ces60 => 60,
+            bundle::Ces::Ces61 => 61,
+            bundle::Ces::Ces62 => 62,
+            bundle::Ces::Ces63 => 63,
+            bundle::Ces::Ces64 => 64,
+            bundle::Ces::Ces65 => 65,
+            bundle::Ces::Ces66 => 66,
+            bundle::Ces::Ces67 => 67,
+            bundle::Ces::Ces68 => 68,
+            bundle::Ces::Ces69 => 69,
+            bundle::Ces::Ces70 => 70,
+            bundle::Ces::Ces71 => 71,
+            bundle::Ces::Ces72 => 72,
+            bundle::Ces::Ces73 => 73,
+            bundle::Ces::Ces74 => 74,
+            bundle::Ces::Ces75 => 75,
+            bundle::Ces::Ces76 => 76,
+            bundle::Ces::Ces77 => 77,
+            bundle::Ces::Ces78 => 78,
+            bundle::Ces::Ces79 => 79,
+            bundle::Ces::Ces80 => 80,
+            bundle::Ces::Ces81 => 81,
+            bundle::Ces::Ces82 => 82,
+            bundle::Ces::Ces83 => 83,
+            bundle::Ces::Ces84 => 84,
+            bundle::Ces::Ces85 => 85,
+            bundle::Ces::Ces86 => 86,
+            bundle::Ces::Ces87 => 87,
+            bundle::Ces::Ces88 => 88,
+            bundle::Ces::Ces89 => 89,
+            bundle::Ces::Ces90 => 90,
+            bundle::Ces::Ces91 => 91,
+            bundle::Ces::Ces92 => 92,
+            bundle::Ces::Ces93 => 93,
+            bundle::Ces::Ces94 => 94,
+            bundle::Ces::Ces95 => 95,
+            bundle::Ces::Ces96 => 96,
+            bundle::Ces::Ces97 => 97,
+            bundle::Ces::Ces98 => 98,
+            bundle::Ces::Ces99 => 99,
+        };
+        Ces(n)
     }
 }

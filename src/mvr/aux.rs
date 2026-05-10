@@ -1,19 +1,23 @@
+use uuid::Uuid;
+
 use crate::mvr::{
-    self as mvr, bundle,
+    self as mvr, Node, NodeId, bundle,
     geo::Geometry,
     layer::{ScaleHandling, Source},
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Class {
-    pub(crate) name: String,
-    pub(crate) id: mvr::NodeId<Class>,
+    name: String,
+    id: NodeId<Class>,
 }
 
-impl From<&bundle::BasicChildListAttribute> for Class {
-    fn from(value: &bundle::BasicChildListAttribute) -> Self {
-        let id: mvr::NodeId<Class> = uuid::Uuid::parse_str(&value.uuid).unwrap().into();
-        Self { name: value.name.clone(), id }
+impl bundle::FromBundle for Class {
+    type Source = bundle::BasicChildListAttribute;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        let id: NodeId<Self> = Uuid::parse_str(&source.uuid).unwrap().into();
+        Self { name: source.name.clone(), id }
     }
 }
 
@@ -21,22 +25,26 @@ impl Class {
     pub fn name(&self) -> &str {
         &self.name
     }
+}
 
-    pub fn id(&self) -> mvr::NodeId<Class> {
+impl Node for Class {
+    fn id(&self) -> NodeId<Self> {
         self.id
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Position {
-    pub(crate) name: String,
-    pub(crate) id: mvr::NodeId<Position>,
+    name: String,
+    id: NodeId<Position>,
 }
 
-impl From<&bundle::BasicChildListAttribute> for Position {
-    fn from(value: &bundle::BasicChildListAttribute) -> Self {
-        let id: mvr::NodeId<Position> = uuid::Uuid::parse_str(&value.uuid).unwrap().into();
-        Self { name: value.name.clone(), id }
+impl bundle::FromBundle for Position {
+    type Source = bundle::BasicChildListAttribute;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        let id: NodeId<Self> = Uuid::parse_str(&source.uuid).unwrap().into();
+        Self { name: source.name.clone(), id }
     }
 }
 
@@ -44,18 +52,20 @@ impl Position {
     pub fn name(&self) -> &str {
         &self.name
     }
+}
 
-    pub fn id(&self) -> mvr::NodeId<Position> {
+impl Node for Position {
+    fn id(&self) -> NodeId<Self> {
         self.id
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Symdef {
-    pub(crate) name: String,
-    pub(crate) id: mvr::NodeId<Symdef>,
+    name: String,
+    id: NodeId<Symdef>,
 
-    pub(crate) geometries: Vec<Geometry>,
+    geometries: Vec<Geometry>,
 }
 
 impl Symdef {
@@ -63,36 +73,60 @@ impl Symdef {
         &self.name
     }
 
-    pub fn id(&self) -> mvr::NodeId<Symdef> {
+    pub fn geometries(&self) -> &[Geometry] {
+        &self.geometries
+    }
+}
+
+impl Node for Symdef {
+    fn id(&self) -> NodeId<Self> {
         self.id
+    }
+}
+
+impl bundle::FromBundle for Symdef {
+    type Source = bundle::Symdef;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let name = source.name.to_string();
+        let id: NodeId<Self> = Uuid::parse_str(&source.uuid).unwrap().into();
+        let geometries = mvr::build_geometries(
+            &source.child_list.geometry_3d,
+            &source.child_list.symbol,
+            bundle,
+        );
+
+        Self { name, id, geometries }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MappingDefinition {
-    pub(crate) name: String,
-    pub(crate) id: mvr::NodeId<MappingDefinition>,
+    name: String,
+    id: NodeId<MappingDefinition>,
 
-    pub(crate) size_x: u32,
-    pub(crate) size_y: u32,
-    pub(crate) source: Source,
-    pub(crate) scale_handling: ScaleHandling,
+    size_x: u32,
+    size_y: u32,
+    source: Source,
+    scale_handling: ScaleHandling,
 }
 
-impl From<&bundle::MappingDefinition> for MappingDefinition {
-    fn from(value: &bundle::MappingDefinition) -> Self {
-        let id: mvr::NodeId<MappingDefinition> = uuid::Uuid::parse_str(&value.uuid).unwrap().into();
+impl bundle::FromBundle for MappingDefinition {
+    type Source = bundle::MappingDefinition;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let id: NodeId<Self> = Uuid::parse_str(&source.uuid).unwrap().into();
 
         Self {
-            name: value.name.clone(),
+            name: source.name.clone(),
             id,
-            size_x: value.size_x as u32,
-            size_y: value.size_y as u32,
-            source: (&value.source).into(),
-            scale_handling: value
+            size_x: source.size_x as u32,
+            size_y: source.size_y as u32,
+            source: Source::from_bundle(&source.source, bundle),
+            scale_handling: source
                 .scale_handeling
                 .as_ref()
-                .map(|sh| (&sh.r#enum).into())
+                .map(|sh| ScaleHandling::from_bundle(&sh, bundle))
                 .unwrap_or_default(),
         }
     }
@@ -101,10 +135,6 @@ impl From<&bundle::MappingDefinition> for MappingDefinition {
 impl MappingDefinition {
     pub fn name(&self) -> &str {
         &self.name
-    }
-
-    pub fn id(&self) -> mvr::NodeId<MappingDefinition> {
-        self.id
     }
 
     pub fn size_x(&self) -> u32 {
@@ -121,5 +151,11 @@ impl MappingDefinition {
 
     pub fn scale_handling(&self) -> ScaleHandling {
         self.scale_handling
+    }
+}
+
+impl Node for MappingDefinition {
+    fn id(&self) -> NodeId<Self> {
+        self.id
     }
 }

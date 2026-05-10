@@ -1,13 +1,15 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Write as _};
 
 use raylib::prelude::*;
-use rigger::mvr::{Layer, Mvr, Object, bundle::ResourceKey};
+use rigger::mvr::{Layer, Mvr, Object, ResourceKey};
 
 struct State {
     pub mvr: Mvr,
+    pub tempdir: tempfile::TempDir,
 
     pub camera: Camera,
     pub models: HashMap<ResourceKey, Model>,
+    pub textures: HashMap<ResourceKey, Texture2D>,
 }
 
 fn main() {
@@ -42,6 +44,7 @@ fn run(mvr: Mvr) {
 
     let mut state = State {
         mvr,
+        tempdir: tempfile::tempdir().unwrap(),
         camera: Camera::perspective(
             Vector3::new(0.0, 5.0, -10.0), // Position
             Vector3::new(0.0, 1.0, 1.0),   // Target
@@ -49,6 +52,7 @@ fn run(mvr: Mvr) {
             90.0,                          // FOV
         ),
         models: HashMap::new(),
+        textures: HashMap::new(),
     };
 
     setup(&mut state, &mut thread, &mut rl);
@@ -59,19 +63,26 @@ fn run(mvr: Mvr) {
 }
 
 fn setup(state: &mut State, thread: &RaylibThread, rl: &mut RaylibHandle) {
-    for model in state.mvr.models() {
-        // Jezus fucking christ.
-        let path_str = state
-            .mvr
-            .bundle()
-            .root_folder()
-            .join(model.key().relative_path())
-            .as_os_str()
-            .to_string_lossy()
-            .to_string();
+    for (key, texture) in state.mvr.resources().textures() {
+        let texture_bytes = texture.bytes();
+        let temp_texture_path = state.tempdir.path().join(key.relative_path());
+        let mut temp_file = std::fs::File::create(&temp_texture_path).unwrap();
+        temp_file.write_all(&texture_bytes).unwrap();
+        let path_str = temp_texture_path.to_string_lossy().to_string();
+
+        let rl_texture = rl.load_texture(thread, path_str.as_str()).unwrap();
+        state.textures.insert(key.clone(), rl_texture);
+    }
+
+    for (key, model) in state.mvr.resources().models() {
+        let model_bytes = model.bytes();
+        let temp_model_path = state.tempdir.path().join(key.relative_path());
+        let mut temp_file = std::fs::File::create(&temp_model_path).unwrap();
+        temp_file.write_all(&model_bytes).unwrap();
+        let path_str = temp_model_path.to_string_lossy().to_string();
 
         let rl_model = rl.load_model(thread, path_str.as_str()).unwrap();
-        state.models.insert(model.key().to_owned(), rl_model);
+        state.models.insert(key.clone(), rl_model);
     }
 }
 
@@ -88,7 +99,8 @@ fn draw(state: &mut State, thread: &RaylibThread, rl: &mut RaylibHandle) {
         unsafe { raylib::ffi::rlDisableBackfaceCulling() };
         d.draw_mode3D(camera, |mut d, _| {
             for layer in state.mvr.layers() {
-                draw_layer(layer, state, &mut d);
+                let layer_world = layer.local_transform();
+                draw_layer(layer, layer_world, state, &mut d);
             }
         });
         unsafe { raylib::ffi::rlEnableBackfaceCulling() };
@@ -96,34 +108,60 @@ fn draw(state: &mut State, thread: &RaylibThread, rl: &mut RaylibHandle) {
     d.draw_fps(10, 10);
 }
 
-fn draw_layer(layer: &Layer, state: &State, d: &mut RaylibMode3D<RaylibDrawHandle<'_>>) {
-    fn draw_objects(objects: &[Object], state: &State, d: &mut RaylibMode3D<RaylibDrawHandle<'_>>) {
+fn to_world(parent_world: glam::Affine3A, local: glam::Affine3A) -> glam::Affine3A {
+    parent_world * local
+}
+
+fn draw_layer(
+    layer: &Layer,
+    layer_world: glam::Affine3A,
+    state: &State,
+    d: &mut RaylibMode3D<RaylibDrawHandle<'_>>,
+) {
+    fn draw_objects(
+        objects: &[Object],
+        parent_world: glam::Affine3A,
+        state: &State,
+        d: &mut RaylibMode3D<RaylibDrawHandle<'_>>,
+    ) {
         for object in objects {
-            draw_object(&object, state, d);
+            let object_world = to_world(parent_world, object.local_transform());
+            draw_object(object, object_world, state, d);
             if let Some(objects) = object.child_objects() {
-                draw_objects(objects, state, d);
+                draw_objects(objects, object_world, state, d);
             }
         }
     }
 
-    draw_objects(layer.objects(), state, d);
+    draw_objects(layer.objects(), layer_world, state, d);
 }
 
-fn draw_object(object: &Object, state: &State, d: &mut RaylibMode3D<RaylibDrawHandle<'_>>) {
-    if let Some(_fixture) = object.as_fixture_object() {
-        if let Some(transform) = state.mvr.object_world_transform(object.id()) {
-            let position = convert_coordinate_space(transform).translation;
-            d.draw_sphere(Vector3::new(position.x, position.y, position.z), 0.1, Color::RED);
+fn draw_object(
+    object: &Object,
+    object_world: glam::Affine3A,
+    state: &State,
+    d: &mut RaylibMode3D<RaylibDrawHandle<'_>>,
+) {
+    if let Some(fixture) = object.as_fixture_object() {
+        let position = convert_coordinate_space(object_world).translation;
+        match fixture.gdtf() {
+            Some(gdtf_info) => {
+                let _gdtf = state.mvr.resources().gdtf(gdtf_info.gdtf_resource()).unwrap();
+            }
+            None => {
+                d.draw_sphere(Vector3::new(position.x, position.y, position.z), 0.1, Color::RED);
+            }
         }
     }
 
-    let Some(geometries) = state.mvr.object_geometries_world(object.id()) else {
+    let Some(geometries) = object.geometries() else {
         return;
     };
 
-    for (geometry, transform) in geometries {
+    for geometry in geometries {
         let model = state.models.get(&geometry.model()).unwrap();
-        draw_model(model, transform, d);
+        let geometry_world = to_world(object_world, geometry.local_transform());
+        draw_model(model, geometry_world, d);
     }
 }
 

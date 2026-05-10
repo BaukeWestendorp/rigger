@@ -1,15 +1,18 @@
 use core::str;
 use std::{
     net::{Ipv4Addr, Ipv6Addr},
+    path::PathBuf,
     str::FromStr as _,
 };
+
+use uuid::Uuid;
 
 use crate::{
     CieColor, gdtf,
     mvr::{
-        self,
+        self, Node, NodeId, ResourceKey,
         aux::{Class, MappingDefinition, Position},
-        bundle,
+        bundle::{self, FromBundle as _},
         geo::Geometry,
     },
     util,
@@ -17,24 +20,20 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Layer {
-    pub(crate) id: mvr::NodeId<Layer>,
-    pub(crate) name: String,
-    pub(crate) local_transform: glam::Affine3A,
+    id: mvr::NodeId<Layer>,
+    name: String,
+    local_transform: glam::Affine3A,
 
-    pub(crate) objects: Vec<Object>,
+    objects: Vec<Object>,
 }
 
 impl Layer {
-    pub fn id(&self) -> mvr::NodeId<Layer> {
-        self.id
-    }
-
     pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub fn local_transform(&self) -> &glam::Affine3A {
-        &self.local_transform
+    pub fn local_transform(&self) -> glam::Affine3A {
+        self.local_transform
     }
 
     pub fn objects(&self) -> &[Object] {
@@ -42,21 +41,43 @@ impl Layer {
     }
 }
 
+impl Node for Layer {
+    fn id(&self) -> mvr::NodeId<Self> {
+        self.id
+    }
+}
+
+impl bundle::FromBundle for Layer {
+    type Source = bundle::Layer;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let uuid: Uuid = Uuid::from_str(&source.uuid).unwrap();
+        let objects = source
+            .child_list
+            .as_ref()
+            .map(|cl| cl.content.iter().map(|child| build_object(child, bundle)).collect())
+            .unwrap_or_default();
+
+        Layer {
+            id: uuid.into(),
+            name: source.name.clone(),
+            local_transform: util::parse_affine3a_or_identity(source.matrix.as_deref()),
+            objects,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Object {
-    pub(crate) id: mvr::NodeId<Object>,
-    pub(crate) name: String,
-    pub(crate) class: Option<mvr::NodeId<Class>>,
-    pub(crate) local_transform: glam::Affine3A,
+    id: mvr::NodeId<Object>,
+    name: String,
+    class: Option<mvr::NodeId<Class>>,
+    local_transform: glam::Affine3A,
 
-    pub(crate) kind: ObjectKind,
+    kind: ObjectKind,
 }
 
 impl Object {
-    pub fn id(&self) -> mvr::NodeId<Object> {
-        self.id
-    }
-
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -65,8 +86,8 @@ impl Object {
         self.class
     }
 
-    pub fn local_transform(&self) -> &glam::Affine3A {
-        &self.local_transform
+    pub fn local_transform(&self) -> glam::Affine3A {
+        self.local_transform
     }
 
     pub fn kind(&self) -> &ObjectKind {
@@ -255,6 +276,12 @@ impl Object {
     }
 }
 
+impl Node for Object {
+    fn id(&self) -> mvr::NodeId<Self> {
+        self.id
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ObjectKind {
     SceneObject(SceneObject),
@@ -269,21 +296,21 @@ pub enum ObjectKind {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SceneObject {
-    pub(crate) id: ObjectIdentifier,
-    pub(crate) gdtf: Option<GdtfInfo>,
+    id: ObjectIdentifier,
+    gdtf: Option<GdtfInfo>,
 
-    pub(crate) cast_shadow: bool,
-    pub(crate) unit_number: Option<i32>,
+    cast_shadow: bool,
+    unit_number: Option<i32>,
 
-    pub(crate) dmx_addresses: Vec<DmxAddress>,
-    pub(crate) network_addresses: Vec<NetworkAddress>,
-    pub(crate) alignments: Vec<Alignment>,
-    pub(crate) custom_commands: Vec<CustomCommand>,
-    pub(crate) overwrites: Vec<Overwrite>,
-    pub(crate) connections: Vec<Connection>,
+    dmx_addresses: Vec<DmxAddress>,
+    network_addresses: Vec<NetworkAddress>,
+    alignments: Vec<Alignment>,
+    custom_commands: Vec<CustomCommand>,
+    overwrites: Vec<Overwrite>,
+    connections: Vec<Connection>,
 
-    pub(crate) geometries: Vec<Geometry>,
-    pub(crate) child_objects: Vec<Object>,
+    geometries: Vec<Geometry>,
+    child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -338,9 +365,42 @@ impl SceneObject {
     }
 }
 
+impl bundle::FromBundle for SceneObject {
+    type Source = bundle::SceneObject;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let id = build_id_from_multipatch(
+            &source.multipatch,
+            source.fixture_id.to_owned(),
+            source.fixture_id_numeric,
+            source.custom_id,
+            source.custom_id_type,
+        );
+
+        Self {
+            id,
+            gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
+            cast_shadow: source.cast_shadow.unwrap_or_default(),
+            unit_number: source.unit_number,
+            dmx_addresses: build_dmx_addresses(source.addresses.as_ref(), bundle),
+            network_addresses: build_network_addresses(source.addresses.as_ref(), bundle),
+            alignments: build_alignments(source.alignments.as_ref(), bundle),
+            custom_commands: build_custom_commands(source.custom_commands.as_ref()),
+            overwrites: build_overwrites(source.overwrites.as_ref(), bundle),
+            connections: build_connections(source.connections.as_ref(), bundle),
+            geometries: mvr::build_geometries(
+                &source.geometries.geometry_3d,
+                &source.geometries.symbol,
+                bundle,
+            ),
+            child_objects: build_child_objects(source.child_list.as_deref(), bundle),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupObject {
-    pub(crate) child_objects: Vec<Object>,
+    child_objects: Vec<Object>,
 }
 
 impl GroupObject {
@@ -349,9 +409,24 @@ impl GroupObject {
     }
 }
 
+impl bundle::FromBundle for GroupObject {
+    type Source = bundle::GroupObject;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        Self {
+            child_objects: source
+                .child_list
+                .content
+                .iter()
+                .map(|child| build_object(child, bundle))
+                .collect(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FocusPointObject {
-    pub(crate) geometries: Vec<Geometry>,
+    geometries: Vec<Geometry>,
 }
 
 impl FocusPointObject {
@@ -360,32 +435,46 @@ impl FocusPointObject {
     }
 }
 
+impl bundle::FromBundle for FocusPointObject {
+    type Source = bundle::FocusPoint;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        FocusPointObject {
+            geometries: mvr::build_geometries(
+                &source.geometries.geometry_3d,
+                &source.geometries.symbol,
+                bundle,
+            ),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FixtureObject {
-    pub(crate) id: ObjectIdentifier,
-    pub(crate) gdtf: Option<GdtfInfo>,
+    id: ObjectIdentifier,
+    gdtf: Option<GdtfInfo>,
 
-    pub(crate) cast_shadow: bool,
-    pub(crate) child_position: Option<gdtf::Node>,
-    pub(crate) color: Option<CieColor>,
-    pub(crate) dmx_invert_pan: bool,
-    pub(crate) dmx_invert_tilt: bool,
-    pub(crate) focus: Option<mvr::NodeId<Object>>,
-    pub(crate) function: Option<String>,
-    pub(crate) gobo: Option<Gobo>,
-    pub(crate) mappings: Vec<Mapping>,
-    pub(crate) position: Option<mvr::NodeId<Position>>,
-    pub(crate) protocols: Vec<Protocol>,
-    pub(crate) unit_number: Option<i32>,
+    cast_shadow: bool,
+    child_position: Option<gdtf::NodePath>,
+    color: Option<CieColor>,
+    dmx_invert_pan: bool,
+    dmx_invert_tilt: bool,
+    focus: Option<mvr::NodeId<Object>>,
+    function: Option<String>,
+    gobo: Option<Gobo>,
+    mappings: Vec<Mapping>,
+    position: Option<mvr::NodeId<Position>>,
+    protocols: Vec<Protocol>,
+    unit_number: Option<i32>,
 
-    pub(crate) dmx_addresses: Vec<DmxAddress>,
-    pub(crate) network_addresses: Vec<NetworkAddress>,
-    pub(crate) alignments: Vec<Alignment>,
-    pub(crate) custom_commands: Vec<CustomCommand>,
-    pub(crate) overwrites: Vec<Overwrite>,
-    pub(crate) connections: Vec<Connection>,
+    dmx_addresses: Vec<DmxAddress>,
+    network_addresses: Vec<NetworkAddress>,
+    alignments: Vec<Alignment>,
+    custom_commands: Vec<CustomCommand>,
+    overwrites: Vec<Overwrite>,
+    connections: Vec<Connection>,
 
-    pub(crate) child_objects: Vec<Object>,
+    child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -404,7 +493,7 @@ impl FixtureObject {
     }
 
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn child_position(&self) -> Option<&gdtf::Node> {
+    pub fn child_position(&self) -> Option<&gdtf::NodePath> {
         self.child_position.as_ref()
     }
 
@@ -477,26 +566,81 @@ impl FixtureObject {
     }
 }
 
+impl bundle::FromBundle for FixtureObject {
+    type Source = bundle::Fixture;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        Self {
+            id: build_id_from_multipatch(
+                &source.multipatch,
+                Some(source.fixture_id.to_owned()),
+                source.fixture_id_numeric,
+                source.custom_id,
+                source.custom_id_type,
+            ),
+            gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
+            cast_shadow: source.cast_shadow.unwrap_or_default(),
+            child_position: source
+                .child_position
+                .as_ref()
+                .map(|s| gdtf::NodePath::from_str(s).unwrap()),
+            color: source.color.as_ref().map(|s| CieColor::from_str(s).unwrap()),
+            dmx_invert_pan: source.dmx_invert_pan.unwrap_or(false),
+            dmx_invert_tilt: source.dmx_invert_tilt.unwrap_or(false),
+            focus: source.focus.as_ref().map(|s| NodeId::from_str(s).unwrap()),
+            function: source.function.clone(),
+            gobo: source.gobo.as_ref().map(|g| Gobo::from_bundle(g, bundle)),
+            mappings: source
+                .mappings
+                .as_ref()
+                .map(|mappings| {
+                    mappings.mapping.iter().map(|m| Mapping::from_bundle(m, bundle)).collect()
+                })
+                .unwrap_or_default(),
+            position: source.position.as_ref().map(|s| NodeId::from_str(s).unwrap()),
+            protocols: source
+                .protocols
+                .as_ref()
+                .map(|protocols| {
+                    protocols.protocol.iter().map(|p| Protocol::from_bundle(p, bundle)).collect()
+                })
+                .unwrap_or_default(),
+            unit_number: Some(source.unit_number),
+            dmx_addresses: build_dmx_addresses(source.addresses.as_ref(), bundle),
+            network_addresses: build_network_addresses(source.addresses.as_ref(), bundle),
+            alignments: build_alignments(source.alignments.as_ref(), bundle),
+            custom_commands: build_custom_commands(source.custom_commands.as_ref()),
+            overwrites: build_overwrites(source.overwrites.as_ref(), bundle),
+            connections: build_connections(source.connections.as_ref(), bundle),
+            child_objects: source
+                .child_list
+                .as_ref()
+                .map(|cl| cl.content.iter().map(|child| build_object(child, bundle)).collect())
+                .unwrap_or_default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct SupportObject {
-    pub(crate) gdtf: Option<GdtfInfo>,
-    pub(crate) id: ObjectIdentifier,
+    gdtf: Option<GdtfInfo>,
+    id: ObjectIdentifier,
 
-    pub(crate) cast_shadow: bool,
-    pub(crate) chain_length: f32,
-    pub(crate) function: Option<String>,
-    pub(crate) position: Option<mvr::NodeId<Position>>,
-    pub(crate) unit_number: Option<i32>,
+    cast_shadow: bool,
+    chain_length: f32,
+    function: Option<String>,
+    position: Option<mvr::NodeId<Position>>,
+    unit_number: Option<i32>,
 
-    pub(crate) dmx_addresses: Vec<DmxAddress>,
-    pub(crate) network_addresses: Vec<NetworkAddress>,
-    pub(crate) alignments: Vec<Alignment>,
-    pub(crate) custom_commands: Vec<CustomCommand>,
-    pub(crate) overwrites: Vec<Overwrite>,
-    pub(crate) connections: Vec<Connection>,
+    dmx_addresses: Vec<DmxAddress>,
+    network_addresses: Vec<NetworkAddress>,
+    alignments: Vec<Alignment>,
+    custom_commands: Vec<CustomCommand>,
+    overwrites: Vec<Overwrite>,
+    connections: Vec<Connection>,
 
-    pub(crate) geometries: Vec<Geometry>,
-    pub(crate) child_objects: Vec<Object>,
+    geometries: Vec<Geometry>,
+    child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -563,26 +707,64 @@ impl SupportObject {
     }
 }
 
+impl bundle::FromBundle for SupportObject {
+    type Source = bundle::Support;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        Self {
+            gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
+            id: build_id_from_multipatch(
+                &source.multipatch,
+                Some(source.fixture_id.to_owned()),
+                source.fixture_id_numeric,
+                source.custom_id,
+                source.custom_id_type,
+            ),
+            cast_shadow: source.cast_shadow.unwrap_or_default(),
+            chain_length: source.chain_length,
+            function: source.function.clone(),
+            position: source.position.as_ref().map(|s| NodeId::from_str(s).unwrap()),
+            unit_number: source.unit_number,
+            dmx_addresses: build_dmx_addresses(source.addresses.as_ref(), bundle),
+            network_addresses: build_network_addresses(source.addresses.as_ref(), bundle),
+            alignments: build_alignments(source.alignments.as_ref(), bundle),
+            custom_commands: build_custom_commands(source.custom_commands.as_ref()),
+            overwrites: build_overwrites(source.overwrites.as_ref(), bundle),
+            connections: build_connections(source.connections.as_ref(), bundle),
+            geometries: mvr::build_geometries(
+                &source.geometries.geometry_3d,
+                &source.geometries.symbol,
+                bundle,
+            ),
+            child_objects: source
+                .child_list
+                .as_ref()
+                .map(|cl| cl.content.iter().map(|child| build_object(child, bundle)).collect())
+                .unwrap_or_default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrussObject {
-    pub(crate) id: ObjectIdentifier,
-    pub(crate) gdtf: Option<GdtfInfo>,
+    id: ObjectIdentifier,
+    gdtf: Option<GdtfInfo>,
 
-    pub(crate) cast_shadow: bool,
-    pub(crate) child_position: Option<gdtf::Node>,
-    pub(crate) function: Option<String>,
-    pub(crate) position: Option<mvr::NodeId<Position>>,
-    pub(crate) unit_number: Option<i32>,
+    cast_shadow: bool,
+    child_position: Option<gdtf::NodePath>,
+    function: Option<String>,
+    position: Option<mvr::NodeId<Position>>,
+    unit_number: Option<i32>,
 
-    pub(crate) dmx_addresses: Vec<DmxAddress>,
-    pub(crate) network_addresses: Vec<NetworkAddress>,
-    pub(crate) alignments: Vec<Alignment>,
-    pub(crate) custom_commands: Vec<CustomCommand>,
-    pub(crate) overwrites: Vec<Overwrite>,
-    pub(crate) connections: Vec<Connection>,
+    dmx_addresses: Vec<DmxAddress>,
+    network_addresses: Vec<NetworkAddress>,
+    alignments: Vec<Alignment>,
+    custom_commands: Vec<CustomCommand>,
+    overwrites: Vec<Overwrite>,
+    connections: Vec<Connection>,
 
-    pub(crate) geometries: Vec<Geometry>,
-    pub(crate) child_objects: Vec<Object>,
+    geometries: Vec<Geometry>,
+    child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -601,7 +783,7 @@ impl TrussObject {
     }
 
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn child_position(&self) -> Option<&gdtf::Node> {
+    pub fn child_position(&self) -> Option<&gdtf::NodePath> {
         self.child_position.as_ref()
     }
 
@@ -650,24 +832,65 @@ impl TrussObject {
     }
 }
 
+impl bundle::FromBundle for TrussObject {
+    type Source = bundle::Truss;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        Self {
+            gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
+            id: build_id_from_multipatch(
+                &source.multipatch,
+                Some(source.fixture_id.to_owned()),
+                source.fixture_id_numeric,
+                source.custom_id,
+                source.custom_id_type,
+            ),
+            cast_shadow: source.cast_shadow.unwrap_or_default(),
+            child_position: source
+                .child_position
+                .as_ref()
+                .map(|s| gdtf::NodePath::from_str(s).unwrap()),
+            function: source.function.clone(),
+            position: source.position.as_ref().map(|s| NodeId::from_str(s).unwrap()),
+            unit_number: source.unit_number,
+            dmx_addresses: build_dmx_addresses(source.addresses.as_ref(), bundle),
+            network_addresses: build_network_addresses(source.addresses.as_ref(), bundle),
+            alignments: build_alignments(source.alignments.as_ref(), bundle),
+            custom_commands: build_custom_commands(source.custom_commands.as_ref()),
+            overwrites: build_overwrites(source.overwrites.as_ref(), bundle),
+            connections: build_connections(source.connections.as_ref(), bundle),
+            geometries: mvr::build_geometries(
+                &source.geometries.geometry_3d,
+                &source.geometries.symbol,
+                bundle,
+            ),
+            child_objects: source
+                .child_list
+                .as_ref()
+                .map(|cl| cl.content.iter().map(|child| build_object(child, bundle)).collect())
+                .unwrap_or_default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct VideoScreenObject {
-    pub(crate) id: ObjectIdentifier,
-    pub(crate) gdtf: Option<GdtfInfo>,
+    id: ObjectIdentifier,
+    gdtf: Option<GdtfInfo>,
 
-    pub(crate) function: Option<String>,
-    pub(crate) sources: Vec<Source>,
-    pub(crate) cast_shadow: bool,
+    function: Option<String>,
+    sources: Vec<Source>,
+    cast_shadow: bool,
 
-    pub(crate) dmx_addresses: Vec<DmxAddress>,
-    pub(crate) network_addresses: Vec<NetworkAddress>,
-    pub(crate) alignments: Vec<Alignment>,
-    pub(crate) custom_commands: Vec<CustomCommand>,
-    pub(crate) overwrites: Vec<Overwrite>,
-    pub(crate) connections: Vec<Connection>,
+    dmx_addresses: Vec<DmxAddress>,
+    network_addresses: Vec<NetworkAddress>,
+    alignments: Vec<Alignment>,
+    custom_commands: Vec<CustomCommand>,
+    overwrites: Vec<Overwrite>,
+    connections: Vec<Connection>,
 
-    pub(crate) geometries: Vec<Geometry>,
-    pub(crate) child_objects: Vec<Object>,
+    geometries: Vec<Geometry>,
+    child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -726,24 +949,66 @@ impl VideoScreenObject {
     }
 }
 
+impl bundle::FromBundle for VideoScreenObject {
+    type Source = bundle::VideoScreen;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        Self {
+            gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
+            id: build_id_from_multipatch(
+                &source.multipatch,
+                Some(source.fixture_id.to_owned()),
+                source.fixture_id_numeric,
+                source.custom_id,
+                source.custom_id_type,
+            ),
+            function: source.function.clone(),
+            sources: source
+                .sources
+                .as_ref()
+                .map(|sources| {
+                    sources.source.iter().map(|s| Source::from_bundle(s, bundle)).collect()
+                })
+                .unwrap_or_default(),
+            dmx_addresses: build_dmx_addresses(source.addresses.as_ref(), bundle),
+            network_addresses: build_network_addresses(source.addresses.as_ref(), bundle),
+            alignments: build_alignments(source.alignments.as_ref(), bundle),
+            custom_commands: build_custom_commands(source.custom_commands.as_ref()),
+            overwrites: build_overwrites(source.overwrites.as_ref(), bundle),
+            connections: build_connections(source.connections.as_ref(), bundle),
+            cast_shadow: source.cast_shadow.unwrap_or_default(),
+            geometries: mvr::build_geometries(
+                &source.geometries.geometry_3d,
+                &source.geometries.symbol,
+                bundle,
+            ),
+            child_objects: source
+                .child_list
+                .as_ref()
+                .map(|cl| cl.content.iter().map(|child| build_object(child, bundle)).collect())
+                .unwrap_or_default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ProjectorObject {
-    pub(crate) id: ObjectIdentifier,
-    pub(crate) gdtf: Option<GdtfInfo>,
+    id: ObjectIdentifier,
+    gdtf: Option<GdtfInfo>,
 
-    pub(crate) cast_shadow: bool,
-    pub(crate) projections: Vec<Projection>,
-    pub(crate) unit_number: Option<i32>,
+    cast_shadow: bool,
+    projections: Vec<Projection>,
+    unit_number: Option<i32>,
 
-    pub(crate) dmx_addresses: Vec<DmxAddress>,
-    pub(crate) network_addresses: Vec<NetworkAddress>,
-    pub(crate) alignments: Vec<Alignment>,
-    pub(crate) custom_commands: Vec<CustomCommand>,
-    pub(crate) overwrites: Vec<Overwrite>,
-    pub(crate) connections: Vec<Connection>,
+    dmx_addresses: Vec<DmxAddress>,
+    network_addresses: Vec<NetworkAddress>,
+    alignments: Vec<Alignment>,
+    custom_commands: Vec<CustomCommand>,
+    overwrites: Vec<Overwrite>,
+    connections: Vec<Connection>,
 
-    pub(crate) geometries: Vec<Geometry>,
-    pub(crate) child_objects: Vec<Object>,
+    geometries: Vec<Geometry>,
+    child_objects: Vec<Object>,
     // FIXME: Only in MVR 1.5 this is needed.
     // fixture_type_id: Option<i32>,
 }
@@ -802,6 +1067,54 @@ impl ProjectorObject {
     }
 }
 
+impl bundle::FromBundle for ProjectorObject {
+    type Source = bundle::Projector;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        Self {
+            gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
+            id: build_id_from_multipatch(
+                &source.multipatch,
+                Some(source.fixture_id.to_owned()),
+                source.fixture_id_numeric,
+                source.custom_id,
+                source.custom_id_type,
+            ),
+            cast_shadow: source.cast_shadow.unwrap_or_default(),
+            projections: source
+                .projections
+                .projection
+                .iter()
+                .filter_map(|p| {
+                    let source = p.source.as_ref().map(|s| Source::from_bundle(s, bundle));
+                    let scale_handling = p
+                        .scale_handeling
+                        .map(|sh| ScaleHandling::from_bundle(&sh, bundle))
+                        .unwrap_or_default();
+                    Some(Projection { source, scale_handling })
+                })
+                .collect(),
+            unit_number: source.unit_number,
+            dmx_addresses: build_dmx_addresses(source.addresses.as_ref(), bundle),
+            network_addresses: build_network_addresses(source.addresses.as_ref(), bundle),
+            alignments: build_alignments(source.alignments.as_ref(), bundle),
+            custom_commands: build_custom_commands(source.custom_commands.as_ref()),
+            overwrites: build_overwrites(source.overwrites.as_ref(), bundle),
+            connections: build_connections(source.connections.as_ref(), bundle),
+            geometries: mvr::build_geometries(
+                &source.geometries.geometry_3d,
+                &source.geometries.symbol,
+                bundle,
+            ),
+            child_objects: source
+                .child_list
+                .as_ref()
+                .map(|cl| cl.content.iter().map(|child| build_object(child, bundle)).collect())
+                .unwrap_or_default(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ObjectIdentifier {
     Multipatch(mvr::NodeId<Object>),
@@ -815,17 +1128,17 @@ pub enum ObjectIdentifier {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GdtfInfo {
-    gdtf_file_name: String,
+    gdtf_resource: ResourceKey,
     gdtf_mode: String,
 }
 
 impl GdtfInfo {
-    pub fn new(gdtf_spec: impl Into<String>, gdtf_mode: impl Into<String>) -> Self {
-        Self { gdtf_file_name: gdtf_spec.into(), gdtf_mode: gdtf_mode.into() }
+    pub fn new(resource: ResourceKey, gdtf_mode: impl Into<String>) -> Self {
+        Self { gdtf_resource: resource, gdtf_mode: gdtf_mode.into() }
     }
 
-    pub fn gdtf_spec(&self) -> &str {
-        &self.gdtf_file_name
+    pub fn gdtf_resource(&self) -> &ResourceKey {
+        &self.gdtf_resource
     }
 
     pub fn gdtf_mode(&self) -> &str {
@@ -835,8 +1148,8 @@ impl GdtfInfo {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DmxAddress {
-    pub(crate) r#break: u32,
-    pub(crate) absolute_value: u32,
+    r#break: u32,
+    absolute_value: u32,
 }
 
 impl DmxAddress {
@@ -849,34 +1162,36 @@ impl DmxAddress {
     }
 }
 
-impl From<&bundle::Address> for DmxAddress {
-    fn from(value: &bundle::Address) -> Self {
-        let absolute_value = if let Some(dot) = value.content.find('.') {
-            let (universe_str, channel_str) = value.content.split_at(dot);
+impl bundle::FromBundle for DmxAddress {
+    type Source = bundle::Address;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        let absolute_value = if let Some(dot) = source.content.find('.') {
+            let (universe_str, channel_str) = source.content.split_at(dot);
             let universe = universe_str.parse::<u32>().unwrap();
             let channel = channel_str[1..].parse::<u32>().unwrap();
             (universe - 1) * 512 + channel
         } else {
-            value.content.parse::<u32>().unwrap()
+            source.content.parse::<u32>().unwrap()
         };
 
-        Self { r#break: value.r#break as u32, absolute_value }
+        Self { r#break: source.r#break as u32, absolute_value }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct NetworkAddress {
-    pub(crate) geometry: gdtf::Node,
-    pub(crate) ipv4: Option<Ipv4Addr>,
-    pub(crate) subnetmask: Option<Ipv4Addr>,
-    pub(crate) ipv6: Option<Ipv6Addr>,
-    pub(crate) dhcp: bool,
-    pub(crate) hostname: Option<String>,
+    geometry: gdtf::NodePath,
+    ipv4: Option<Ipv4Addr>,
+    subnetmask: Option<Ipv4Addr>,
+    ipv6: Option<Ipv6Addr>,
+    dhcp: bool,
+    hostname: Option<String>,
 }
 
 impl NetworkAddress {
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn geometry(&self) -> &gdtf::Node {
+    pub fn geometry(&self) -> &gdtf::NodePath {
         &self.geometry
     }
 
@@ -901,56 +1216,60 @@ impl NetworkAddress {
     }
 }
 
-impl From<&bundle::Network> for NetworkAddress {
-    fn from(value: &bundle::Network) -> Self {
+impl bundle::FromBundle for NetworkAddress {
+    type Source = bundle::Network;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            geometry: gdtf::Node::from_str(&value.geometry).unwrap(),
-            ipv4: value.ipv_4.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
-            subnetmask: value.subnetmask.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
-            ipv6: value.ipv_6.as_ref().map(|s| Ipv6Addr::from_str(s).unwrap()),
-            dhcp: value.dhcp.as_ref().is_some_and(|s| s == "on"),
-            hostname: value.hostname.to_owned(),
+            geometry: gdtf::NodePath::from_str(&source.geometry).unwrap(),
+            ipv4: source.ipv_4.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
+            subnetmask: source.subnetmask.as_ref().map(|s| Ipv4Addr::from_str(s).unwrap()),
+            ipv6: source.ipv_6.as_ref().map(|s| Ipv6Addr::from_str(s).unwrap()),
+            dhcp: source.dhcp.as_ref().is_some_and(|s| s == "on"),
+            hostname: source.hostname.to_owned(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Alignment {
-    pub(crate) geometry: gdtf::Node,
-    pub(crate) up: glam::Vec3A,
-    pub(crate) direction: glam::Vec3A,
+    geometry: gdtf::NodePath,
+    up: glam::Vec3A,
+    direction: glam::Vec3A,
 }
 
 impl Alignment {
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn geometry(&self) -> &gdtf::Node {
+    pub fn geometry(&self) -> &gdtf::NodePath {
         &self.geometry
     }
 
-    pub fn up(&self) -> &glam::Vec3A {
-        &self.up
+    pub fn up(&self) -> glam::Vec3A {
+        self.up
     }
 
-    pub fn direction(&self) -> &glam::Vec3A {
-        &self.direction
+    pub fn direction(&self) -> glam::Vec3A {
+        self.direction
     }
 }
 
-impl From<&bundle::Alignment> for Alignment {
-    fn from(value: &bundle::Alignment) -> Self {
+impl bundle::FromBundle for Alignment {
+    type Source = bundle::Alignment;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            geometry: gdtf::Node::from_str(
-                value.geometry.as_ref().expect("FIXME: handle missing geometry"),
+            geometry: gdtf::NodePath::from_str(
+                source.geometry.as_ref().expect("FIXME: handle missing geometry"),
             )
             .unwrap(),
-            up: util::parse_vec3(&value.up),
-            direction: util::parse_vec3(&value.direction),
+            up: util::parse_vec3(&source.up),
+            direction: util::parse_vec3(&source.direction),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CustomCommand(pub(crate) String);
+pub struct CustomCommand(String);
 
 impl CustomCommand {
     pub fn command(&self) -> &str {
@@ -968,46 +1287,48 @@ impl str::FromStr for CustomCommand {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Overwrite {
-    pub(crate) universal: gdtf::Node,
-    pub(crate) target: Option<gdtf::Node>,
+    universal: gdtf::NodePath,
+    target: Option<gdtf::NodePath>,
 }
 
 impl Overwrite {
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn universal(&self) -> &gdtf::Node {
+    pub fn universal(&self) -> &gdtf::NodePath {
         &self.universal
     }
 
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn target(&self) -> Option<&gdtf::Node> {
+    pub fn target(&self) -> Option<&gdtf::NodePath> {
         self.target.as_ref()
     }
 }
 
-impl From<&bundle::Overwrite> for Overwrite {
-    fn from(value: &bundle::Overwrite) -> Self {
+impl bundle::FromBundle for Overwrite {
+    type Source = bundle::Overwrite;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            universal: gdtf::Node::from_str(&value.universal).unwrap(),
-            target: Some(gdtf::Node::from_str(&value.target).unwrap()),
+            universal: gdtf::NodePath::from_str(&source.universal).unwrap(),
+            target: Some(gdtf::NodePath::from_str(&source.target).unwrap()),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Connection {
-    pub(crate) own: gdtf::Node,
-    pub(crate) other: gdtf::Node,
-    pub(crate) to_object: mvr::NodeId<Object>,
+    own: gdtf::NodePath,
+    other: gdtf::NodePath,
+    to_object: mvr::NodeId<Object>,
 }
 
 impl Connection {
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn own(&self) -> &gdtf::Node {
+    pub fn own(&self) -> &gdtf::NodePath {
         &self.own
     }
 
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn other(&self) -> &gdtf::Node {
+    pub fn other(&self) -> &gdtf::NodePath {
         &self.other
     }
 
@@ -1016,30 +1337,34 @@ impl Connection {
     }
 }
 
-impl From<&bundle::Connection> for Connection {
-    fn from(value: &bundle::Connection) -> Self {
+impl bundle::FromBundle for Connection {
+    type Source = bundle::Connection;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            own: gdtf::Node::from_str(&value.own).unwrap(),
-            other: gdtf::Node::from_str(&value.other).unwrap(),
-            to_object: mvr::NodeId::from_str(&value.to_object).unwrap(),
+            own: gdtf::NodePath::from_str(&source.own).unwrap(),
+            other: gdtf::NodePath::from_str(&source.other).unwrap(),
+            to_object: mvr::NodeId::from_str(&source.to_object).unwrap(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Gobo {
-    pub(crate) resource: bundle::ResourceKey,
-    pub(crate) rotation: f32,
+    resource: ResourceKey,
+    rotation: f32,
 }
 
-impl From<&bundle::Gobo> for Gobo {
-    fn from(value: &bundle::Gobo) -> Self {
-        Self { resource: bundle::ResourceKey::new(&value.file_name), rotation: value.rotation }
+impl bundle::FromBundle for Gobo {
+    type Source = bundle::Gobo;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        Self { resource: ResourceKey::new(&source.file_name), rotation: source.rotation }
     }
 }
 
 impl Gobo {
-    pub fn resource(&self) -> &bundle::ResourceKey {
+    pub fn resource(&self) -> &ResourceKey {
         &self.resource
     }
 
@@ -1050,16 +1375,16 @@ impl Gobo {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Protocol {
-    pub(crate) geometry: gdtf::Node,
-    pub(crate) name: String,
-    pub(crate) r#type: Option<String>,
-    pub(crate) version: Option<String>,
-    pub(crate) transmission: Option<Transmission>,
+    geometry: gdtf::NodePath,
+    name: String,
+    r#type: Option<String>,
+    version: Option<String>,
+    transmission: Option<Transmission>,
 }
 
 impl Protocol {
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn geometry(&self) -> &gdtf::Node {
+    pub fn geometry(&self) -> &gdtf::NodePath {
         &self.geometry
     }
 
@@ -1080,15 +1405,20 @@ impl Protocol {
     }
 }
 
-impl From<&bundle::Protocol> for Protocol {
-    fn from(value: &bundle::Protocol) -> Self {
+impl bundle::FromBundle for Protocol {
+    type Source = bundle::Protocol;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            geometry: gdtf::Node::from_str(&value.geometry)
-                .unwrap_or_else(|_| gdtf::Node::from_str("NetworkInOut_1").unwrap()),
-            name: value.name.clone(),
-            r#type: if value.r#type.is_empty() { None } else { Some(value.r#type.clone()) },
-            version: if value.version.is_empty() { None } else { Some(value.version.clone()) },
-            transmission: value.transmission.as_ref().map(Into::into),
+            geometry: gdtf::NodePath::from_str(&source.geometry)
+                .unwrap_or_else(|_| gdtf::NodePath::from_str("NetworkInOut_1").unwrap()),
+            name: source.name.clone(),
+            r#type: if source.r#type.is_empty() { None } else { Some(source.r#type.clone()) },
+            version: if source.version.is_empty() { None } else { Some(source.version.clone()) },
+            transmission: source
+                .transmission
+                .as_ref()
+                .map(|t| Transmission::from_bundle(&t, bundle)),
         }
     }
 }
@@ -1101,9 +1431,11 @@ pub enum Transmission {
     Anycast,
 }
 
-impl From<&bundle::Transmission> for Transmission {
-    fn from(value: &bundle::Transmission) -> Self {
-        match value {
+impl bundle::FromBundle for Transmission {
+    type Source = bundle::Transmission;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        match source {
             bundle::Transmission::Unicast => Transmission::Unicast,
             bundle::Transmission::Multicast => Transmission::Multicast,
             bundle::Transmission::Broadcast => Transmission::Broadcast,
@@ -1114,12 +1446,12 @@ impl From<&bundle::Transmission> for Transmission {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Mapping {
-    pub(crate) linked_def: mvr::NodeId<MappingDefinition>,
-    pub(crate) ux: i32,
-    pub(crate) uy: i32,
-    pub(crate) ox: i32,
-    pub(crate) oy: i32,
-    pub(crate) rz: f32,
+    linked_def: mvr::NodeId<MappingDefinition>,
+    ux: i32,
+    uy: i32,
+    ox: i32,
+    oy: i32,
+    rz: f32,
 }
 
 impl Mapping {
@@ -1148,33 +1480,35 @@ impl Mapping {
     }
 }
 
-impl From<&bundle::Mapping> for Mapping {
-    fn from(value: &bundle::Mapping) -> Self {
+impl bundle::FromBundle for Mapping {
+    type Source = bundle::Mapping;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            linked_def: mvr::NodeId::from_str(&value.linked_def).unwrap(),
-            ux: value.ux.unwrap_or_default(),
-            uy: value.uy.unwrap_or_default(),
-            ox: value.ox.unwrap_or_default(),
-            oy: value.oy.unwrap_or_default(),
-            rz: value.rz.unwrap_or_default(),
+            linked_def: mvr::NodeId::from_str(&source.linked_def).unwrap(),
+            ux: source.ux.unwrap_or_default(),
+            uy: source.uy.unwrap_or_default(),
+            ox: source.ox.unwrap_or_default(),
+            oy: source.oy.unwrap_or_default(),
+            rz: source.rz.unwrap_or_default(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Source {
-    pub(crate) linked_geometry: gdtf::Node,
-    pub(crate) r#type: SourceType,
-    pub(crate) value: String,
+    linked_geometry: gdtf::NodePath,
+    r#type: SourceType,
+    value: String,
 }
 
 impl Source {
     // FIXME: Add direct getter from `Mvr` for this.
-    pub fn linked_geometry(&self) -> &gdtf::Node {
+    pub fn linked_geometry(&self) -> &gdtf::NodePath {
         &self.linked_geometry
     }
 
-    pub fn type_(&self) -> SourceType {
+    pub fn r#type(&self) -> SourceType {
         self.r#type
     }
 
@@ -1183,12 +1517,14 @@ impl Source {
     }
 }
 
-impl From<&bundle::Source> for Source {
-    fn from(value: &bundle::Source) -> Self {
+impl bundle::FromBundle for Source {
+    type Source = bundle::Source;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            linked_geometry: gdtf::Node::from_str(&value.linked_geometry).unwrap(),
-            r#type: (&value.r#type).into(),
-            value: value.content.clone(),
+            linked_geometry: gdtf::NodePath::from_str(&source.linked_geometry).unwrap(),
+            r#type: SourceType::from_bundle(&source.r#type, bundle),
+            value: source.content.clone(),
         }
     }
 }
@@ -1201,9 +1537,11 @@ pub enum SourceType {
     CaptureDevice,
 }
 
-impl From<&bundle::SourceType> for SourceType {
-    fn from(value: &bundle::SourceType) -> Self {
-        match value {
+impl bundle::FromBundle for SourceType {
+    type Source = bundle::SourceType;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        match source {
             bundle::SourceType::Ndi => SourceType::Ndi,
             bundle::SourceType::File => SourceType::File,
             bundle::SourceType::Citp => SourceType::Citp,
@@ -1220,15 +1558,11 @@ pub enum ScaleHandling {
     KeepSizeCenter,
 }
 
-impl From<&bundle::ScaleHandeling> for ScaleHandling {
-    fn from(value: &bundle::ScaleHandeling) -> Self {
-        (&value.r#enum).into()
-    }
-}
+impl bundle::FromBundle for ScaleHandling {
+    type Source = bundle::ScaleHandeling;
 
-impl From<&bundle::Scale> for ScaleHandling {
-    fn from(value: &bundle::Scale) -> Self {
-        match value {
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        match source.r#enum {
             bundle::Scale::ScaleKeepRatio => ScaleHandling::ScaleKeepRatio,
             bundle::Scale::ScaleIgnoreRatio => ScaleHandling::ScaleIgnoreRatio,
             bundle::Scale::KeepSizeCenter => ScaleHandling::KeepSizeCenter,
@@ -1238,13 +1572,13 @@ impl From<&bundle::Scale> for ScaleHandling {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Projection {
-    pub(crate) source: Source,
-    pub(crate) scale_handling: ScaleHandling,
+    source: Option<Source>,
+    scale_handling: ScaleHandling,
 }
 
 impl Projection {
-    pub fn source(&self) -> &Source {
-        &self.source
+    pub fn source(&self) -> Option<&Source> {
+        self.source.as_ref()
     }
 
     pub fn scale_handling(&self) -> ScaleHandling {
@@ -1252,14 +1586,181 @@ impl Projection {
     }
 }
 
-impl From<&bundle::Projection> for Projection {
-    fn from(value: &bundle::Projection) -> Self {
-        let source = value.source.first().unwrap();
-        let source: Source = source.into();
+impl bundle::FromBundle for Projection {
+    type Source = bundle::Projection;
 
-        let scale_handling =
-            value.scale_handeling.first().map(|sh| (&sh.r#enum).into()).unwrap_or_default();
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let src = source.source.as_ref().map(|s| Source::from_bundle(s, bundle));
+        let scale_handling = source
+            .scale_handeling
+            .as_ref()
+            .map(|sh| ScaleHandling::from_bundle(sh, bundle))
+            .unwrap_or_default();
+        Self { source: src, scale_handling }
+    }
+}
 
-        Self { source, scale_handling }
+fn build_object(child: &bundle::ChildListContent, bundle: &bundle::Bundle) -> Object {
+    let (uuid_str, name, matrix, classing, kind) = match child {
+        bundle::ChildListContent::SceneObject(c) => (
+            &c.uuid,
+            &c.name,
+            c.matrix.as_deref(),
+            c.classing.as_ref(),
+            ObjectKind::SceneObject(SceneObject::from_bundle(c, bundle)),
+        ),
+        bundle::ChildListContent::GroupObject(c) => (
+            &c.uuid,
+            &c.name,
+            c.matrix.as_deref(),
+            c.classing.as_ref(),
+            ObjectKind::GroupObject(GroupObject::from_bundle(c, bundle)),
+        ),
+        bundle::ChildListContent::FocusPoint(c) => (
+            &c.uuid,
+            &c.name,
+            c.matrix.as_deref(),
+            c.classing.as_ref(),
+            ObjectKind::FocusPoint(FocusPointObject::from_bundle(c, bundle)),
+        ),
+        bundle::ChildListContent::Fixture(c) => (
+            &c.uuid,
+            &c.name,
+            c.matrix.as_deref(),
+            c.classing.as_ref(),
+            ObjectKind::Fixture(FixtureObject::from_bundle(c, bundle)),
+        ),
+        bundle::ChildListContent::Support(c) => (
+            &c.uuid,
+            &c.name,
+            c.matrix.as_deref(),
+            c.classing.as_ref(),
+            ObjectKind::Support(SupportObject::from_bundle(c, bundle)),
+        ),
+        bundle::ChildListContent::Truss(c) => (
+            &c.uuid,
+            &c.name,
+            c.matrix.as_deref(),
+            c.classing.as_ref(),
+            ObjectKind::Truss(TrussObject::from_bundle(c, bundle)),
+        ),
+        bundle::ChildListContent::VideoScreen(c) => (
+            &c.uuid,
+            &c.name,
+            c.matrix.as_deref(),
+            c.classing.as_ref(),
+            ObjectKind::VideoScreen(VideoScreenObject::from_bundle(c, bundle)),
+        ),
+        bundle::ChildListContent::Projector(c) => (
+            &c.uuid,
+            &c.name,
+            c.matrix.as_deref(),
+            c.classing.as_ref(),
+            ObjectKind::Projector(ProjectorObject::from_bundle(c, bundle)),
+        ),
+    };
+
+    Object {
+        id: Uuid::from_str(uuid_str).unwrap().into(),
+        name: name.to_string(),
+        class: classing.map(|classing| NodeId::new(Uuid::from_str(classing).unwrap())),
+        local_transform: util::parse_affine3a_or_identity(matrix),
+        kind,
+    }
+}
+
+fn build_child_objects(
+    child_list: Option<&bundle::ChildList>,
+    bundle: &bundle::Bundle,
+) -> Vec<Object> {
+    child_list
+        .map(|cl| cl.content.iter().map(|child| build_object(child, bundle)).collect())
+        .unwrap_or_default()
+}
+
+fn build_dmx_addresses(
+    addresses: Option<&bundle::Addresses>,
+    bundle: &bundle::Bundle,
+) -> Vec<DmxAddress> {
+    addresses
+        .map(|addrs| addrs.address.iter().map(|a| DmxAddress::from_bundle(a, bundle)).collect())
+        .unwrap_or_default()
+}
+
+fn build_network_addresses(
+    addresses: Option<&bundle::Addresses>,
+    bundle: &bundle::Bundle,
+) -> Vec<NetworkAddress> {
+    addresses
+        .map(|addrs| addrs.network.iter().map(|n| NetworkAddress::from_bundle(n, bundle)).collect())
+        .unwrap_or_default()
+}
+
+fn build_alignments(
+    alignments: Option<&bundle::Alignments>,
+    bundle: &bundle::Bundle,
+) -> Vec<Alignment> {
+    alignments
+        .map(|alignments| {
+            alignments.alignment.iter().map(|a| Alignment::from_bundle(a, bundle)).collect()
+        })
+        .unwrap_or_default()
+}
+
+fn build_custom_commands(commands: Option<&bundle::CustomCommands>) -> Vec<CustomCommand> {
+    commands
+        .map(|commands| commands.custom_command.iter().map(|c| c.parse().unwrap()).collect())
+        .unwrap_or_default()
+}
+
+fn build_overwrites(
+    overwrites: Option<&bundle::Overwrites>,
+    bundle: &bundle::Bundle,
+) -> Vec<Overwrite> {
+    overwrites
+        .map(|ows| ows.overwrite.iter().map(|o| Overwrite::from_bundle(o, bundle)).collect())
+        .unwrap_or_default()
+}
+
+fn build_connections(
+    connections: Option<&bundle::Connections>,
+    bundle: &bundle::Bundle,
+) -> Vec<Connection> {
+    connections
+        .map(|conns| conns.connection.iter().map(|c| Connection::from_bundle(c, bundle)).collect())
+        .unwrap_or_default()
+}
+
+fn build_gdtf_info(gdtf_spec: &Option<String>, gdtf_mode: &Option<String>) -> Option<GdtfInfo> {
+    match (gdtf_spec, gdtf_mode) {
+        (Some(spec), Some(mode)) => {
+            let spec = spec.trim();
+            let mode = mode.trim();
+
+            if spec.is_empty() {
+                return None;
+            }
+
+            Some(GdtfInfo::new(
+                ResourceKey::new(PathBuf::from(spec).with_extension("gdtf")),
+                mode.to_owned(),
+            ))
+        }
+        _ => None,
+    }
+}
+
+fn build_id_from_multipatch(
+    multipatch: &str,
+    fixture_id: Option<String>,
+    fixture_id_numeric: Option<i32>,
+    custom_id: Option<i32>,
+    custom_id_type: Option<i32>,
+) -> ObjectIdentifier {
+    match Uuid::from_str(multipatch) {
+        Ok(uuid) => ObjectIdentifier::Multipatch(uuid.into()),
+        Err(_) => {
+            ObjectIdentifier::Single { fixture_id, fixture_id_numeric, custom_id, custom_id_type }
+        }
     }
 }

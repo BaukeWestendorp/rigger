@@ -1,15 +1,16 @@
 const GSD_FILE_NAME: &str = "GeneralSceneDescription.xml";
 
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 mod description;
-mod resource;
 mod source;
 
 pub use description::*;
-pub use resource::*;
 
-use source::{ArchiveSource, BundleSource, FolderSource, SourceLoader as _};
+use source::{ArchiveBytesSource, ArchiveSource, FolderSource, SourceLoader as _};
 
 /// Representation of an MVR bundle.
 ///
@@ -17,39 +18,40 @@ use source::{ArchiveSource, BundleSource, FolderSource, SourceLoader as _};
 /// files contained in the bundle (folder/zip).
 pub struct Bundle {
     description: GeneralSceneDescription,
-    resources: ResourceMap,
-    source: BundleSource,
+    resources: HashMap<PathBuf, Vec<u8>>,
+    path: Option<PathBuf>,
 }
 
 impl Bundle {
-    pub(crate) fn new(
-        description: GeneralSceneDescription,
-        resources: ResourceMap,
-        source: BundleSource,
-    ) -> Self {
-        Self { description, resources, source }
-    }
-
     pub fn from_folder(path: impl Into<PathBuf>) -> Self {
         let path = path.into();
-        FolderSource::new(path.clone()).load_bundle(BundleSource::Folder { root: path })
+        FolderSource::new(path).load_bundle()
     }
 
     pub fn from_archive(path: impl Into<PathBuf>) -> Self {
         let path = path.into();
-        ArchiveSource::new(path)
-            .load_bundle(BundleSource::Archive { temp_dir: tempfile::TempDir::new().unwrap() })
+        ArchiveSource::new(path).load_bundle()
+    }
+
+    pub fn from_archive_bytes(bytes: &[u8]) -> Self {
+        ArchiveBytesSource::new(bytes).load_bundle()
     }
 
     pub fn description(&self) -> &GeneralSceneDescription {
         &self.description
     }
 
-    pub fn resources(&self) -> &ResourceMap {
+    pub fn resources(&self) -> &HashMap<PathBuf, Vec<u8>> {
         &self.resources
     }
 
-    pub fn root_folder(&self) -> &Path {
-        self.source.root_folder()
+    pub fn path(&self) -> Option<&Path> {
+        self.path.as_deref()
     }
+}
+
+pub(crate) trait FromBundle {
+    type Source;
+
+    fn from_bundle(source: &Self::Source, bundle: &Bundle) -> Self;
 }

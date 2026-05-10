@@ -443,9 +443,9 @@ pub struct Overwrites {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Projection {
     #[serde(default, rename = "Source")]
-    pub source: Vec<Source>,
+    pub source: Option<Source>,
     #[serde(default, rename = "ScaleHandeling")]
-    pub scale_handeling: Vec<ScaleHandeling>,
+    pub scale_handeling: Option<ScaleHandeling>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

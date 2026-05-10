@@ -1,6 +1,16 @@
 fn parse_floats(s: &str) -> Vec<f32> {
-    let s = s.trim().trim_start_matches('{').trim_end_matches('}');
-    s.split(',').map(|v| v.trim().parse::<f32>().unwrap()).collect()
+    s.split('}')
+        .filter_map(|row| {
+            let row = row.trim_start_matches('{').trim();
+            if row.is_empty() { None } else { Some(row) }
+        })
+        .flat_map(|row| {
+            row.split(',').filter_map(|num| {
+                let num = num.trim();
+                if num.is_empty() { None } else { num.parse::<f32>().ok() }
+            })
+        })
+        .collect()
 }
 
 pub(crate) fn parse_vec2(s: &str) -> glam::Vec2 {

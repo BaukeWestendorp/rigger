@@ -1,19 +1,16 @@
-use crate::gdtf::{
-    Name,
-    bundle::{self, ResourceKey},
-};
+use crate::gdtf::{Name, Node, ResourceKey, bundle};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
-    pub(crate) name: Name,
-    pub(crate) length: f32,
-    pub(crate) width: f32,
-    pub(crate) height: f32,
-    pub(crate) primitive_type: PrimitiveType,
-    pub(crate) files: Vec<ResourceKey>,
-    pub(crate) svg_offset: glam::Vec2,
-    pub(crate) svg_side_offset: glam::Vec2,
-    pub(crate) svg_front_offset: glam::Vec2,
+    name: Name,
+    length: f32,
+    width: f32,
+    height: f32,
+    primitive_type: PrimitiveType,
+    files: Vec<ResourceKey>,
+    svg_offset: glam::Vec2,
+    svg_side_offset: glam::Vec2,
+    svg_front_offset: glam::Vec2,
 }
 
 impl Model {
@@ -54,29 +51,44 @@ impl Model {
     }
 }
 
-impl From<&bundle::Model> for Model {
-    fn from(value: &bundle::Model) -> Self {
-        // FIXME: Get all LODs of models from bundle.
-        let files = Vec::new();
+impl Node for Model {
+    fn name(&self) -> Option<Name> {
+        Some(self.name().clone())
+    }
+}
+
+impl bundle::FromBundle for Model {
+    type Source = bundle::Model;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let files = bundle
+            .resources()
+            .keys()
+            .filter(|path| {
+                path.starts_with("models")
+                    && path.file_name().is_some_and(|f| f.to_string_lossy().contains(&source.file))
+            })
+            .map(|path| ResourceKey::new(path))
+            .collect();
 
         Self {
-            name: Name::new(value.name.to_owned()),
-            length: value.length,
-            width: value.width,
-            height: value.height,
-            primitive_type: (&value.primitive_type).into(),
+            name: Name::new(source.name.to_owned()),
+            length: source.length,
+            width: source.width,
+            height: source.height,
+            primitive_type: (&source.primitive_type).into(),
             files,
             svg_offset: glam::Vec2::new(
-                value.svg_offset_x.unwrap_or(0.0),
-                value.svg_offset_y.unwrap_or(0.0),
+                source.svg_offset_x.unwrap_or(0.0),
+                source.svg_offset_y.unwrap_or(0.0),
             ),
             svg_side_offset: glam::Vec2::new(
-                value.svg_offset_x.unwrap_or(0.0),
-                value.svg_offset_y.unwrap_or(0.0),
+                source.svg_offset_x.unwrap_or(0.0),
+                source.svg_offset_y.unwrap_or(0.0),
             ),
             svg_front_offset: glam::Vec2::new(
-                value.svg_offset_x.unwrap_or(0.0),
-                value.svg_offset_y.unwrap_or(0.0),
+                source.svg_offset_x.unwrap_or(0.0),
+                source.svg_offset_y.unwrap_or(0.0),
             ),
         }
     }

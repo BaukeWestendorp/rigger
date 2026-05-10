@@ -1,29 +1,9 @@
-use std::{
-    fs::{self, File},
-    io::{self, BufReader},
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, fs, io::BufReader, path::PathBuf};
 
-use crate::mvr::bundle::{
-    Bundle, GSD_FILE_NAME, ResourceEntry, ResourceKey, ResourceKind, ResourceMap,
-};
-
-pub(crate) enum BundleSource {
-    Folder { root: PathBuf },
-    Archive { temp_dir: tempfile::TempDir },
-}
-
-impl BundleSource {
-    pub fn root_folder(&self) -> &Path {
-        match &self {
-            BundleSource::Folder { root } => root.as_path(),
-            BundleSource::Archive { temp_dir, .. } => temp_dir.path(),
-        }
-    }
-}
+use crate::mvr::bundle::{Bundle, GSD_FILE_NAME};
 
 pub(crate) trait SourceLoader {
-    fn load_bundle(&self, source: BundleSource) -> Bundle;
+    fn load_bundle(&self) -> Bundle;
 }
 
 pub(crate) struct FolderSource {
@@ -31,19 +11,19 @@ pub(crate) struct FolderSource {
 }
 
 impl FolderSource {
-    pub(crate) fn new(path: PathBuf) -> Self {
+    pub fn new(path: PathBuf) -> Self {
         Self { path }
     }
 }
 
 impl SourceLoader for FolderSource {
-    fn load_bundle(&self, source: BundleSource) -> Bundle {
+    fn load_bundle(&self) -> Bundle {
         let description = quick_xml::de::from_reader(BufReader::new(
-            File::open(source.root_folder().join(GSD_FILE_NAME)).unwrap(),
+            fs::File::open(self.path.join(GSD_FILE_NAME)).unwrap(),
         ))
         .unwrap();
 
-        let mut resources = ResourceMap::new();
+        let mut resources = HashMap::new();
 
         if let Ok(read_dir) = fs::read_dir(&self.path) {
             for entry in read_dir.flatten() {
@@ -58,13 +38,12 @@ impl SourceLoader for FolderSource {
                     Err(_) => continue,
                 };
 
-                let key = ResourceKey::new(relative.to_string_lossy());
-                let kind = ResourceKind::from_path(&p);
-                resources.insert(ResourceEntry::new(key, kind));
+                let bytes = std::fs::read(self.path.join(relative)).unwrap();
+                resources.insert(relative.to_path_buf(), bytes);
             }
         }
 
-        Bundle::new(description, resources, source)
+        Bundle { description, resources, path: Some(self.path.clone()) }
     }
 }
 
@@ -76,51 +55,61 @@ impl ArchiveSource {
     pub fn new(path: PathBuf) -> Self {
         Self { path }
     }
-
-    pub fn path(&self) -> &Path {
-        &self.path
-    }
-
-    fn extract_to_root(&self, root: &Path) {
-        let file = File::open(self.path()).unwrap();
-        let mut archive = zip::ZipArchive::new(file).unwrap();
-
-        for i in 0..archive.len() {
-            let mut file = archive.by_index(i).unwrap();
-            let corrected_name = String::from_utf8_lossy(file.name_raw());
-            let relative = PathBuf::from(corrected_name.to_string());
-            let out_path = {
-                let joined = root.join(&relative);
-                let out_path = joined.canonicalize().unwrap_or(joined);
-                if !out_path.starts_with(root) {
-                    panic!("Invalid file path in archive: {:?}", relative);
-                }
-                out_path
-            };
-
-            if file.is_dir() {
-                fs::create_dir_all(&out_path).unwrap();
-            } else {
-                if let Some(p) = out_path.parent() {
-                    if !p.exists() {
-                        fs::create_dir_all(p).unwrap();
-                    }
-                }
-                let mut out_file = File::create(&out_path).unwrap();
-                io::copy(&mut file, &mut out_file).unwrap();
-            }
-        }
-    }
 }
 
 impl SourceLoader for ArchiveSource {
-    fn load_bundle(&self, source: BundleSource) -> Bundle {
-        let root = source.root_folder().to_path_buf();
+    fn load_bundle(&self) -> Bundle {
+        let file = std::fs::File::open(&self.path).unwrap();
+        let mut zip = zip::ZipArchive::new(file).unwrap();
 
-        fs::create_dir_all(&root).unwrap();
-        self.extract_to_root(&root);
+        let desc_file = zip.by_name(GSD_FILE_NAME).unwrap();
+        let description = quick_xml::de::from_reader(std::io::BufReader::new(desc_file)).unwrap();
 
-        let folder_loader = FolderSource { path: root.clone() };
-        folder_loader.load_bundle(source)
+        let mut resources = HashMap::new();
+        for i in 0..zip.len() {
+            let mut file = zip.by_index(i).unwrap();
+            if file.name() == GSD_FILE_NAME {
+                continue;
+            }
+            let mut bytes = Vec::new();
+            std::io::Read::read_to_end(&mut file, &mut bytes).unwrap();
+            let name = String::from_utf8_lossy(file.name_raw()).to_string();
+            resources.insert(PathBuf::from(name), bytes);
+        }
+
+        Bundle { description, resources, path: Some(self.path.clone()) }
+    }
+}
+
+pub(crate) struct ArchiveBytesSource<'a> {
+    bytes: &'a [u8],
+}
+
+impl<'a> ArchiveBytesSource<'a> {
+    pub fn new(bytes: &'a [u8]) -> Self {
+        Self { bytes }
+    }
+}
+
+impl SourceLoader for ArchiveBytesSource<'_> {
+    fn load_bundle(&self) -> Bundle {
+        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(self.bytes)).unwrap();
+
+        let desc_file = zip.by_name(GSD_FILE_NAME).unwrap();
+        let description = quick_xml::de::from_reader(std::io::BufReader::new(desc_file)).unwrap();
+
+        let mut resources = HashMap::new();
+        for i in 0..zip.len() {
+            let mut file = zip.by_index(i).unwrap();
+            if file.name() == GSD_FILE_NAME {
+                continue;
+            }
+            let mut bytes = Vec::new();
+            std::io::Read::read_to_end(&mut file, &mut bytes).unwrap();
+            let name = String::from_utf8_lossy(file.name_raw()).to_string();
+            resources.insert(PathBuf::from(name), bytes);
+        }
+
+        Bundle { description, resources, path: None }
     }
 }

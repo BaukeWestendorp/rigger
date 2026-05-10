@@ -3,51 +3,9 @@ use std::{
     str::{self, FromStr as _},
 };
 
-fn extract_attr_n<T: str::FromStr>(s: &str, prefix: &str, suffix: Option<&str>) -> Option<T> {
-    s.strip_prefix(prefix).and_then(|rest| {
-        if let Some(suffix) = suffix {
-            rest.strip_suffix(suffix).and_then(|number_part| number_part.parse::<T>().ok())
-        } else {
-            rest.parse::<T>().ok()
-        }
-    })
-}
-
-fn extract_attr_n_m<T: str::FromStr>(
-    s: &str,
-    prefix: &str,
-    middle: &str,
-    suffix: Option<&str>,
-) -> Option<(T, T)> {
-    if !s.starts_with(prefix) {
-        return None;
-    }
-
-    let rest = &s[prefix.len()..];
-
-    if let Some(middle_pos) = rest.find(middle) {
-        let n_part = &rest[..middle_pos];
-        let n = n_part.parse::<T>().ok()?;
-
-        let after_middle = &rest[middle_pos + middle.len()..];
-
-        let m_part = if let Some(suffix) = suffix {
-            after_middle.strip_suffix(suffix)?
-        } else {
-            after_middle
-        };
-
-        let m = m_part.parse::<T>().ok()?;
-
-        Some((n, m))
-    } else {
-        None
-    }
-}
-
 use crate::{
     CieColor,
-    gdtf::{Name, Node, bundle},
+    gdtf::{Name, Node, NodeContainer, NodePath, bundle},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -69,6 +27,21 @@ pub enum ActivationGroup {
     Prism,
     BeamShaper,
     Shaper,
+}
+
+impl bundle::FromBundle for ActivationGroup {
+    type Source = bundle::ActivationGroup;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        let name = Name::new(&source.name);
+        ActivationGroup::from_str(name.as_str()).unwrap()
+    }
+}
+
+impl Node for ActivationGroup {
+    fn name(&self) -> Option<Name> {
+        Some(Name::new(self.to_string()))
+    }
 }
 
 impl fmt::Display for ActivationGroup {
@@ -136,15 +109,15 @@ impl str::FromStr for ActivationGroup {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Attribute {
-    pub(crate) name: AttributeName,
-    pub(crate) pretty: String,
-    pub(crate) activation_group: Option<Node>,
-    pub(crate) feature: Node,
-    pub(crate) main_attribute: Option<Node>,
-    pub(crate) physical_unit: Option<PhysicalUnit>,
-    pub(crate) color: Option<CieColor>,
+    name: AttributeName,
+    pretty: String,
+    activation_group: Option<NodePath>,
+    feature: NodePath,
+    main_attribute: Option<NodePath>,
+    physical_unit: Option<PhysicalUnit>,
+    color: Option<CieColor>,
 
-    pub(crate) sub_physical_units: Vec<SubPhysicalUnit>,
+    sub_physical_units: Vec<SubPhysicalUnit>,
 }
 
 impl Attribute {
@@ -156,15 +129,15 @@ impl Attribute {
         &self.pretty
     }
 
-    pub fn activation_group(&self) -> Option<&Node> {
+    pub fn activation_group(&self) -> Option<&NodePath> {
         self.activation_group.as_ref()
     }
 
-    pub fn feature(&self) -> &Node {
+    pub fn feature(&self) -> &NodePath {
         &self.feature
     }
 
-    pub fn main_attribute(&self) -> Option<&Node> {
+    pub fn main_attribute(&self) -> Option<&NodePath> {
         self.main_attribute.as_ref()
     }
 
@@ -181,20 +154,39 @@ impl Attribute {
     }
 }
 
-impl From<&bundle::Attribute> for Attribute {
-    fn from(value: &bundle::Attribute) -> Self {
+impl Node for Attribute {
+    fn name(&self) -> Option<Name> {
+        Some(Name::new(self.name.to_string()))
+    }
+}
+
+impl bundle::FromBundle for Attribute {
+    type Source = bundle::Attribute;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            name: AttributeName::from_str(&value.name).unwrap(),
-            pretty: value.pretty.to_string(),
-            activation_group: value
+            name: AttributeName::from_str(&source.name).unwrap(),
+            pretty: source.pretty.to_owned(),
+            activation_group: source
                 .activation_group
                 .as_deref()
-                .map(|ag| Node::from_str(ag).unwrap()),
-            feature: Node::from_str(&value.feature).unwrap(),
-            main_attribute: value.main_attribute.as_deref().map(|ma| Node::from_str(ma).unwrap()),
-            physical_unit: (&value.physical_unit).into(),
-            color: value.color.as_deref().map(|c| CieColor::from_str(c).unwrap()),
-            sub_physical_units: value.sub_physical_units.iter().map(Into::into).collect(),
+                .map(|ag| NodePath::from_str(ag).unwrap()),
+            feature: NodePath::from_str(&source.feature).unwrap(),
+            main_attribute: source
+                .main_attribute
+                .as_deref()
+                .map(|ma| NodePath::from_str(ma).unwrap()),
+            physical_unit: PhysicalUnit::from_bundle(&source.physical_unit),
+            color: source.color.as_deref().map(|c| {
+                CieColor::from_str(c)
+                    .inspect_err(|_| eprintln!("Failed to parse color: {c}. Defaulting to white."))
+                    .unwrap_or_default()
+            }),
+            sub_physical_units: source
+                .sub_physical_units
+                .iter()
+                .map(|spu| SubPhysicalUnit::from_bundle(spu, bundle))
+                .collect(),
         }
     }
 }
@@ -1490,7 +1482,7 @@ impl str::FromStr for AttributeName {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Feature {
-    pub(crate) name: Name,
+    name: Name,
 }
 
 impl Feature {
@@ -1499,17 +1491,25 @@ impl Feature {
     }
 }
 
-impl From<&bundle::Feature> for Feature {
-    fn from(value: &bundle::Feature) -> Self {
-        Self { name: Name::new(&value.name) }
+impl Node for Feature {
+    fn name(&self) -> Option<Name> {
+        Some(self.name.clone())
+    }
+}
+
+impl bundle::FromBundle for Feature {
+    type Source = bundle::Feature;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        Feature { name: Name::new(&source.name) }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FeatureGroup {
-    pub(crate) name: Name,
-    pub(crate) pretty: String,
-    pub(crate) features: Vec<Feature>,
+    name: Name,
+    pretty: String,
+    features: NodeContainer<Feature>,
 }
 
 impl FeatureGroup {
@@ -1521,22 +1521,30 @@ impl FeatureGroup {
         &self.pretty
     }
 
-    pub fn features(&self) -> &[Feature] {
+    pub fn features(&self) -> &NodeContainer<Feature> {
         &self.features
-    }
-
-    pub fn feature(&self, name: &str) -> Option<&Feature> {
-        self.features.iter().find(|f| f.name().as_str() == name)
     }
 }
 
-impl From<&bundle::FeatureGroup> for FeatureGroup {
-    fn from(value: &bundle::FeatureGroup) -> Self {
-        let name = Name::new(&value.name);
+impl Node for FeatureGroup {
+    fn name(&self) -> Option<Name> {
+        Some(self.name.clone())
+    }
+}
+
+impl bundle::FromBundle for FeatureGroup {
+    type Source = bundle::FeatureGroup;
+
+    fn from_bundle(feature_group: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let mut features = NodeContainer::default();
+        for f in &feature_group.features {
+            features.add(Feature::from_bundle(f, bundle));
+        }
+
         Self {
-            name: name.clone(),
-            pretty: value.pretty.to_string(),
-            features: value.features.iter().map(Into::into).collect(),
+            name: Name::new(&feature_group.name),
+            pretty: feature_group.pretty.to_owned(),
+            features,
         }
     }
 }
@@ -1566,9 +1574,9 @@ pub enum PhysicalUnit {
     ColorComponent,
 }
 
-impl From<&bundle::PhysicalUnit> for Option<PhysicalUnit> {
-    fn from(value: &bundle::PhysicalUnit) -> Self {
-        match value {
+impl PhysicalUnit {
+    pub fn from_bundle(physical_unit: &bundle::PhysicalUnit) -> Option<Self> {
+        match physical_unit {
             bundle::PhysicalUnit::None => None,
             bundle::PhysicalUnit::Percent => Some(PhysicalUnit::Percent),
             bundle::PhysicalUnit::Length => Some(PhysicalUnit::Length),
@@ -1597,10 +1605,10 @@ impl From<&bundle::PhysicalUnit> for Option<PhysicalUnit> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SubPhysicalUnit {
-    pub(crate) r#type: SubPhysicalUnitType,
-    pub(crate) physical_unit: Option<PhysicalUnit>,
-    pub(crate) physical_from: f32,
-    pub(crate) physical_to: f32,
+    r#type: SubPhysicalUnitType,
+    physical_unit: Option<PhysicalUnit>,
+    physical_from: f32,
+    physical_to: f32,
 }
 
 impl SubPhysicalUnit {
@@ -1621,13 +1629,15 @@ impl SubPhysicalUnit {
     }
 }
 
-impl From<&bundle::SubPhysicalUnit> for SubPhysicalUnit {
-    fn from(value: &bundle::SubPhysicalUnit) -> Self {
+impl bundle::FromBundle for SubPhysicalUnit {
+    type Source = bundle::SubPhysicalUnit;
+
+    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            r#type: (&value.r#type).into(),
-            physical_unit: value.physical_unit.as_ref().and_then(|pu| pu.into()),
-            physical_from: value.physical_from.unwrap_or(0.0),
-            physical_to: value.physical_to.unwrap_or(1.0),
+            r#type: SubPhysicalUnitType::from_bundle(&source.r#type, bundle),
+            physical_unit: source.physical_unit.as_ref().and_then(PhysicalUnit::from_bundle),
+            physical_from: source.physical_from.unwrap_or(0.0),
+            physical_to: source.physical_to.unwrap_or(1.0),
         }
     }
 }
@@ -1647,9 +1657,11 @@ pub enum SubPhysicalUnitType {
     RatioVertical,
 }
 
-impl From<&bundle::SubPhysicalType> for SubPhysicalUnitType {
-    fn from(value: &bundle::SubPhysicalType) -> Self {
-        match value {
+impl bundle::FromBundle for SubPhysicalUnitType {
+    type Source = bundle::SubPhysicalType;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        match source {
             bundle::SubPhysicalType::PlacementOffset => SubPhysicalUnitType::PlacementOffset,
             bundle::SubPhysicalType::Amplitude => SubPhysicalUnitType::Amplitude,
             bundle::SubPhysicalType::AmplitudeMin => SubPhysicalUnitType::AmplitudeMin,
@@ -1662,5 +1674,47 @@ impl From<&bundle::SubPhysicalType> for SubPhysicalUnitType {
             bundle::SubPhysicalType::RatioHorizontal => SubPhysicalUnitType::RatioHorizontal,
             bundle::SubPhysicalType::RatioVertical => SubPhysicalUnitType::RatioVertical,
         }
+    }
+}
+
+fn extract_attr_n<T: str::FromStr>(s: &str, prefix: &str, suffix: Option<&str>) -> Option<T> {
+    s.strip_prefix(prefix).and_then(|rest| {
+        if let Some(suffix) = suffix {
+            rest.strip_suffix(suffix).and_then(|number_part| number_part.parse::<T>().ok())
+        } else {
+            rest.parse::<T>().ok()
+        }
+    })
+}
+
+fn extract_attr_n_m<T: str::FromStr>(
+    s: &str,
+    prefix: &str,
+    middle: &str,
+    suffix: Option<&str>,
+) -> Option<(T, T)> {
+    if !s.starts_with(prefix) {
+        return None;
+    }
+
+    let rest = &s[prefix.len()..];
+
+    if let Some(middle_pos) = rest.find(middle) {
+        let n_part = &rest[..middle_pos];
+        let n = n_part.parse::<T>().ok()?;
+
+        let after_middle = &rest[middle_pos + middle.len()..];
+
+        let m_part = if let Some(suffix) = suffix {
+            after_middle.strip_suffix(suffix)?
+        } else {
+            after_middle
+        };
+
+        let m = m_part.parse::<T>().ok()?;
+
+        Some((n, m))
+    } else {
+        None
     }
 }

@@ -5,8 +5,8 @@ use std::{
 };
 
 use rigger::mvr::{
-    Layer, Mvr, NodeId, Object,
-    layer::{ObjectIdentifier, ObjectKind, ScaleHandling, SourceType, Transmission},
+    Layer, Mvr, Node as _, NodeId, Object, ObjectIdentifier, ObjectKind, ResourceKey,
+    ScaleHandling, SourceType, Transmission,
 };
 
 fn load_complete_mvr() -> Mvr {
@@ -31,12 +31,34 @@ fn load_empty_scene_and_user_data_mvr() -> Mvr {
 
 fn object_by_uuid<'a>(mvr: &'a Mvr, uuid: &str) -> &'a Object {
     let id: NodeId<Object> = NodeId::from_str(uuid).unwrap();
-    mvr.object(id).unwrap_or_else(|| panic!("Object {uuid} not found"))
+
+    fn find_object<'b>(objects: &'b [Object], id: NodeId<Object>) -> Option<&'b Object> {
+        for obj in objects {
+            if obj.id() == id {
+                return Some(obj);
+            }
+
+            if let Some(children) = obj.child_objects() {
+                if let Some(found) = find_object(children, id) {
+                    return Some(found);
+                }
+            }
+        }
+        None
+    }
+
+    for layer in mvr.layers().iter() {
+        if let Some(obj) = find_object(layer.objects(), id) {
+            return obj;
+        }
+    }
+
+    panic!("Object {uuid} not found");
 }
 
 fn layer_by_uuid<'a>(mvr: &'a Mvr, uuid: &str) -> &'a Layer {
     let id: NodeId<Layer> = NodeId::from_str(uuid).unwrap();
-    mvr.layer(id).unwrap_or_else(|| panic!("Layer {uuid} not found"))
+    mvr.layers().get(id).unwrap_or_else(|| panic!("Layer {uuid} not found"))
 }
 
 #[test]
@@ -62,11 +84,12 @@ fn test_provider_defaults_when_missing() {
 #[test]
 fn test_layer_count_and_names() {
     let mvr = load_complete_mvr();
-    let layers = mvr.layers();
+    let mut layers = mvr.layers().iter().collect::<Vec<_>>();
+    layers.sort_by_key(|l| l.name());
     assert_eq!(layers.len(), 3);
-    assert_eq!(layers[0].name(), "Empty Layer");
-    assert_eq!(layers[1].name(), "Single Simple Object Layer");
-    assert_eq!(layers[2].name(), "Complete Object Layer");
+    assert_eq!(layers[0].name(), "Complete Object Layer");
+    assert_eq!(layers[1].name(), "Empty Layer");
+    assert_eq!(layers[2].name(), "Single Simple Object Layer");
 }
 
 #[test]
@@ -80,7 +103,7 @@ fn test_layer_lookup_by_id() {
 fn test_layer_lookup_returns_none_for_unknown_id() {
     let mvr = load_complete_mvr();
     let id: NodeId<Layer> = NodeId::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    assert!(mvr.layer(id).is_none());
+    assert!(mvr.layers().get(id).is_none());
 }
 
 #[test]
@@ -94,20 +117,20 @@ fn test_empty_layer_has_no_objects() {
 fn test_layer_without_matrix_has_identity_transform() {
     let mvr = load_complete_mvr();
     let layer = layer_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000001");
-    assert_eq!(*layer.local_transform(), glam::Affine3A::IDENTITY);
+    assert_eq!(layer.local_transform(), glam::Affine3A::IDENTITY);
 }
 
 #[test]
 fn test_classes() {
     let mvr = load_complete_mvr();
-    let mut classes: Vec<_> = mvr.classes().collect();
+    let mut classes = mvr.classes().iter().collect::<Vec<_>>();
     classes.sort_by_key(|c| c.name());
     assert_eq!(classes.len(), 2);
     assert_eq!(classes[0].name(), "Class 1");
     assert_eq!(classes[1].name(), "Class 2");
 
     let id = NodeId::from_str("deadbeef-0000-0000-0000-000000000064").unwrap();
-    let class = mvr.class(id).expect("Expected Class 1 by id");
+    let class = mvr.classes().get(id).expect("Expected Class 1 by id");
     assert_eq!(class.name(), "Class 1");
     assert_eq!(class.id(), id);
 }
@@ -115,24 +138,24 @@ fn test_classes() {
 #[test]
 fn test_positions() {
     let mvr = load_complete_mvr();
-    let mut positions: Vec<_> = mvr.positions().collect();
+    let mut positions = mvr.positions().iter().collect::<Vec<_>>();
     positions.sort_by_key(|p| p.name());
     assert_eq!(positions.len(), 2);
     assert_eq!(positions[0].name(), "Position 1");
     assert_eq!(positions[1].name(), "Position 2");
 
     let id = NodeId::from_str("deadbeef-0000-0000-0000-000000000071").unwrap();
-    let pos = mvr.position(id).expect("Expected Position 1 by id");
+    let pos = mvr.positions().get(id).expect("Expected Position 1 by id");
     assert_eq!(pos.name(), "Position 1");
 }
 
 #[test]
 fn test_symdefs() {
     let mvr = load_complete_mvr();
-    assert_eq!(mvr.symdefs().count(), 5);
+    assert_eq!(mvr.symdefs().len(), 5);
 
     let id = NodeId::from_str("deadbeef-0000-0000-0000-000000000066").unwrap();
-    let symdef = mvr.symdef(id).expect("Expected Symdef 'Symbol 1' by id");
+    let symdef = mvr.symdefs().get(id).expect("Expected Symdef 'Symbol 1' by id");
     assert_eq!(symdef.name(), "Symbol 1");
     assert_eq!(symdef.id(), id);
 }
@@ -140,14 +163,14 @@ fn test_symdefs() {
 #[test]
 fn test_mapping_definitions() {
     let mvr = load_complete_mvr();
-    assert_eq!(mvr.mapping_definitions().count(), 7);
+    assert_eq!(mvr.mapping_definitions().len(), 7);
 
     let id = NodeId::from_str("deadbeef-0000-0000-0000-000000000073").unwrap();
-    let md = mvr.mapping_definition(id).expect("Expected MappingDefinition 'Mapping 1'");
+    let md = mvr.mapping_definitions().get(id).expect("Expected MappingDefinition 'Mapping 1'");
     assert_eq!(md.name(), "Mapping 1");
     assert_eq!(md.size_x(), 1920);
     assert_eq!(md.size_y(), 1080);
-    assert_eq!(md.source().type_(), SourceType::File);
+    assert_eq!(md.source().r#type(), SourceType::File);
     assert_eq!(md.source().value(), "movie.mov");
     assert_eq!(md.scale_handling(), ScaleHandling::ScaleKeepRatio);
 }
@@ -157,11 +180,11 @@ fn test_mapping_definition_scale_handling_variants() {
     let mvr = load_complete_mvr();
 
     let id_ignore = NodeId::from_str("deadbeef-0000-0000-0000-000000000088").unwrap();
-    let md_ignore = mvr.mapping_definition(id_ignore).unwrap();
+    let md_ignore = mvr.mapping_definitions().get(id_ignore).unwrap();
     assert_eq!(md_ignore.scale_handling(), ScaleHandling::ScaleIgnoreRatio);
 
     let id_center = NodeId::from_str("deadbeef-0000-0000-0000-000000000089").unwrap();
-    let md_center = mvr.mapping_definition(id_center).unwrap();
+    let md_center = mvr.mapping_definitions().get(id_center).unwrap();
     assert_eq!(md_center.scale_handling(), ScaleHandling::KeepSizeCenter);
 }
 
@@ -170,13 +193,6 @@ fn test_object_lookup_by_id() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000003");
     assert_eq!(obj.name(), "Simple Object");
-}
-
-#[test]
-fn test_object_lookup_returns_none_for_unknown_id() {
-    let mvr = load_complete_mvr();
-    let id: NodeId<Object> = NodeId::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    assert!(mvr.object(id).is_none());
 }
 
 #[test]
@@ -192,7 +208,7 @@ fn test_child_object_is_reachable() {
     let mvr = load_complete_mvr();
     let child_id: NodeId<Object> =
         NodeId::from_str("deadbeef-0000-0000-0000-000000000006").unwrap();
-    assert!(mvr.object(child_id).is_some());
+    object_by_uuid(&mvr, &child_id.as_uuid().to_string().as_str());
 }
 
 #[test]
@@ -208,7 +224,7 @@ fn test_object_class_is_resolved() {
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000005");
 
     let class_id = obj.class().expect("Expected class on Complete SceneObject 1");
-    let class = mvr.class(class_id).expect("Expected class to be resolvable");
+    let class = mvr.classes().get(class_id).expect("Expected class to be resolvable");
     assert_eq!(class.name(), "Class 1");
 }
 
@@ -223,7 +239,7 @@ fn test_object_without_class_has_none() {
 fn test_object_local_transform_identity_when_no_matrix() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000003");
-    assert_eq!(*obj.local_transform(), glam::Affine3A::IDENTITY);
+    assert_eq!(obj.local_transform(), glam::Affine3A::IDENTITY);
 }
 
 #[test]
@@ -234,34 +250,6 @@ fn test_object_local_transform_translation_divided_by_1000() {
     assert!((t.x - 1.0).abs() < 1e-5);
     assert!(t.y.abs() < 1e-5);
     assert!(t.z.abs() < 1e-5);
-}
-
-#[test]
-fn test_object_world_transform() {
-    let mvr = load_complete_mvr();
-    let id: NodeId<Object> = NodeId::from_str("deadbeef-0000-0000-0000-000000000005").unwrap();
-    let world = mvr.object_world_transform(id).expect("Expected world transform");
-    let t = world.translation;
-    assert!((t.x - 1.0).abs() < 1e-5);
-    assert!(t.y.abs() < 1e-5);
-}
-
-#[test]
-fn test_child_object_world_transform_accumulates_parent() {
-    let mvr = load_complete_mvr();
-    let id: NodeId<Object> = NodeId::from_str("deadbeef-0000-0000-0000-000000000006").unwrap();
-    let world = mvr.object_world_transform(id).expect("Expected world transform for child");
-    let t = world.translation;
-    assert!((t.x - 2.0).abs() < 1e-5);
-    assert!((t.y - 0.5).abs() < 1e-5);
-    assert!(t.z.abs() < 1e-5);
-}
-
-#[test]
-fn test_object_world_transform_returns_none_for_unknown_id() {
-    let mvr = load_complete_mvr();
-    let id: NodeId<Object> = NodeId::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    assert!(mvr.object_world_transform(id).is_none());
 }
 
 #[test]
@@ -350,7 +338,7 @@ fn test_gdtf_info_present() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000009");
     let info = obj.gdtf_info().expect("Expected GdtfInfo on Complete Fixture 1");
-    assert_eq!(info.gdtf_spec(), "Robe Lighting@Robin Spiider.gdtf");
+    assert_eq!(info.gdtf_resource(), &ResourceKey::new("Robe Lighting@Robin Spiider.gdtf"));
     assert_eq!(info.gdtf_mode(), "Mode 1 - Standard 16 bit");
 }
 
@@ -476,8 +464,8 @@ fn test_alignments() {
     let aligns = obj.alignments().expect("Expected alignments");
     assert_eq!(aligns.len(), 1);
     assert_eq!(aligns[0].geometry().to_string(), "Beam1");
-    assert_eq!(*aligns[0].up(), glam::Vec3A::new(0.0, 0.0, 1.0));
-    assert_eq!(*aligns[0].direction(), glam::Vec3A::new(0.0, 0.0, -1.0));
+    assert_eq!(aligns[0].up(), glam::Vec3A::new(0.0, 0.0, 1.0));
+    assert_eq!(aligns[0].direction(), glam::Vec3A::new(0.0, 0.0, -1.0));
 }
 
 #[test]
@@ -534,7 +522,7 @@ fn test_geometries_present_on_scene_object() {
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000005");
     let geos = obj.geometries().expect("Expected geometries");
     assert_eq!(geos.len(), 1);
-    assert_eq!(geos[0].model().as_str(), "model1.glb");
+    assert_eq!(geos[0].model().relative_path(), Path::new("model1.glb"));
 }
 
 #[test]
@@ -555,18 +543,6 @@ fn test_geometry_from_symbol_with_matrix_composes_transforms() {
     assert_eq!(geos.len(), 1);
     let t = geos[0].local_transform().translation;
     assert!((t.x - 0.3).abs() < 1e-5);
-    assert!(t.y.abs() < 1e-5);
-}
-
-#[test]
-fn test_object_geometries_world() {
-    let mvr = load_complete_mvr();
-    let id: NodeId<Object> = NodeId::from_str("deadbeef-0000-0000-0000-000000000005").unwrap();
-    let mut geos = mvr.object_geometries_world(id).expect("Expected geometries world");
-    let (geo, world) = geos.next().expect("Expected at least one geometry");
-    assert_eq!(geo.model().as_str(), "model1.glb");
-    let t = world.translation;
-    assert!((t.x - 1.1).abs() < 1e-5);
     assert!(t.y.abs() < 1e-5);
 }
 
@@ -616,7 +592,7 @@ fn test_fixture_position_reference() {
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000009");
     let f = obj.as_fixture_object().unwrap();
     let pos_id = f.position().expect("Expected position reference");
-    let pos = mvr.position(pos_id).expect("Expected position to resolve");
+    let pos = mvr.positions().get(pos_id).expect("Expected position to resolve");
     assert_eq!(pos.name(), "Position 1");
 }
 
@@ -626,7 +602,7 @@ fn test_fixture_gobo() {
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000009");
     let f = obj.as_fixture_object().unwrap();
     let gobo = f.gobo().expect("Expected gobo");
-    assert_eq!(gobo.resource().as_str(), "gobo.png");
+    assert_eq!(gobo.resource().relative_path(), Path::new("gobo.png"));
     assert!((gobo.rotation() - 32.5).abs() < 1e-5);
 }
 
@@ -690,7 +666,7 @@ fn test_truss_fields() {
     assert_eq!(t.unit_number(), Some(2013));
 
     let pos_id = t.position().expect("Expected position reference on truss");
-    let pos = mvr.position(pos_id).expect("Expected position to resolve");
+    let pos = mvr.positions().get(pos_id).expect("Expected position to resolve");
     assert_eq!(pos.name(), "Position 1");
 
     assert_eq!(t.child_objects().len(), 1);
@@ -716,7 +692,7 @@ fn test_video_screen_sources() {
     assert_eq!(vs.function(), Some("This video screen is meant for testing"));
     let sources = vs.sources();
     assert_eq!(sources.len(), 1);
-    assert_eq!(sources[0].type_(), SourceType::File);
+    assert_eq!(sources[0].r#type(), SourceType::File);
     assert_eq!(sources[0].value(), "movie.mov");
     assert_eq!(sources[0].linked_geometry().to_string(), "Display1");
 }
@@ -728,8 +704,8 @@ fn test_projector_projection_and_scale_handling() {
     let p = obj.as_projector_object().unwrap();
     let projs = p.projections();
     assert_eq!(projs.len(), 1);
-    assert_eq!(projs[0].source().type_(), SourceType::File);
-    assert_eq!(projs[0].source().value(), "projector_content.mov");
+    assert_eq!(projs[0].source().unwrap().r#type(), SourceType::File);
+    assert_eq!(projs[0].source().unwrap().value(), "projector_content.mov");
     assert_eq!(projs[0].scale_handling(), ScaleHandling::ScaleKeepRatio);
 }
 
@@ -737,8 +713,13 @@ fn test_projector_projection_and_scale_handling() {
 fn test_gdtf_loading() {
     let mvr = load_complete_mvr();
 
-    assert_eq!(mvr.gdtfs().count(), 1);
+    assert_eq!(mvr.resources().gdtfs().count(), 1);
 
-    let gdtf = mvr.gdtf("Robe Lighting@Robin Spiider.gdtf").expect("Should have GDTF file");
-    assert_eq!(gdtf.bundle().description().data_version, "1.2");
+    let gdtf = mvr
+        .resources()
+        .gdtf(&ResourceKey::new("Robe Lighting@Robin Spiider.gdtf"))
+        .expect("Should have GDTF file");
+
+    assert_eq!(gdtf.version().major(), 1);
+    assert_eq!(gdtf.version().minor(), 2);
 }

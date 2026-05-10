@@ -1,855 +1,222 @@
 use std::{
-    collections::HashMap,
-    fmt,
-    path::PathBuf,
-    str::{self, FromStr},
+    path::{Path, PathBuf},
+    str,
 };
 
-use uuid::Uuid;
+use crate::{gdtf::Gdtf, mvr::bundle::FromBundle, util};
 
-use crate::{CieColor, gdtf, util};
-
-pub mod aux;
 pub mod bundle;
-pub mod geo;
-pub mod layer;
 
-pub use aux::{Class, MappingDefinition, Position, Symdef};
-pub use geo::Geometry;
-pub use layer::{GdtfInfo, Layer, Object, ObjectKind};
+mod aux;
+mod geo;
+mod layer;
+mod node;
+mod resource;
 
+pub use aux::*;
+pub use geo::*;
+pub use layer::*;
+pub use node::*;
+pub use resource::*;
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Mvr {
-    bundle: bundle::Bundle,
-
     version: Version,
     provider: Provider,
 
-    symdefs: HashMap<NodeId<Symdef>, Symdef>,
-    classes: HashMap<NodeId<Class>, Class>,
-    mapping_definitions: HashMap<NodeId<MappingDefinition>, MappingDefinition>,
-    positions: HashMap<NodeId<Position>, Position>,
+    symdefs: NodeContainer<Symdef>,
+    classes: NodeContainer<Class>,
+    mapping_definitions: NodeContainer<MappingDefinition>,
+    positions: NodeContainer<Position>,
 
-    layers: Vec<Layer>,
-    layers_ix: HashMap<NodeId<Layer>, usize>,
-    objects_path_ix: HashMap<NodeId<Object>, ObjectPath>,
+    layers: NodeContainer<Layer>,
 
-    gdtfs: HashMap<bundle::ResourceKey, gdtf::Gdtf>,
+    path: Option<PathBuf>,
+    resources: Resources,
 }
 
 impl Mvr {
-    pub fn new(bundle: bundle::Bundle) -> Self {
-        bundle.into()
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn from_folder(path: impl Into<PathBuf>) -> Self {
-        Self::new(bundle::Bundle::from_folder(path))
+        Self::from(&bundle::Bundle::from_folder(path))
     }
 
     pub fn from_archive(path: impl Into<PathBuf>) -> Self {
-        Self::new(bundle::Bundle::from_archive(path))
+        Self::from(&bundle::Bundle::from_archive(path))
     }
 
-    pub fn bundle(&self) -> &bundle::Bundle {
-        &self.bundle
+    pub fn from_archive_bytes(bytes: &[u8]) -> Self {
+        Self::from(&bundle::Bundle::from_archive_bytes(bytes))
     }
 
     pub fn version(&self) -> Version {
         self.version
     }
 
+    pub fn set_version(&mut self, version: Version) {
+        self.version = version;
+    }
+
     pub fn provider(&self) -> &Provider {
         &self.provider
     }
 
-    pub fn symdefs(&self) -> impl Iterator<Item = &Symdef> {
-        self.symdefs.values()
+    pub fn set_provider(&mut self, provider: Provider) {
+        self.provider = provider;
     }
 
-    pub fn symdef(&self, id: NodeId<Symdef>) -> Option<&Symdef> {
-        self.symdefs.get(&id)
+    pub fn symdefs(&self) -> &NodeContainer<Symdef> {
+        &self.symdefs
     }
 
-    pub fn classes(&self) -> impl Iterator<Item = &Class> {
-        self.classes.values()
+    pub fn symdefs_mut(&mut self) -> &mut NodeContainer<Symdef> {
+        &mut self.symdefs
     }
 
-    pub fn class(&self, id: NodeId<Class>) -> Option<&Class> {
-        self.classes.get(&id)
+    pub fn classes(&self) -> &NodeContainer<Class> {
+        &self.classes
     }
 
-    pub fn positions(&self) -> impl Iterator<Item = &Position> {
-        self.positions.values()
+    pub fn classes_mut(&mut self) -> &mut NodeContainer<Class> {
+        &mut self.classes
     }
 
-    pub fn position(&self, id: NodeId<Position>) -> Option<&Position> {
-        self.positions.get(&id)
+    pub fn positions(&self) -> &NodeContainer<Position> {
+        &self.positions
     }
 
-    pub fn mapping_definitions(&self) -> impl Iterator<Item = &MappingDefinition> {
-        self.mapping_definitions.values()
+    pub fn positions_mut(&mut self) -> &mut NodeContainer<Position> {
+        &mut self.positions
     }
 
-    pub fn mapping_definition(&self, id: NodeId<MappingDefinition>) -> Option<&MappingDefinition> {
-        self.mapping_definitions.get(&id)
+    pub fn mapping_definitions(&self) -> &NodeContainer<MappingDefinition> {
+        &self.mapping_definitions
     }
 
-    pub fn layers(&self) -> &[Layer] {
+    pub fn mapping_definitions_mut(&mut self) -> &mut NodeContainer<MappingDefinition> {
+        &mut self.mapping_definitions
+    }
+
+    pub fn layers(&self) -> &NodeContainer<Layer> {
         &self.layers
     }
 
-    pub fn layer(&self, id: NodeId<Layer>) -> Option<&Layer> {
-        let layer_ix = *self.layers_ix.get(&id)?;
-        Some(&self.layers[layer_ix])
+    pub fn layers_mut(&mut self) -> &mut NodeContainer<Layer> {
+        &mut self.layers
     }
 
-    pub fn object(&self, id: NodeId<Object>) -> Option<&Object> {
-        let path = self.objects_path_ix.get(&id)?;
-        self.object_by_path(path)
+    pub fn path(&self) -> Option<&Path> {
+        self.path.as_deref()
     }
 
-    pub(crate) fn object_path(&self, id: NodeId<Object>) -> Option<&ObjectPath> {
-        self.objects_path_ix.get(&id)
+    pub fn set_path(&mut self, path: impl Into<PathBuf>) {
+        self.path = Some(path.into());
     }
 
-    pub(crate) fn object_by_path(&self, path: &ObjectPath) -> Option<&Object> {
-        let layer_ix = *self.layers_ix.get(&path.layer_id)?;
-        let layer = self.layers.get(layer_ix)?;
-
-        let mut indices = path.indices.iter();
-        let first = *indices.next()?;
-        let mut object = layer.objects.get(first)?;
-
-        for &ix in indices {
-            let child_objects = object.child_objects()?;
-            object = child_objects.get(ix)?;
-        }
-
-        Some(object)
+    pub fn resources(&self) -> &Resources {
+        &self.resources
     }
 
-    pub fn object_world_transform(&self, id: NodeId<Object>) -> Option<glam::Affine3A> {
-        let path = self.object_path(id)?;
-        self.object_world_transform_by_path(path)
-    }
-
-    fn object_world_transform_by_path(&self, path: &ObjectPath) -> Option<glam::Affine3A> {
-        let layer_ix = *self.layers_ix.get(&path.layer_id)?;
-        let layer = self.layers.get(layer_ix)?;
-
-        let mut indices = path.indices.iter();
-        let first = *indices.next()?;
-        let mut object = layer.objects.get(first)?;
-        let mut transform = *layer.local_transform() * *object.local_transform();
-
-        for &ix in indices {
-            let child_objects = object.child_objects()?;
-            object = child_objects.get(ix)?;
-            transform = transform * *object.local_transform();
-        }
-
-        Some(transform)
-    }
-
-    pub fn object_geometries_world<'a>(
-        &'a self,
-        id: NodeId<Object>,
-    ) -> Option<impl Iterator<Item = (&'a geo::Geometry, glam::Affine3A)> + 'a> {
-        let path = self.object_path(id)?;
-        let world = self.object_world_transform_by_path(path)?;
-        let object = self.object_by_path(path)?;
-        let geometries = object.geometries()?;
-
-        Some(geometries.iter().map(move |g| (g, world * g.local_transform())))
-    }
-
-    pub fn gdtfs(&self) -> impl Iterator<Item = (&bundle::ResourceKey, &gdtf::Gdtf)> {
-        self.gdtfs.iter()
-    }
-
-    pub fn gdtf(&self, file_name: &str) -> Option<&gdtf::Gdtf> {
-        let key = self.gdtf_resource_key(file_name)?;
-        self.gdtfs.get(&key)
-    }
-
-    fn gdtf_resource_key(&self, gdtf_spec: &str) -> Option<bundle::ResourceKey> {
-        let key = bundle::ResourceKey::new(gdtf_spec);
-        if self.bundle.resources().contains_key(&key) {
-            return Some(key);
-        }
-
-        for entry in self.bundle.resources().entries() {
-            if entry.key().relative_path().file_name()?.to_str()? == gdtf_spec {
-                return Some(entry.key().clone());
-            }
-        }
-
-        None
-    }
-
-    pub fn models(&self) -> impl Iterator<Item = &bundle::ResourceEntry> {
-        self.bundle.resources().entries().filter(|e| e.kind() == bundle::ResourceKind::Model)
-    }
-
-    pub fn textures(&self) -> impl Iterator<Item = &bundle::ResourceEntry> {
-        self.bundle.resources().entries().filter(|e| e.kind() == bundle::ResourceKind::Texture)
+    pub fn resources_mut(&mut self) -> &mut Resources {
+        &mut self.resources
     }
 }
 
-impl From<bundle::Bundle> for Mvr {
-    fn from(bundle: bundle::Bundle) -> Self {
-        let version = Version {
-            major: bundle.description().ver_major as u32,
-            minor: bundle.description().ver_minor as u32,
-        };
-
-        let provider = Provider {
-            name: bundle.description().provider.clone().unwrap_or_default(),
-            version: bundle.description().provider_version.clone().unwrap_or_default(),
-        };
-
-        let mut symdefs = HashMap::new();
-        let mut classes = HashMap::new();
-        let mut positions = HashMap::new();
-        let mut layers = Vec::new();
-        let mut layers_ix = HashMap::new();
-        let mut objects_path_ix = HashMap::new();
-        let mut mapping_definitions = HashMap::new();
-
-        static EMPTY_AUX_DATA: bundle::AuxData = bundle::AuxData {
-            class: Vec::new(),
-            symdef: Vec::new(),
-            position: Vec::new(),
-            mapping_definition: Vec::new(),
-        };
-        let aux_data = bundle.description().scene.aux_data.as_ref().unwrap_or(&EMPTY_AUX_DATA);
-
-        Self::build_classes(aux_data, &mut classes);
-        Self::build_positions(aux_data, &mut positions);
-        Self::build_symdefs(aux_data, &mut symdefs);
-        Self::build_mapping_definitions(aux_data, &mut mapping_definitions);
-        Self::build_layers(&bundle, &classes, aux_data, &mut layers);
-
-        let gdtfs = Self::build_gdtfs(&bundle);
-
-        for (layer_ix, layer) in layers.iter().enumerate() {
-            layers_ix.insert(layer.id(), layer_ix);
-
-            for (object_ix, object) in layer.objects().iter().enumerate() {
-                Self::index_object_paths(layer.id(), vec![object_ix], object, &mut objects_path_ix);
-            }
-        }
-
+impl Default for Mvr {
+    fn default() -> Self {
         Self {
-            bundle,
-            version,
-            provider,
-            symdefs,
-            classes,
-            mapping_definitions,
-            positions,
-            layers,
-            layers_ix,
-            objects_path_ix,
-            gdtfs,
+            version: Version::new(1, 6),
+            provider: Provider::new("Rigger", env!("CARGO_PKG_VERSION")),
+            symdefs: Default::default(),
+            classes: Default::default(),
+            mapping_definitions: Default::default(),
+            positions: Default::default(),
+            layers: Default::default(),
+            path: None,
+            resources: Default::default(),
         }
     }
 }
 
-impl Mvr {
-    fn index_object_paths(
-        layer_id: NodeId<Layer>,
-        indices: Vec<usize>,
-        object: &Object,
-        objects_path_ix: &mut HashMap<NodeId<Object>, ObjectPath>,
-    ) {
-        objects_path_ix.insert(object.id(), ObjectPath::new(layer_id, indices.clone()));
+impl From<&bundle::Bundle> for Mvr {
+    fn from(bundle: &bundle::Bundle) -> Self {
+        let mut mvr = Mvr::new();
 
-        if let Some(children) = object.child_objects() {
-            for (child_ix, child) in children.iter().enumerate() {
-                let mut child_indices = indices.clone();
-                child_indices.push(child_ix);
-                Self::index_object_paths(layer_id, child_indices, child, objects_path_ix);
-            }
-        }
-    }
+        mvr.set_version(Version::new(
+            bundle.description().ver_major as u32,
+            bundle.description().ver_minor as u32,
+        ));
 
-    fn build_classes(aux_data: &bundle::AuxData, classes: &mut HashMap<NodeId<Class>, Class>) {
+        mvr.set_provider(Provider::new(
+            bundle.description().provider.clone().unwrap_or_default(),
+            bundle.description().provider_version.clone().unwrap_or_default(),
+        ));
+
+        let aux_data = bundle.description().scene.aux_data.as_ref().unwrap_or({
+            static EMPTY_AUX_DATA: bundle::AuxData = bundle::AuxData {
+                class: Vec::new(),
+                symdef: Vec::new(),
+                position: Vec::new(),
+                mapping_definition: Vec::new(),
+            };
+            &EMPTY_AUX_DATA
+        });
+
         for class in &aux_data.class {
-            let class: Class = class.into();
-            classes.insert(class.id(), class);
+            let class = Class::from_bundle(&class, &bundle);
+            mvr.classes_mut().add(class);
         }
-    }
 
-    fn build_positions(
-        aux_data: &bundle::AuxData,
-        positions: &mut HashMap<NodeId<Position>, Position>,
-    ) {
         for position in &aux_data.position {
-            let position: Position = position.into();
-            positions.insert(position.id(), position);
+            let position = Position::from_bundle(&position, &bundle);
+            mvr.positions_mut().add(position);
         }
-    }
 
-    fn build_symdefs(aux_data: &bundle::AuxData, symdefs: &mut HashMap<NodeId<Symdef>, Symdef>) {
         for symdef in &aux_data.symdef {
-            let id: NodeId<Symdef> = Uuid::parse_str(&symdef.uuid).unwrap().into();
-            symdefs.insert(id, Self::build_symdef(&symdef.uuid, aux_data));
+            let symdef = Symdef::from_bundle(&symdef, &bundle);
+            mvr.symdefs_mut().add(symdef);
         }
-    }
 
-    fn build_symdef(symdef_uuid: &str, aux_data: &bundle::AuxData) -> Symdef {
-        let symdef = aux_data.symdef.iter().find(|s| s.uuid == symdef_uuid).unwrap();
-        let id: NodeId<Symdef> = Uuid::parse_str(symdef_uuid).unwrap().into();
-        let geometries = Self::build_geometries(
-            &symdef.child_list.geometry_3d,
-            &symdef.child_list.symbol,
-            aux_data,
-        );
-        Symdef { name: symdef.name.clone(), id, geometries }
-    }
-
-    fn build_mapping_definitions(
-        aux_data: &bundle::AuxData,
-        mapping_definitions: &mut HashMap<NodeId<MappingDefinition>, MappingDefinition>,
-    ) {
         for mapping_definition in &aux_data.mapping_definition {
-            let id: NodeId<MappingDefinition> =
-                Uuid::parse_str(&mapping_definition.uuid).unwrap().into();
-            mapping_definitions
-                .insert(id, Self::build_mapping_definition(&mapping_definition.uuid, aux_data));
-        }
-    }
-
-    fn build_geometries(
-        geometry_3ds: &[bundle::Geometry3D],
-        symbols: &[bundle::Symbol],
-        aux_data: &bundle::AuxData,
-    ) -> Vec<Geometry> {
-        let mut geometries = Vec::new();
-
-        for geo3d in geometry_3ds {
-            geometries.push(Geometry {
-                local_transform: util::parse_affine3a_or_identity(geo3d.matrix.as_deref()),
-                model: bundle::ResourceKey::new(&geo3d.file_name),
-            });
+            let mapping_definition = MappingDefinition::from_bundle(&mapping_definition, &bundle);
+            mvr.mapping_definitions_mut().add(mapping_definition);
         }
 
-        for symbol in symbols {
-            let symbol_transform = util::parse_affine3a_or_identity(symbol.matrix.as_deref());
-            let nested_symdef = Self::build_symdef(&symbol.symdef, aux_data);
-            for mut geo in nested_symdef.geometries {
-                geo.local_transform *= symbol_transform;
-                geometries.push(geo);
-            }
+        for layer in &bundle.description().scene.layers.layer {
+            let layer = Layer::from_bundle(&layer, &bundle);
+            mvr.layers_mut().add(layer);
         }
 
-        geometries
-    }
-
-    fn build_mapping_definition(
-        mapping_definition_uuid: &str,
-        aux_data: &bundle::AuxData,
-    ) -> MappingDefinition {
-        let md = aux_data
-            .mapping_definition
-            .iter()
-            .find(|md| md.uuid == mapping_definition_uuid)
-            .unwrap();
-
-        md.into()
-    }
-
-    fn build_layers(
-        bundle: &bundle::Bundle,
-        classes: &HashMap<NodeId<Class>, Class>,
-        aux_data: &bundle::AuxData,
-        layers: &mut Vec<Layer>,
-    ) {
-        for layer_data in &bundle.description().scene.layers.layer {
-            let uuid: Uuid = Uuid::from_str(&layer_data.uuid).unwrap();
-            let objects = layer_data
-                .child_list
-                .as_ref()
-                .map(|cl| {
-                    cl.content
-                        .iter()
-                        .map(|child| Self::build_object(child, classes, aux_data))
-                        .collect()
-                })
-                .unwrap_or_default();
-
-            layers.push(Layer {
-                id: uuid.into(),
-                name: layer_data.name.clone(),
-                local_transform: util::parse_affine3a_or_identity(layer_data.matrix.as_deref()),
-                objects,
-            });
+        for (file_name, bytes) in bundle.resources() {
+            match file_name.extension().unwrap().to_str().unwrap() {
+                "gdtf" => {
+                    let gdtf = Gdtf::from_archive_bytes(&bytes);
+                    mvr.resources_mut().add_gdtf(ResourceKey::new(file_name), gdtf);
+                }
+                "3ds" | "gltf" | "glb" => {
+                    mvr.resources_mut().add_model(
+                        ResourceKey::new(file_name),
+                        ModelResource::new(file_name, bytes.clone()),
+                    );
+                }
+                "png" | "jpg" | "jpeg" | "svg" => {
+                    mvr.resources_mut().add_texture(
+                        ResourceKey::new(file_name),
+                        TextureResource::new(file_name, bytes.clone()),
+                    );
+                }
+                _ => {}
+            };
         }
-    }
 
-    fn build_object(
-        child: &bundle::ChildListContent,
-        classes: &HashMap<NodeId<Class>, Class>,
-        aux_data: &bundle::AuxData,
-    ) -> Object {
-        let (uuid_str, name, matrix, classing, kind) = match child {
-            bundle::ChildListContent::SceneObject(c) => (
-                &c.uuid,
-                &c.name,
-                c.matrix.as_deref(),
-                c.classing.as_ref(),
-                ObjectKind::SceneObject(Self::build_scene_object(c, classes, aux_data)),
-            ),
-            bundle::ChildListContent::GroupObject(c) => (
-                &c.uuid,
-                &c.name,
-                c.matrix.as_deref(),
-                c.classing.as_ref(),
-                ObjectKind::GroupObject(Self::build_group_object(c, classes, aux_data)),
-            ),
-            bundle::ChildListContent::FocusPoint(c) => (
-                &c.uuid,
-                &c.name,
-                c.matrix.as_deref(),
-                c.classing.as_ref(),
-                ObjectKind::FocusPoint(Self::build_focus_point_object(c, aux_data)),
-            ),
-            bundle::ChildListContent::Fixture(c) => (
-                &c.uuid,
-                &c.name,
-                c.matrix.as_deref(),
-                c.classing.as_ref(),
-                ObjectKind::Fixture(Self::build_fixture_object(c, aux_data)),
-            ),
-            bundle::ChildListContent::Support(c) => (
-                &c.uuid,
-                &c.name,
-                c.matrix.as_deref(),
-                c.classing.as_ref(),
-                ObjectKind::Support(Self::build_support_object(c, aux_data)),
-            ),
-            bundle::ChildListContent::Truss(c) => (
-                &c.uuid,
-                &c.name,
-                c.matrix.as_deref(),
-                c.classing.as_ref(),
-                ObjectKind::Truss(Self::build_truss_object(c, aux_data)),
-            ),
-            bundle::ChildListContent::VideoScreen(c) => (
-                &c.uuid,
-                &c.name,
-                c.matrix.as_deref(),
-                c.classing.as_ref(),
-                ObjectKind::VideoScreen(Self::build_video_screen_object(c, aux_data)),
-            ),
-            bundle::ChildListContent::Projector(c) => (
-                &c.uuid,
-                &c.name,
-                c.matrix.as_deref(),
-                c.classing.as_ref(),
-                ObjectKind::Projector(Self::build_projector_object(c, aux_data)),
-            ),
-        };
-
-        Object {
-            id: Uuid::from_str(uuid_str).unwrap().into(),
-            name: name.to_string(),
-            class: classing
-                .map(|id| Uuid::from_str(id).unwrap())
-                .and_then(|id| classes.get(&id.into()))
-                .map(|class| class.id()),
-            local_transform: util::parse_affine3a_or_identity(matrix),
-            kind,
+        if let Some(path) = bundle.path() {
+            mvr.set_path(path);
         }
-    }
 
-    fn build_child_objects(
-        child_list: Option<&bundle::ChildList>,
-        classes: &HashMap<NodeId<Class>, Class>,
-        aux_data: &bundle::AuxData,
-    ) -> Vec<Object> {
-        child_list
-            .map(|cl| {
-                cl.content
-                    .iter()
-                    .map(|child| Self::build_object(child, classes, aux_data))
-                    .collect()
-            })
-            .unwrap_or_default()
-    }
-
-    fn build_scene_object(
-        c: &bundle::SceneObject,
-        classes: &HashMap<NodeId<Class>, Class>,
-        aux_data: &bundle::AuxData,
-    ) -> layer::SceneObject {
-        let id = Self::build_id_from_multipatch(
-            &c.multipatch,
-            c.fixture_id.to_owned(),
-            c.fixture_id_numeric,
-            c.custom_id,
-            c.custom_id_type,
-        );
-
-        layer::SceneObject {
-            id,
-            gdtf: Self::build_gdtf_info(&c.gdtf_spec, &c.gdtf_mode),
-            cast_shadow: c.cast_shadow.unwrap_or_default(),
-            unit_number: c.unit_number,
-            dmx_addresses: Self::build_dmx_addresses(c.addresses.as_ref()),
-            network_addresses: Self::build_network_addresses(c.addresses.as_ref()),
-            alignments: Self::build_alignments(c.alignments.as_ref()),
-            custom_commands: Self::build_custom_commands(c.custom_commands.as_ref()),
-            overwrites: Self::build_overwrites(c.overwrites.as_ref()),
-            connections: Self::build_connections(c.connections.as_ref()),
-            geometries: Self::build_geometries(
-                &c.geometries.geometry_3d,
-                &c.geometries.symbol,
-                aux_data,
-            ),
-            child_objects: Self::build_child_objects(c.child_list.as_deref(), classes, aux_data),
-        }
-    }
-
-    fn build_group_object(
-        c: &bundle::GroupObject,
-        classes: &HashMap<NodeId<Class>, Class>,
-        aux_data: &bundle::AuxData,
-    ) -> layer::GroupObject {
-        layer::GroupObject {
-            child_objects: c
-                .child_list
-                .content
-                .iter()
-                .map(|child| Self::build_object(child, classes, aux_data))
-                .collect(),
-        }
-    }
-
-    fn build_focus_point_object(
-        c: &bundle::FocusPoint,
-        aux_data: &bundle::AuxData,
-    ) -> layer::FocusPointObject {
-        layer::FocusPointObject {
-            geometries: Self::build_geometries(
-                &c.geometries.geometry_3d,
-                &c.geometries.symbol,
-                aux_data,
-            ),
-        }
-    }
-
-    fn build_fixture_object(
-        c: &bundle::Fixture,
-        aux_data: &bundle::AuxData,
-    ) -> layer::FixtureObject {
-        layer::FixtureObject {
-            id: Self::build_id_from_multipatch(
-                &c.multipatch,
-                Some(c.fixture_id.to_owned()),
-                c.fixture_id_numeric,
-                c.custom_id,
-                c.custom_id_type,
-            ),
-            gdtf: Self::build_gdtf_info(&c.gdtf_spec, &c.gdtf_mode),
-            cast_shadow: c.cast_shadow.unwrap_or_default(),
-            child_position: c.child_position.as_ref().map(|s| gdtf::Node::from_str(s).unwrap()),
-            color: c.color.as_ref().map(|s| CieColor::from_str(s).unwrap()),
-            dmx_invert_pan: c.dmx_invert_pan.unwrap_or(false),
-            dmx_invert_tilt: c.dmx_invert_tilt.unwrap_or(false),
-            focus: c.focus.as_ref().map(|s| NodeId::from_str(s).unwrap()),
-            function: c.function.clone(),
-            gobo: c.gobo.as_ref().map(Into::into),
-            mappings: c
-                .mappings
-                .as_ref()
-                .map(|mappings| mappings.mapping.iter().map(Into::into).collect())
-                .unwrap_or_default(),
-            position: c.position.as_ref().map(|s| NodeId::from_str(s).unwrap()),
-            protocols: c
-                .protocols
-                .as_ref()
-                .map(|protocols| protocols.protocol.iter().map(Into::into).collect())
-                .unwrap_or_default(),
-            unit_number: Some(c.unit_number),
-            dmx_addresses: Self::build_dmx_addresses(c.addresses.as_ref()),
-            network_addresses: Self::build_network_addresses(c.addresses.as_ref()),
-            alignments: Self::build_alignments(c.alignments.as_ref()),
-            custom_commands: Self::build_custom_commands(c.custom_commands.as_ref()),
-            overwrites: Self::build_overwrites(c.overwrites.as_ref()),
-            connections: Self::build_connections(c.connections.as_ref()),
-            child_objects: c
-                .child_list
-                .as_ref()
-                .map(|cl| {
-                    cl.content
-                        .iter()
-                        .map(|child| Self::build_object(child, &HashMap::new(), aux_data))
-                        .collect()
-                })
-                .unwrap_or_default(),
-        }
-    }
-
-    fn build_support_object(
-        c: &bundle::Support,
-        aux_data: &bundle::AuxData,
-    ) -> layer::SupportObject {
-        layer::SupportObject {
-            gdtf: Self::build_gdtf_info(&c.gdtf_spec, &c.gdtf_mode),
-            id: Self::build_id_from_multipatch(
-                &c.multipatch,
-                Some(c.fixture_id.to_owned()),
-                c.fixture_id_numeric,
-                c.custom_id,
-                c.custom_id_type,
-            ),
-            cast_shadow: c.cast_shadow.unwrap_or_default(),
-            chain_length: c.chain_length,
-            function: c.function.clone(),
-            position: c.position.as_ref().map(|s| NodeId::from_str(s).unwrap()),
-            unit_number: c.unit_number,
-            dmx_addresses: Self::build_dmx_addresses(c.addresses.as_ref()),
-            network_addresses: Self::build_network_addresses(c.addresses.as_ref()),
-            alignments: Self::build_alignments(c.alignments.as_ref()),
-            custom_commands: Self::build_custom_commands(c.custom_commands.as_ref()),
-            overwrites: Self::build_overwrites(c.overwrites.as_ref()),
-            connections: Self::build_connections(c.connections.as_ref()),
-            geometries: Self::build_geometries(
-                &c.geometries.geometry_3d,
-                &c.geometries.symbol,
-                aux_data,
-            ),
-            child_objects: c
-                .child_list
-                .as_ref()
-                .map(|cl| {
-                    cl.content
-                        .iter()
-                        .map(|child| Self::build_object(child, &HashMap::new(), aux_data))
-                        .collect()
-                })
-                .unwrap_or_default(),
-        }
-    }
-
-    fn build_truss_object(c: &bundle::Truss, aux_data: &bundle::AuxData) -> layer::TrussObject {
-        layer::TrussObject {
-            gdtf: Self::build_gdtf_info(&c.gdtf_spec, &c.gdtf_mode),
-            id: Self::build_id_from_multipatch(
-                &c.multipatch,
-                Some(c.fixture_id.to_owned()),
-                c.fixture_id_numeric,
-                c.custom_id,
-                c.custom_id_type,
-            ),
-            cast_shadow: c.cast_shadow.unwrap_or_default(),
-            child_position: c.child_position.as_ref().map(|s| gdtf::Node::from_str(s).unwrap()),
-            function: c.function.clone(),
-            position: c.position.as_ref().map(|s| NodeId::from_str(s).unwrap()),
-            unit_number: c.unit_number,
-            dmx_addresses: Self::build_dmx_addresses(c.addresses.as_ref()),
-            network_addresses: Self::build_network_addresses(c.addresses.as_ref()),
-            alignments: Self::build_alignments(c.alignments.as_ref()),
-            custom_commands: Self::build_custom_commands(c.custom_commands.as_ref()),
-            overwrites: Self::build_overwrites(c.overwrites.as_ref()),
-            connections: Self::build_connections(c.connections.as_ref()),
-            geometries: Self::build_geometries(
-                &c.geometries.geometry_3d,
-                &c.geometries.symbol,
-                aux_data,
-            ),
-            child_objects: c
-                .child_list
-                .as_ref()
-                .map(|cl| {
-                    cl.content
-                        .iter()
-                        .map(|child| Self::build_object(child, &HashMap::new(), aux_data))
-                        .collect()
-                })
-                .unwrap_or_default(),
-        }
-    }
-
-    fn build_video_screen_object(
-        c: &bundle::VideoScreen,
-        aux_data: &bundle::AuxData,
-    ) -> layer::VideoScreenObject {
-        layer::VideoScreenObject {
-            gdtf: Self::build_gdtf_info(&c.gdtf_spec, &c.gdtf_mode),
-            id: Self::build_id_from_multipatch(
-                &c.multipatch,
-                Some(c.fixture_id.to_owned()),
-                c.fixture_id_numeric,
-                c.custom_id,
-                c.custom_id_type,
-            ),
-            function: c.function.clone(),
-            sources: c
-                .sources
-                .as_ref()
-                .map(|sources| sources.source.iter().map(Into::into).collect())
-                .unwrap_or_default(),
-            dmx_addresses: Self::build_dmx_addresses(c.addresses.as_ref()),
-            network_addresses: Self::build_network_addresses(c.addresses.as_ref()),
-            alignments: Self::build_alignments(c.alignments.as_ref()),
-            custom_commands: Self::build_custom_commands(c.custom_commands.as_ref()),
-            overwrites: Self::build_overwrites(c.overwrites.as_ref()),
-            connections: Self::build_connections(c.connections.as_ref()),
-            cast_shadow: c.cast_shadow.unwrap_or_default(),
-            geometries: Self::build_geometries(
-                &c.geometries.geometry_3d,
-                &c.geometries.symbol,
-                aux_data,
-            ),
-            child_objects: c
-                .child_list
-                .as_ref()
-                .map(|cl| {
-                    cl.content
-                        .iter()
-                        .map(|child| Self::build_object(child, &HashMap::new(), aux_data))
-                        .collect()
-                })
-                .unwrap_or_default(),
-        }
-    }
-
-    fn build_projector_object(
-        c: &bundle::Projector,
-        aux_data: &bundle::AuxData,
-    ) -> layer::ProjectorObject {
-        layer::ProjectorObject {
-            gdtf: Self::build_gdtf_info(&c.gdtf_spec, &c.gdtf_mode),
-            id: Self::build_id_from_multipatch(
-                &c.multipatch,
-                Some(c.fixture_id.to_owned()),
-                c.fixture_id_numeric,
-                c.custom_id,
-                c.custom_id_type,
-            ),
-            cast_shadow: c.cast_shadow.unwrap_or_default(),
-            projections: c
-                .projections
-                .projection
-                .iter()
-                .filter_map(|p| {
-                    let source: layer::Source = p.source.first().map(Into::into)?;
-
-                    let scale_handling: layer::ScaleHandling =
-                        p.scale_handeling.first().map(Into::into).unwrap_or_default();
-
-                    Some(layer::Projection { source, scale_handling })
-                })
-                .collect(),
-            unit_number: c.unit_number,
-            dmx_addresses: Self::build_dmx_addresses(c.addresses.as_ref()),
-            network_addresses: Self::build_network_addresses(c.addresses.as_ref()),
-            alignments: Self::build_alignments(c.alignments.as_ref()),
-            custom_commands: Self::build_custom_commands(c.custom_commands.as_ref()),
-            overwrites: Self::build_overwrites(c.overwrites.as_ref()),
-            connections: Self::build_connections(c.connections.as_ref()),
-            geometries: Self::build_geometries(
-                &c.geometries.geometry_3d,
-                &c.geometries.symbol,
-                aux_data,
-            ),
-            child_objects: c
-                .child_list
-                .as_ref()
-                .map(|cl| {
-                    cl.content
-                        .iter()
-                        .map(|child| Self::build_object(child, &HashMap::new(), aux_data))
-                        .collect()
-                })
-                .unwrap_or_default(),
-        }
-    }
-
-    fn build_dmx_addresses(addresses: Option<&bundle::Addresses>) -> Vec<layer::DmxAddress> {
-        addresses.map(|addrs| addrs.address.iter().map(Into::into).collect()).unwrap_or_default()
-    }
-
-    fn build_network_addresses(
-        addresses: Option<&bundle::Addresses>,
-    ) -> Vec<layer::NetworkAddress> {
-        addresses.map(|addrs| addrs.network.iter().map(Into::into).collect()).unwrap_or_default()
-    }
-
-    fn build_alignments(alignments: Option<&bundle::Alignments>) -> Vec<layer::Alignment> {
-        alignments
-            .map(|alignments| alignments.alignment.iter().map(Into::into).collect())
-            .unwrap_or_default()
-    }
-
-    fn build_custom_commands(
-        commands: Option<&bundle::CustomCommands>,
-    ) -> Vec<layer::CustomCommand> {
-        commands
-            .map(|commands| commands.custom_command.iter().map(|c| c.parse().unwrap()).collect())
-            .unwrap_or_default()
-    }
-
-    fn build_overwrites(overwrites: Option<&bundle::Overwrites>) -> Vec<layer::Overwrite> {
-        overwrites.map(|ows| ows.overwrite.iter().map(Into::into).collect()).unwrap_or_default()
-    }
-
-    fn build_connections(connections: Option<&bundle::Connections>) -> Vec<layer::Connection> {
-        connections
-            .map(|conns| conns.connection.iter().map(Into::into).collect())
-            .unwrap_or_default()
-    }
-
-    fn build_gdtf_info(gdtf_spec: &Option<String>, gdtf_mode: &Option<String>) -> Option<GdtfInfo> {
-        match (gdtf_spec, gdtf_mode) {
-            (Some(spec), Some(mode)) => Some(GdtfInfo::new(spec.to_owned(), mode.to_owned())),
-            _ => None,
-        }
-    }
-
-    fn build_id_from_multipatch(
-        multipatch: &str,
-        fixture_id: Option<String>,
-        fixture_id_numeric: Option<i32>,
-        custom_id: Option<i32>,
-        custom_id_type: Option<i32>,
-    ) -> layer::ObjectIdentifier {
-        match Uuid::from_str(multipatch) {
-            Ok(uuid) => layer::ObjectIdentifier::Multipatch(uuid.into()),
-            Err(_) => layer::ObjectIdentifier::Single {
-                fixture_id,
-                fixture_id_numeric,
-                custom_id,
-                custom_id_type,
-            },
-        }
-    }
-
-    fn build_gdtfs(bundle: &bundle::Bundle) -> HashMap<bundle::ResourceKey, gdtf::Gdtf> {
-        bundle
-            .resources()
-            .entries()
-            .filter(|e| e.kind() == bundle::ResourceKind::Gdtf)
-            .map(|e| {
-                let path = bundle.root_folder().join(e.key().relative_path());
-                (e.key().clone(), gdtf::Gdtf::from_archive(path))
-            })
-            .collect()
-    }
-}
-
-impl std::fmt::Debug for Mvr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Mvr")
-            .field("version", &self.version)
-            .field("provider", &self.provider)
-            .field("symdefs", &self.symdefs)
-            .field("classes", &self.classes)
-            .field("positions", &self.positions)
-            .field("layers", &self.layers)
-            .finish()
+        mvr
     }
 }
 
@@ -860,6 +227,10 @@ pub struct Version {
 }
 
 impl Version {
+    pub fn new(major: u32, minor: u32) -> Self {
+        Self { major, minor }
+    }
+
     pub fn major(&self) -> u32 {
         self.major
     }
@@ -876,6 +247,10 @@ pub struct Provider {
 }
 
 impl Provider {
+    pub fn new(name: impl Into<String>, version: impl Into<String>) -> Self {
+        Self { name: name.into(), version: version.into() }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -885,71 +260,30 @@ impl Provider {
     }
 }
 
-pub struct NodeId<T> {
-    uuid: Uuid,
-    _marker: std::marker::PhantomData<T>,
-}
+fn build_geometries(
+    geometry_3ds: &[bundle::Geometry3D],
+    symbols: &[bundle::Symbol],
+    bundle: &bundle::Bundle,
+) -> Vec<Geometry> {
+    let mut geometries = Vec::new();
 
-impl<T> NodeId<T> {
-    pub fn new(uuid: Uuid) -> Self {
-        Self { uuid, _marker: std::marker::PhantomData }
+    for geo3d in geometry_3ds {
+        geometries.push(Geometry::from_bundle(geo3d, bundle));
     }
 
-    pub fn as_uuid(&self) -> Uuid {
-        self.uuid
+    let Some(aux_data) = &bundle.description().scene.aux_data else {
+        return geometries;
+    };
+
+    for symbol in symbols {
+        let symbol_transform = util::parse_affine3a_or_identity(symbol.matrix.as_deref());
+        let symdef = aux_data.symdef.iter().find(|s| s.uuid == symbol.symdef).unwrap();
+        let nested_symdef = Symdef::from_bundle(&symdef, bundle);
+        for mut geo in nested_symdef.geometries().to_owned() {
+            geo.set_local_transform(geo.local_transform() * symbol_transform);
+            geometries.push(geo);
+        }
     }
-}
 
-impl<T> Clone for NodeId<T> {
-    fn clone(&self) -> Self {
-        Self { uuid: self.uuid, _marker: std::marker::PhantomData }
-    }
-}
-
-impl<T> Copy for NodeId<T> {}
-
-impl<T> PartialEq for NodeId<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.uuid == other.uuid
-    }
-}
-
-impl<T> Eq for NodeId<T> {}
-
-impl<T> std::hash::Hash for NodeId<T> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.uuid.hash(state);
-    }
-}
-
-impl<T> From<Uuid> for NodeId<T> {
-    fn from(uuid: Uuid) -> Self {
-        Self { uuid, _marker: std::marker::PhantomData }
-    }
-}
-
-impl<T> str::FromStr for NodeId<T> {
-    type Err = uuid::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::new(Uuid::from_str(s)?))
-    }
-}
-
-impl<T> fmt::Debug for NodeId<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "NodeId<{}>({:?})", std::any::type_name::<T>(), self.uuid)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct ObjectPath {
-    layer_id: NodeId<Layer>,
-    indices: Vec<usize>,
-}
-
-impl ObjectPath {
-    pub fn new(layer_id: NodeId<Layer>, indices: Vec<usize>) -> Self {
-        Self { layer_id, indices }
-    }
+    geometries
 }
