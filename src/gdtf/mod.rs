@@ -14,6 +14,7 @@ use crate::gdtf::{
 pub mod bundle;
 
 pub mod attr;
+pub mod geo;
 pub mod model;
 pub mod phys;
 pub mod resource;
@@ -50,6 +51,8 @@ pub struct Gdtf {
 
     models: NodeContainer<model::Model>,
 
+    geometries: NodeContainer<geo::Geometry>,
+
     resources: Resources,
 }
 
@@ -83,6 +86,7 @@ impl Gdtf {
             cri_groups: Vec::new(),
             properties: phys::Properties::new(),
             models: NodeContainer::new(),
+            geometries: NodeContainer::new(),
             resources: Resources::new(),
         }
     }
@@ -286,6 +290,14 @@ impl Gdtf {
         &mut self.models
     }
 
+    pub fn geometries(&self) -> &NodeContainer<geo::Geometry> {
+        &self.geometries
+    }
+
+    pub fn geometries_mut(&mut self) -> &mut NodeContainer<geo::Geometry> {
+        &mut self.geometries
+    }
+
     pub fn resources(&self) -> &Resources {
         &self.resources
     }
@@ -404,6 +416,10 @@ impl From<&bundle::Bundle> for Gdtf {
                 gdtf.models_mut().add(model::Model::from_bundle(model, bundle));
             }
         };
+
+        for geometry in &ft.geometries.children {
+            gdtf.geometries_mut().add(geo::Geometry::from_bundle(geometry, bundle));
+        }
 
         for (path, bytes) in bundle.resources() {
             if let Some(first_component) = path.components().next() {

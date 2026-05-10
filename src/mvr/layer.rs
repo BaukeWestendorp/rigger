@@ -8,7 +8,7 @@ use std::{
 use uuid::Uuid;
 
 use crate::{
-    CieColor, gdtf,
+    CieColor, DmxAddress, gdtf,
     mvr::{
         self, Node, NodeId, ResourceKey,
         aux::{Class, MappingDefinition, Position},
@@ -1143,39 +1143,6 @@ impl GdtfInfo {
 
     pub fn gdtf_mode(&self) -> &str {
         &self.gdtf_mode
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct DmxAddress {
-    r#break: u32,
-    absolute_value: u32,
-}
-
-impl DmxAddress {
-    pub fn break_(&self) -> u32 {
-        self.r#break
-    }
-
-    pub fn absolute_value(&self) -> u32 {
-        self.absolute_value
-    }
-}
-
-impl bundle::FromBundle for DmxAddress {
-    type Source = bundle::Address;
-
-    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
-        let absolute_value = if let Some(dot) = source.content.find('.') {
-            let (universe_str, channel_str) = source.content.split_at(dot);
-            let universe = universe_str.parse::<u32>().unwrap();
-            let channel = channel_str[1..].parse::<u32>().unwrap();
-            (universe - 1) * 512 + channel
-        } else {
-            source.content.parse::<u32>().unwrap()
-        };
-
-        Self { r#break: source.r#break as u32, absolute_value }
     }
 }
 

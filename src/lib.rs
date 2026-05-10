@@ -2,7 +2,7 @@ pub mod gdtf;
 pub mod mvr;
 pub(crate) mod util;
 
-use std::str;
+use std::str::{self, FromStr as _};
 
 /// Re-export of glam.
 pub use glam;
@@ -51,5 +51,63 @@ impl str::FromStr for CieColor {
         let y = parts[1].trim().parse::<f32>().map_err(|_| ())?;
         let yy = parts[2].trim().parse::<f32>().map_err(|_| ())?;
         Ok(CieColor { x, y, yy })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct DmxAddress {
+    absolute: u32,
+    dmx_break: u8,
+}
+
+impl DmxAddress {
+    pub fn new(absolute: u32) -> Self {
+        Self { absolute, dmx_break: 1 }
+    }
+
+    pub fn absolute(&self) -> u32 {
+        self.absolute
+    }
+
+    pub fn set_absolute(&mut self, absolute: u32) {
+        self.absolute = absolute
+    }
+
+    pub fn dmx_break(&self) -> u8 {
+        self.dmx_break
+    }
+
+    pub fn set_dmx_brak(&mut self, dmx_break: u8) {
+        self.dmx_break = dmx_break;
+    }
+
+    pub fn with_dmx_break(mut self, dmx_break: u8) -> Self {
+        self.dmx_break = dmx_break;
+        self
+    }
+}
+
+impl mvr::bundle::FromBundle for DmxAddress {
+    type Source = mvr::bundle::Address;
+
+    fn from_bundle(source: &Self::Source, _bundle: &mvr::bundle::Bundle) -> Self {
+        DmxAddress::from_str(&source.content).unwrap()
+    }
+}
+
+impl std::str::FromStr for DmxAddress {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.trim();
+        let absolute_address = if let Some(dot) = s.find('.') {
+            let (universe_str, channel_str) = s.split_at(dot);
+            let universe = universe_str.parse::<u32>().map_err(|_| ())?;
+            let channel = channel_str[1..].parse::<u32>().map_err(|_| ())?;
+            (universe - 1) * 512 + channel
+        } else {
+            s.parse::<u32>().map_err(|_| ())?
+        };
+        Ok(DmxAddress { dmx_break: 1, absolute: absolute_address })
     }
 }

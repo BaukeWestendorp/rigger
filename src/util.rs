@@ -57,3 +57,16 @@ pub(crate) fn parse_affine3a(s: &str) -> glam::Affine3A {
 pub(crate) fn parse_affine3a_or_identity(s: Option<&str>) -> glam::Affine3A {
     s.map(parse_affine3a).unwrap_or(glam::Affine3A::IDENTITY)
 }
+
+pub(crate) fn parse_affine3a_from_mat4(s: &str) -> glam::Affine3A {
+    let v = parse_floats(s);
+    assert_eq!(v.len(), 16, "expected 16 floats for mat4, got {}: {:?}", v.len(), s);
+    #[rustfmt::skip]
+    let cols = [
+        v[0], v[1], v[2],
+        v[4], v[5], v[6],
+        v[8], v[9], v[10],
+        v[12] / 1000.0, v[13] / 1000.0, v[14] / 1000.0,
+    ];
+    glam::Affine3A::from_cols_array(&cols)
+}
