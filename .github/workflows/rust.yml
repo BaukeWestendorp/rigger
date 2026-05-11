@@ -15,8 +15,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install X11 dependencies
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxrandr-dev
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxrandr-dev libxinerama
       - name: Build
         run: cargo build --verbose
       - name: Run tests
