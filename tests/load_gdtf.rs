@@ -192,7 +192,7 @@ fn test_gdtf_attributes() {
     assert_eq!(pan.name(), &AttributeName::Pan);
     assert_eq!(pan.pretty(), "Pan");
     assert_eq!(pan.activation_group(), Some(&NodePath::from_str("PanTilt").unwrap()));
-    assert_eq!(pan.feature(), &NodePath::from_str("Position.PanTilt").unwrap());
+    assert_eq!(pan.feature(), Some(&NodePath::from_str("Position.PanTilt").unwrap()));
     assert_eq!(pan.main_attribute(), None);
     assert_eq!(pan.physical_unit(), Some(PhysicalUnit::Angle));
     assert_eq!(pan.color(), None);
@@ -202,7 +202,7 @@ fn test_gdtf_attributes() {
     assert_eq!(tilt.name(), &AttributeName::Tilt);
     assert_eq!(tilt.pretty(), "Tilt");
     assert_eq!(tilt.activation_group(), Some(&NodePath::from_str("PanTilt").unwrap()));
-    assert_eq!(tilt.feature(), &NodePath::from_str("Position.PanTilt").unwrap());
+    assert_eq!(tilt.feature(), Some(&NodePath::from_str("Position.PanTilt").unwrap()));
     assert_eq!(tilt.main_attribute(), None);
     assert_eq!(tilt.physical_unit(), Some(PhysicalUnit::Angle));
     assert_eq!(tilt.color(), None);
@@ -212,7 +212,7 @@ fn test_gdtf_attributes() {
     assert_eq!(dimmer.name(), &AttributeName::Dimmer);
     assert_eq!(dimmer.pretty(), "Dimmer");
     assert_eq!(dimmer.activation_group(), None);
-    assert_eq!(dimmer.feature(), &NodePath::from_str("Dimmer.Dimmer").unwrap());
+    assert_eq!(dimmer.feature(), Some(&NodePath::from_str("Dimmer.Dimmer").unwrap()));
     assert_eq!(dimmer.main_attribute(), None);
     assert_eq!(dimmer.physical_unit(), Some(PhysicalUnit::LuminousIntensity));
     assert_eq!(dimmer.color(), None);
@@ -222,7 +222,7 @@ fn test_gdtf_attributes() {
     assert_eq!(color_r.name(), &AttributeName::ColorAddR);
     assert_eq!(color_r.pretty(), "R");
     assert_eq!(color_r.activation_group(), None);
-    assert_eq!(color_r.feature(), &NodePath::from_str("Color.Color").unwrap());
+    assert_eq!(color_r.feature(), Some(&NodePath::from_str("Color.Color").unwrap()));
     assert_eq!(color_r.main_attribute(), None);
     assert_eq!(color_r.physical_unit(), Some(PhysicalUnit::ColorComponent));
     assert_color(color_r.color().unwrap(), CieColor::new(0.7347, 0.2653, 0.2126));
@@ -232,7 +232,7 @@ fn test_gdtf_attributes() {
     assert_eq!(color_g.name(), &AttributeName::ColorAddG);
     assert_eq!(color_g.pretty(), "G");
     assert_eq!(color_g.activation_group(), None);
-    assert_eq!(color_g.feature(), &NodePath::from_str("Color.Color").unwrap());
+    assert_eq!(color_g.feature(), Some(&NodePath::from_str("Color.Color").unwrap()));
     assert_eq!(color_g.main_attribute(), None);
     assert_eq!(color_g.physical_unit(), Some(PhysicalUnit::ColorComponent));
     assert_color(color_g.color().unwrap(), CieColor::new(0.1596, 0.8404, 0.7152));
@@ -242,7 +242,7 @@ fn test_gdtf_attributes() {
     assert_eq!(color_b.name(), &AttributeName::ColorAddB);
     assert_eq!(color_b.pretty(), "B");
     assert_eq!(color_b.activation_group(), None);
-    assert_eq!(color_b.feature(), &NodePath::from_str("Color.Color").unwrap());
+    assert_eq!(color_b.feature(), Some(&NodePath::from_str("Color.Color").unwrap()));
     assert_eq!(color_b.main_attribute(), None);
     assert_eq!(color_b.physical_unit(), Some(PhysicalUnit::ColorComponent));
     assert_color(color_b.color().unwrap(), CieColor::new(0.0366, 0.0001, 0.0722));
@@ -252,7 +252,7 @@ fn test_gdtf_attributes() {
     assert_eq!(gobo1.name(), &AttributeName::Gobo(1));
     assert_eq!(gobo1.pretty(), "Gobo 1");
     assert_eq!(gobo1.activation_group(), None);
-    assert_eq!(gobo1.feature(), &NodePath::from_str("Gobo.Gobo").unwrap());
+    assert_eq!(gobo1.feature(), Some(&NodePath::from_str("Gobo.Gobo").unwrap()));
     assert_eq!(gobo1.main_attribute(), None);
     assert_eq!(gobo1.physical_unit(), None);
     assert_eq!(gobo1.color(), None);
@@ -262,7 +262,7 @@ fn test_gdtf_attributes() {
     assert_eq!(zoom.name(), &AttributeName::Zoom);
     assert_eq!(zoom.pretty(), "Zoom");
     assert_eq!(zoom.activation_group(), None);
-    assert_eq!(zoom.feature(), &NodePath::from_str("Beam.Beam").unwrap());
+    assert_eq!(zoom.feature(), Some(&NodePath::from_str("Beam.Beam").unwrap()));
     assert_eq!(zoom.main_attribute(), None);
     assert_eq!(zoom.physical_unit(), Some(PhysicalUnit::Angle));
     assert_eq!(zoom.color(), None);
@@ -272,7 +272,7 @@ fn test_gdtf_attributes() {
     assert_eq!(focus1.name(), &AttributeName::Focus(1));
     assert_eq!(focus1.pretty(), "Focus");
     assert_eq!(focus1.activation_group(), None);
-    assert_eq!(focus1.feature(), &NodePath::from_str("Focus.Focus").unwrap());
+    assert_eq!(focus1.feature(), Some(&NodePath::from_str("Focus.Focus").unwrap()));
     assert_eq!(focus1.main_attribute(), None);
     assert_eq!(focus1.physical_unit(), Some(PhysicalUnit::Length));
     assert_eq!(focus1.color(), None);
@@ -282,7 +282,7 @@ fn test_gdtf_attributes() {
     assert_eq!(shutter1.name(), &AttributeName::Shutter(1));
     assert_eq!(shutter1.pretty(), "Shutter");
     assert_eq!(shutter1.activation_group(), None);
-    assert_eq!(shutter1.feature(), &NodePath::from_str("Control.Control").unwrap());
+    assert_eq!(shutter1.feature(), Some(&NodePath::from_str("Control.Control").unwrap()));
     assert_eq!(shutter1.main_attribute(), None);
     assert_eq!(shutter1.physical_unit(), Some(PhysicalUnit::Frequency));
     assert_eq!(shutter1.color(), None);

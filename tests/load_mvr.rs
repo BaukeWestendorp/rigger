@@ -387,7 +387,7 @@ fn test_dmx_address_absolute_format() {
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000009");
     let addrs = obj.dmx_addresses().expect("Expected DMX addresses");
     assert_eq!(addrs.len(), 1);
-    assert_eq!(addrs[0].dmx_break(), 0);
+    assert_eq!(addrs[0].dmx_break(), 1);
     assert_eq!(addrs[0].absolute(), 45);
 }
 
@@ -397,7 +397,7 @@ fn test_dmx_address_universe_channel_format() {
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000005");
     let addrs = obj.dmx_addresses().expect("Expected DMX addresses");
     assert_eq!(addrs.len(), 2);
-    assert_eq!(addrs[0].dmx_break(), 0);
+    assert_eq!(addrs[0].dmx_break(), 1);
     assert_eq!(addrs[0].absolute(), 42);
     assert_eq!(addrs[1].dmx_break(), 1);
     assert_eq!(addrs[1].absolute(), 21034);

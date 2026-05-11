@@ -138,7 +138,7 @@
 				<ColorSpace Name="ProPhotoSpace" Mode="ProPhoto" />
 			</AdditionalColorSpaces>
 			<Gamuts>
-				<Gamut Name="FullGamut" Points="{0.7347,0.2653,0.2126},{0.1596,0.8404,0.7152},{0.0366,0.0001,0.0722}" />
+				<Gamut Name="FullGamut" Points="{0.7347,0.2653,0.2126}{0.1596,0.8404,0.7152}{0.0366,0.0001,0.0722}" />
 			</Gamuts>
 			<DMXProfiles>
 				<DMXProfile Name="DimmerCurve">
