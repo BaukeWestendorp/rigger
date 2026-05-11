@@ -14,6 +14,7 @@ use crate::gdtf::{
 pub mod bundle;
 
 pub mod attr;
+pub mod dmx;
 pub mod geo;
 pub mod model;
 pub mod phys;
@@ -53,6 +54,8 @@ pub struct Gdtf {
 
     geometries: NodeContainer<geo::Geometry>,
 
+    dmx_modes: NodeContainer<dmx::DmxMode>,
+
     resources: Resources,
 }
 
@@ -87,6 +90,7 @@ impl Gdtf {
             properties: phys::Properties::new(),
             models: NodeContainer::new(),
             geometries: NodeContainer::new(),
+            dmx_modes: NodeContainer::new(),
             resources: Resources::new(),
         }
     }
@@ -298,6 +302,14 @@ impl Gdtf {
         &mut self.geometries
     }
 
+    pub fn dmx_modes(&self) -> &NodeContainer<dmx::DmxMode> {
+        &self.dmx_modes
+    }
+
+    pub fn dmx_modes_mut(&mut self) -> &mut NodeContainer<dmx::DmxMode> {
+        &mut self.dmx_modes
+    }
+
     pub fn resources(&self) -> &Resources {
         &self.resources
     }
@@ -419,6 +431,10 @@ impl From<&bundle::Bundle> for Gdtf {
 
         for geometry in &ft.geometries.children {
             gdtf.geometries_mut().add(geo::Geometry::from_bundle(geometry, bundle));
+        }
+
+        for dmx_mode in &ft.dmx_modes.dmx_modes {
+            gdtf.dmx_modes_mut().add(dmx::DmxMode::from_bundle(dmx_mode, bundle));
         }
 
         for (path, bytes) in bundle.resources() {

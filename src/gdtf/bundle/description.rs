@@ -476,8 +476,9 @@ pub struct ChannelFunction {
     pub filter: Option<String>,
     #[serde(default, rename = "@ColorSpace")]
     pub color_space: Option<String>,
-    #[serde(default, rename = "@Gammut")]
-    pub gammut: Option<String>,
+    // FIXME: The XSD makes this generate as @Gammut. GDTF XSD bug?
+    #[serde(default, rename = "@Gamut")]
+    pub gamut: Option<String>,
     #[serde(default, rename = "@ModeMaster")]
     pub mode_master: Option<String>,
     #[serde(default = "ChannelFunction::default_mode_from", rename = "@ModeFrom")]
@@ -526,14 +527,21 @@ impl ChannelFunction {
 pub struct ChannelSet {
     #[serde(default, rename = "@Name")]
     pub name: Option<String>,
-    #[serde(default, rename = "@DMXFrom")]
-    pub dmx_from: Option<String>,
+    #[serde(default = "ChannelSet::default_dmx_from", rename = "@DMXFrom")]
+    pub dmx_from: String,
     #[serde(default, rename = "@PhysicalFrom")]
     pub physical_from: Option<f32>,
     #[serde(default, rename = "@PhysicalTo")]
     pub physical_to: Option<f32>,
     #[serde(default, rename = "@WheelSlotIndex")]
     pub wheel_slot_index: Option<u32>,
+}
+
+impl ChannelSet {
+    #[must_use]
+    pub fn default_dmx_from() -> String {
+        String::from("0/1")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1482,12 +1490,12 @@ pub struct Relation {
     #[serde(rename = "@Follower")]
     pub follower: String,
     #[serde(rename = "@Type")]
-    pub r#type: RelationTypes,
+    pub r#type: RelationType,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub enum RelationTypes {
+pub enum RelationType {
     #[serde(rename = "Multiply")]
     Multiply,
     #[serde(rename = "Override")]
@@ -1639,12 +1647,12 @@ pub enum StructureType {
 pub struct SubChannelSet {
     #[serde(default, rename = "@Name")]
     pub name: Option<String>,
-    #[serde(default, rename = "@PhysicalFrom")]
-    pub physical_from: Option<String>,
-    #[serde(default, rename = "@PhysicalTo")]
-    pub physical_to: Option<String>,
-    #[serde(default, rename = "@SubPhysicalUnit")]
-    pub sub_physical_unit: Option<String>,
+    #[serde(rename = "@PhysicalFrom")]
+    pub physical_from: f32,
+    #[serde(rename = "@PhysicalTo")]
+    pub physical_to: f32,
+    #[serde(rename = "@SubPhysicalUnit")]
+    pub sub_physical_unit: String,
     #[serde(default, rename = "@DMXProfile")]
     pub dmx_profile: Option<String>,
 }
