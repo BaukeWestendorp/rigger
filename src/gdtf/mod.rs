@@ -19,6 +19,7 @@ pub mod geo;
 pub mod model;
 pub mod phys;
 pub mod resource;
+pub mod rev;
 pub mod wheel;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -56,6 +57,8 @@ pub struct Gdtf {
 
     dmx_modes: NodeContainer<dmx::DmxMode>,
 
+    revisions: Vec<rev::Revision>,
+
     resources: Resources,
 }
 
@@ -91,6 +94,7 @@ impl Gdtf {
             models: NodeContainer::new(),
             geometries: NodeContainer::new(),
             dmx_modes: NodeContainer::new(),
+            revisions: Vec::new(),
             resources: Resources::new(),
         }
     }
@@ -310,6 +314,14 @@ impl Gdtf {
         &mut self.dmx_modes
     }
 
+    pub fn revisions(&self) -> &[rev::Revision] {
+        &self.revisions
+    }
+
+    pub fn revisions_mut(&mut self) -> &mut Vec<rev::Revision> {
+        &mut self.revisions
+    }
+
     pub fn resources(&self) -> &Resources {
         &self.resources
     }
@@ -435,6 +447,12 @@ impl From<&bundle::Bundle> for Gdtf {
 
         for dmx_mode in &ft.dmx_modes.dmx_modes {
             gdtf.dmx_modes_mut().add(dmx::DmxMode::from_bundle(dmx_mode, bundle));
+        }
+
+        if let Some(r) = &ft.revisions {
+            for revision in &r.revisions {
+                gdtf.revisions_mut().push(rev::Revision::from_bundle(revision, bundle));
+            }
         }
 
         for (path, bytes) in bundle.resources() {

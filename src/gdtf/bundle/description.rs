@@ -1517,7 +1517,7 @@ pub struct Revision {
     #[serde(default, rename = "@Date")]
     pub date: Option<String>,
     #[serde(default = "Revision::default_user_id", rename = "@UserID")]
-    pub user_id: i32,
+    pub user_id: u32,
     #[serde(default = "Revision::default_modified_by", rename = "@ModifiedBy")]
     pub modified_by: String,
 }
@@ -1528,8 +1528,8 @@ impl Revision {
         String::from("")
     }
     #[must_use]
-    pub fn default_user_id() -> i32 {
-        0i32
+    pub fn default_user_id() -> u32 {
+        0u32
     }
     #[must_use]
     pub fn default_modified_by() -> String {
