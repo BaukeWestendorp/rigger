@@ -8,6 +8,7 @@ use uuid::Uuid;
 
 use crate::gdtf::{
     bundle::FromBundle as _,
+    proto::Protocols,
     resource::{ModelResource, ResourceKey, Resources, ThumbnailResource, WheelResource},
 };
 
@@ -18,6 +19,7 @@ pub mod dmx;
 pub mod geo;
 pub mod model;
 pub mod phys;
+pub mod proto;
 pub mod resource;
 pub mod rev;
 pub mod wheel;
@@ -59,6 +61,8 @@ pub struct Gdtf {
 
     revisions: Vec<rev::Revision>,
 
+    protocols: Protocols,
+
     resources: Resources,
 }
 
@@ -95,6 +99,7 @@ impl Gdtf {
             geometries: NodeContainer::new(),
             dmx_modes: NodeContainer::new(),
             revisions: Vec::new(),
+            protocols: Protocols::new(),
             resources: Resources::new(),
         }
     }
@@ -322,6 +327,14 @@ impl Gdtf {
         &mut self.revisions
     }
 
+    pub fn protocols(&self) -> &proto::Protocols {
+        &self.protocols
+    }
+
+    pub fn protocols_mut(&mut self) -> &mut proto::Protocols {
+        &mut self.protocols
+    }
+
     pub fn resources(&self) -> &Resources {
         &self.resources
     }
@@ -453,6 +466,10 @@ impl From<&bundle::Bundle> for Gdtf {
             for revision in &r.revisions {
                 gdtf.revisions_mut().push(rev::Revision::from_bundle(revision, bundle));
             }
+        }
+
+        if let Some(p) = &ft.protocols {
+            gdtf.protocols = proto::Protocols::from_bundle(p, bundle);
         }
 
         for (path, bytes) in bundle.resources() {

@@ -32,11 +32,20 @@ pub struct AnimationSystem {
     pub radius: f32,
 }
 
+// FIXME: The GDTF XSD has a mistake: It should be a list, not an optional.
 #[derive(Debug, Clone, PartialEq)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct ArtNet {
     #[serde(default, rename = "Map")]
-    pub map: Option<Map>,
+    pub map: Vec<Map>,
+}
+
+// FIXME: The GDTF XSD has a mistake: sACN is empty.
+#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct SAcn {
+    #[serde(default, rename = "Map")]
+    pub map: Vec<Map>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -411,6 +420,14 @@ pub enum Ces {
 #[derive(Debug, Clone, PartialEq)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Citp;
+
+#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct PosiStageNet;
+
+#[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct OpenSoundControl;
 
 #[derive(Debug, Clone, PartialEq)]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -1194,9 +1211,9 @@ pub struct MacroDmxValue {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Map {
     #[serde(default, rename = "@Key")]
-    pub key: Option<u32>,
+    pub key: u32,
     #[serde(default, rename = "@Value")]
-    pub value: Option<u32>,
+    pub value: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1471,11 +1488,11 @@ pub struct Protocols {
     #[serde(default, rename = "Art-Net")]
     pub art_net: Option<ArtNet>,
     #[serde(default, rename = "sACN")]
-    pub s_acn: Option<Citp>,
+    pub s_acn: Option<SAcn>,
     #[serde(default, rename = "PosiStageNet")]
-    pub posi_stage_net: Option<Citp>,
+    pub posi_stage_net: Option<PosiStageNet>,
     #[serde(default, rename = "OpenSoundControl")]
-    pub open_sound_control: Option<Citp>,
+    pub open_sound_control: Option<OpenSoundControl>,
     #[serde(default, rename = "CITP")]
     pub citp: Option<Citp>,
 }
