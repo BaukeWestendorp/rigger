@@ -3,6 +3,7 @@ use std::str::FromStr as _;
 use crate::{
     CieColor,
     gdtf::{Name, Node, bundle, parse_optional_name},
+    util,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -325,18 +326,9 @@ impl bundle::FromBundle for Gamut {
     type Source = bundle::Gamut;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
-        let points = source.points.as_deref().map(parse_gamut_points).unwrap_or_default();
+        let points = source.points.as_deref().map(util::parse_cie_color_array).unwrap_or_default();
         Self { name: parse_optional_name(source.name.as_deref()), points }
     }
-}
-
-fn parse_gamut_points(s: &str) -> Vec<CieColor> {
-    s.split("},{")
-        .map(|chunk| {
-            let trimmed = chunk.trim_matches(|c| c == '{' || c == '}');
-            CieColor::from_str(trimmed).unwrap()
-        })
-        .collect()
 }
 
 #[derive(Debug, Clone, PartialEq)]

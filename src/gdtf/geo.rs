@@ -1,3 +1,5 @@
+use std::str::FromStr as _;
+
 use crate::{
     DmxAddress,
     gdtf::{Name, Node, NodePath, bundle, resource::ResourceKey},
@@ -787,7 +789,7 @@ pub struct ReferenceGeometry {
     name: Name,
     model: Option<Name>,
     local_transform: glam::Affine3A,
-    geometry: Name,
+    geometry: NodePath,
     children: Vec<Geometry>,
     breaks: Vec<DmxAddress>,
 }
@@ -805,7 +807,7 @@ impl ReferenceGeometry {
         self.local_transform
     }
 
-    pub fn geometry(&self) -> &Name {
+    pub fn geometry(&self) -> &NodePath {
         &self.geometry
     }
 
@@ -826,7 +828,20 @@ impl bundle::FromBundle for ReferenceGeometry {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
-            geometry: Name::new(&source.geometry),
+            geometry: match &source.geometry {
+                Some(name) => NodePath::from_str(name).unwrap(),
+                None => {
+                    let first_geometry_name = bundle
+                        .description()
+                        .fixture_type
+                        .geometries
+                        .children
+                        .first()
+                        .expect("FIXME: Find out what to do in this cade")
+                        .name();
+                    NodePath::from_str(first_geometry_name).unwrap()
+                }
+            },
             children: source
                 .children
                 .iter()

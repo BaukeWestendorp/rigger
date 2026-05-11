@@ -4,12 +4,15 @@ use std::{
     time::Duration,
 };
 
-use crate::gdtf::{Name, Node, NodePath, bundle};
+use crate::{
+    gdtf::{Name, Node, NodePath, bundle},
+    util,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DmxMode {
     name: Name,
-    description: String,
+    description: Option<String>,
     geometry: NodePath,
 
     dmx_channels: Vec<DmxChannel>,
@@ -18,8 +21,8 @@ pub struct DmxMode {
 }
 
 impl DmxMode {
-    pub fn description(&self) -> &str {
-        &self.description
+    pub fn description(&self) -> Option<&str> {
+        self.description.as_deref()
     }
 
     pub fn geometry(&self) -> &NodePath {
@@ -51,8 +54,24 @@ impl bundle::FromBundle for DmxMode {
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
             name: Name::new(&source.name),
-            description: source.description.clone().unwrap(),
-            geometry: NodePath::from_str(&source.geometry).unwrap(),
+            description: match source.description.as_deref() {
+                Some("") | None => None,
+                Some(s) => Some(s.to_string()),
+            },
+            geometry: match &source.geometry {
+                Some(name) => NodePath::from_str(name).unwrap(),
+                None => {
+                    let first_geometry_name = bundle
+                        .description()
+                        .fixture_type
+                        .geometries
+                        .children
+                        .first()
+                        .expect("FIXME: Find out what to do in this case")
+                        .name();
+                    NodePath::from_str(first_geometry_name).unwrap()
+                }
+            },
             dmx_channels: source
                 .dmx_channels
                 .dmx_channels
@@ -77,7 +96,7 @@ impl bundle::FromBundle for DmxMode {
 pub struct DmxChannel {
     dmx_break: DmxBreak,
     offset: DmxOffset,
-    initial_function: NodePath,
+    initial_function: Option<NodePath>,
     highlight: Option<DmxValue>,
     geometry: NodePath,
 
@@ -94,7 +113,10 @@ impl DmxChannel {
     }
 
     pub fn initial_function(&self) -> &NodePath {
-        &self.initial_function
+        match &self.initial_function {
+            Some(cf) => cf,
+            None => todo!("get the first LC's first CF "),
+        }
     }
 
     pub fn highlight(&self) -> Option<DmxValue> {
@@ -117,8 +139,10 @@ impl bundle::FromBundle for DmxChannel {
         Self {
             dmx_break: DmxBreak::from_str(&source.dmx_break).unwrap(),
             offset: DmxOffset::from_str(&source.offset).unwrap(),
-            initial_function: NodePath::from_str(source.initial_function.as_ref().unwrap())
-                .unwrap(),
+            initial_function: source
+                .initial_function
+                .as_ref()
+                .map(|node| NodePath::from_str(node).unwrap()),
             highlight: if source.highlight.trim() == "None" {
                 None
             } else {
@@ -201,8 +225,8 @@ impl bundle::FromBundle for LogicalChannel {
             attribute: NodePath::from_str(&source.attribute).unwrap(),
             snap: Snap::from_bundle(&source.snap, bundle),
             master: Master::from_bundle(&source.master, bundle),
-            mib_fade: Duration::from_secs_f32(source.mib_fade.unwrap_or(0.0)),
-            dmx_change_time_limit: Duration::from_secs_f32(
+            mib_fade: util::parse_possibly_negative_duration(source.mib_fade.unwrap_or(0.0)),
+            dmx_change_time_limit: util::parse_possibly_negative_duration(
                 source.dmx_change_time_limit.unwrap_or(0.0),
             ),
             channel_function: source
@@ -383,7 +407,7 @@ impl bundle::FromBundle for ChannelFunction {
             default: DmxValue::from_str(&source.dmx_from).unwrap(),
             physical_from: source.physical_from.unwrap_or(0.0),
             physical_to: source.physical_to.unwrap_or(1.0),
-            real_fade: Duration::from_secs_f32(source.real_fade.unwrap_or(0.0)),
+            real_fade: util::parse_possibly_negative_duration(source.real_fade.unwrap_or(0.0)),
             real_acceleration: source.real_acceleration.unwrap_or(0.0),
             wheel: source.wheel.as_ref().map(|s| NodePath::from_str(&s).unwrap()),
             emitter: source.emitter.as_ref().map(|s| NodePath::from_str(&s).unwrap()),
@@ -474,7 +498,7 @@ impl bundle::FromBundle for ChannelSet {
             dmx_from: DmxValue::from_str(&source.dmx_from).unwrap(),
             physical_from: source.physical_from.unwrap_or(0.0),
             physical_to: source.physical_to.unwrap_or(1.0),
-            wheel_slot_index: source.wheel_slot_index,
+            wheel_slot_index: source.wheel_slot_index.map(|i| i as u32),
         }
     }
 }
@@ -662,7 +686,7 @@ impl bundle::FromBundle for MacroDmxStep {
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
-            duration: Duration::from_secs_f32(source.duration.unwrap_or(1.0)),
+            duration: util::parse_possibly_negative_duration(source.duration.unwrap_or_default()),
             values: source
                 .macro_dmx_values
                 .iter()

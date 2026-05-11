@@ -1,3 +1,7 @@
+use std::time::Duration;
+
+use crate::CieColor;
+
 fn parse_floats(s: &str) -> Vec<f32> {
     s.split('}')
         .filter_map(|row| {
@@ -11,6 +15,10 @@ fn parse_floats(s: &str) -> Vec<f32> {
             })
         })
         .collect()
+}
+
+pub(crate) fn parse_cie_color_array(s: &str) -> Vec<CieColor> {
+    parse_floats(s).chunks(3).map(|chunk| CieColor::new(chunk[0], chunk[1], chunk[2])).collect()
 }
 
 pub(crate) fn parse_vec2(s: &str) -> glam::Vec2 {
@@ -69,4 +77,14 @@ pub(crate) fn parse_affine3a_from_mat4(s: &str) -> glam::Affine3A {
         v[12] / 1000.0, v[13] / 1000.0, v[14] / 1000.0,
     ];
     glam::Affine3A::from_cols_array(&cols)
+}
+
+pub(crate) fn parse_possibly_negative_duration(duration: f32) -> Duration {
+    match duration {
+        v if v >= 0.0 => Duration::from_secs_f32(v),
+        _ => {
+            eprintln!("Negative duration found");
+            Duration::default()
+        }
+    }
 }

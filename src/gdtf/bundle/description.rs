@@ -57,8 +57,8 @@ pub struct Attribute {
     pub pretty: String,
     #[serde(default, rename = "@ActivationGroup")]
     pub activation_group: Option<String>,
-    #[serde(rename = "@Feature")]
-    pub feature: String,
+    #[serde(default, rename = "@Feature")]
+    pub feature: Option<String>,
     #[serde(default, rename = "@MainAttribute")]
     pub main_attribute: Option<String>,
     #[serde(default = "Attribute::default_physical_unit", rename = "@PhysicalUnit")]
@@ -475,7 +475,7 @@ pub struct ChannelFunction {
     pub original_attribute: String,
     #[serde(default = "ChannelFunction::default_dmx_from", rename = "@DMXFrom")]
     pub dmx_from: String,
-    #[serde(rename = "@Default")]
+    #[serde(default = "ChannelFunction::default_default", rename = "@Default")]
     pub default: String,
     #[serde(default, rename = "@PhysicalFrom")]
     pub physical_from: Option<f32>,
@@ -527,6 +527,10 @@ impl ChannelFunction {
     }
     #[must_use]
     pub fn default_dmx_from() -> String {
+        String::from("0/1")
+    }
+    #[must_use]
+    pub fn default_default() -> String {
         String::from("0/1")
     }
     #[must_use]
@@ -673,8 +677,8 @@ pub struct DmxChannels {
 pub struct DmxMode {
     #[serde(rename = "@Name")]
     pub name: String,
-    #[serde(rename = "@Geometry")]
-    pub geometry: String,
+    #[serde(default, rename = "@Geometry")]
+    pub geometry: Option<String>,
     #[serde(default, rename = "@Description")]
     pub description: Option<String>,
     #[serde(rename = "DMXChannels")]
@@ -706,7 +710,7 @@ pub struct DmxPersonality {
 pub struct DmxProfile {
     #[serde(default, rename = "@Name")]
     pub name: Option<String>,
-    #[serde(rename = "Point")]
+    #[serde(default, rename = "Point")]
     pub points: Vec<Point>,
 }
 
@@ -844,8 +848,8 @@ pub struct Feature {
 pub struct FeatureGroup {
     #[serde(rename = "@Name")]
     pub name: String,
-    #[serde(rename = "@Pretty")]
-    pub pretty: String,
+    #[serde(default, rename = "@Pretty")]
+    pub pretty: Option<String>,
     #[serde(default, rename = "Feature")]
     pub features: Vec<Feature>,
 }
@@ -913,9 +917,9 @@ pub struct FixtureType {
     #[serde(default, rename = "@Thumbnail")]
     pub thumbnail: Option<String>,
     #[serde(default, rename = "@ThumbnailOffsetX")]
-    pub thumbnail_offset_x: Option<i32>,
+    pub thumbnail_offset_x: Option<i64>,
     #[serde(default, rename = "@ThumbnailOffsetY")]
-    pub thumbnail_offset_y: Option<i32>,
+    pub thumbnail_offset_y: Option<i64>,
     #[serde(default, rename = "@RefFT")]
     pub ref_ft: Option<String>,
     #[serde(default = "FixtureType::default_can_have_children", rename = "@CanHaveChildren")]
@@ -1020,6 +1024,31 @@ pub enum Geometry {
     Magnet(BasicGeometryType),
 }
 
+impl Geometry {
+    pub fn name(&self) -> &str {
+        match self {
+            Geometry::Geometry(v) => &v.name,
+            Geometry::Axis(v) => &v.name,
+            Geometry::FilterBeam(v) => &v.name,
+            Geometry::FilterColor(v) => &v.name,
+            Geometry::FilterGobo(v) => &v.name,
+            Geometry::FilterShaper(v) => &v.name,
+            Geometry::Beam(v) => &v.name,
+            Geometry::MediaServerLayer(v) => &v.name,
+            Geometry::MediaServerCamera(v) => &v.name,
+            Geometry::MediaServerMaster(v) => &v.name,
+            Geometry::Display(v) => &v.name,
+            Geometry::Laser(v) => &v.name,
+            Geometry::GeometryReference(v) => &v.name,
+            Geometry::WiringObject(v) => &v.name,
+            Geometry::Inventory(v) => &v.name,
+            Geometry::Structure(v) => &v.name,
+            Geometry::Support(v) => &v.name,
+            Geometry::Magnet(v) => &v.name,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GeometryReference {
@@ -1029,8 +1058,8 @@ pub struct GeometryReference {
     pub model: Option<String>,
     #[serde(default = "GeometryReference::default_position", rename = "@Position")]
     pub position: String,
-    #[serde(rename = "@Geometry")]
-    pub geometry: String,
+    #[serde(default, rename = "@Geometry")]
+    pub geometry: Option<String>,
     #[serde(default, rename = "$value")]
     pub children: Vec<Geometry>,
     #[serde(default, rename = "Break")]
@@ -1064,8 +1093,7 @@ pub struct Inventory {
     pub model: Option<String>,
     #[serde(default = "Inventory::default_position", rename = "@Position")]
     pub position: String,
-    #[serde(rename = "@Geometry")]
-    pub geometry: String,
+
     #[serde(default, rename = "@Count")]
     pub count: Option<u32>,
     #[serde(default, rename = "$value")]
@@ -1534,7 +1562,7 @@ pub struct Revision {
     #[serde(default, rename = "@Date")]
     pub date: Option<String>,
     #[serde(default = "Revision::default_user_id", rename = "@UserID")]
-    pub user_id: u32,
+    pub user_id: i32,
     #[serde(default = "Revision::default_modified_by", rename = "@ModifiedBy")]
     pub modified_by: String,
 }
@@ -1545,8 +1573,8 @@ impl Revision {
         String::from("")
     }
     #[must_use]
-    pub fn default_user_id() -> u32 {
-        0u32
+    pub fn default_user_id() -> i32 {
+        0i32
     }
     #[must_use]
     pub fn default_modified_by() -> String {
@@ -1625,8 +1653,6 @@ pub struct Structure {
     pub model: Option<String>,
     #[serde(default = "Structure::default_position", rename = "@Position")]
     pub position: String,
-    #[serde(rename = "@Geometry")]
-    pub geometry: String,
     #[serde(default, rename = "@LinkedGeometry")]
     pub linked_geometry: Option<String>,
     #[serde(default, rename = "@StructureType")]
@@ -1723,8 +1749,6 @@ pub struct Support {
     pub model: Option<String>,
     #[serde(default = "Support::default_position", rename = "@Position")]
     pub position: String,
-    #[serde(rename = "@Geometry")]
-    pub geometry: String,
     #[serde(rename = "@SupportType")]
     pub support_type: SupportType,
     #[serde(default, rename = "@RopeCrossSection")]

@@ -9,6 +9,7 @@ edition = "2024"
 glam = "0.32.1"
 quick-xml = { version = "0.39.2", features = ["serialize"] }
 serde = { version = "1.0.228", features = ["derive"] }
+serde_path_to_error = "0.1.20"
 uuid = { version = "1.23.0", features = ["v4"] }
 zip = { version = "8.5.1", default-features = false, features = ["deflate"] }
 

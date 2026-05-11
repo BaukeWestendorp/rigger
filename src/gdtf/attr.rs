@@ -8,7 +8,7 @@ use crate::{
     gdtf::{Name, Node, NodeContainer, NodePath, bundle},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ActivationGroup {
     PanTilt,
     Xyz,
@@ -27,6 +27,7 @@ pub enum ActivationGroup {
     Prism,
     BeamShaper,
     Shaper,
+    Custom(String),
 }
 
 impl bundle::FromBundle for ActivationGroup {
@@ -64,6 +65,7 @@ impl fmt::Display for ActivationGroup {
             ActivationGroup::Prism => write!(f, "Prism"),
             ActivationGroup::BeamShaper => write!(f, "BeamShaper"),
             ActivationGroup::Shaper => write!(f, "Shaper"),
+            ActivationGroup::Custom(name) => write!(f, "{name}"),
         }
     }
 }
@@ -98,7 +100,7 @@ impl str::FromStr for ActivationGroup {
                 } else if let Some(n) = extract_attr_n::<u32>(s, "AnimationSystem", None) {
                     Self::AnimationSystem(n)
                 } else {
-                    return Err(());
+                    Self::Custom(s.to_string())
                 }
             }
         };
@@ -112,7 +114,7 @@ pub struct Attribute {
     name: AttributeName,
     pretty: String,
     activation_group: Option<NodePath>,
-    feature: NodePath,
+    feature: Option<NodePath>,
     main_attribute: Option<NodePath>,
     physical_unit: Option<PhysicalUnit>,
     color: Option<CieColor>,
@@ -133,8 +135,8 @@ impl Attribute {
         self.activation_group.as_ref()
     }
 
-    pub fn feature(&self) -> &NodePath {
-        &self.feature
+    pub fn feature(&self) -> Option<&NodePath> {
+        self.feature.as_ref()
     }
 
     pub fn main_attribute(&self) -> Option<&NodePath> {
@@ -171,7 +173,7 @@ impl bundle::FromBundle for Attribute {
                 .activation_group
                 .as_deref()
                 .map(|ag| NodePath::from_str(ag).unwrap()),
-            feature: NodePath::from_str(&source.feature).unwrap(),
+            feature: source.feature.as_ref().map(|s| NodePath::from_str(s).unwrap()),
             main_attribute: source
                 .main_attribute
                 .as_deref()
@@ -1541,11 +1543,9 @@ impl bundle::FromBundle for FeatureGroup {
             features.add(Feature::from_bundle(f, bundle));
         }
 
-        Self {
-            name: Name::new(&feature_group.name),
-            pretty: feature_group.pretty.to_owned(),
-            features,
-        }
+        let name = Name::new(&feature_group.name);
+
+        Self { pretty: feature_group.pretty.to_owned().unwrap_or(name.to_string()), name, features }
     }
 }
 

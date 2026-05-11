@@ -110,11 +110,11 @@ pub struct ModelResource {
 }
 
 impl ModelResource {
-    pub fn new(file_name: &Path, bytes: Vec<u8>) -> Self {
-        let ext = file_name.extension().and_then(|s| s.to_str()).map(|s| s.to_ascii_lowercase());
+    pub fn new(path: &Path, bytes: Vec<u8>) -> Option<Self> {
+        let ext = path.extension().and_then(|s| s.to_str()).map(|s| s.to_ascii_lowercase());
         let parent =
-            file_name.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()).unwrap_or("");
-        let grandparent = file_name
+            path.parent().and_then(|p| p.file_name()).and_then(|n| n.to_str()).unwrap_or("");
+        let grandparent = path
             .parent()
             .and_then(|p| p.parent())
             .and_then(|p| p.file_name())
@@ -153,10 +153,10 @@ impl ModelResource {
                 ("models", "svg_side") => ModelKind::Svg { view: SvgView::Side },
                 _ => ModelKind::Svg { view: SvgView::Top },
             },
-            _ => todo!(),
+            _ => return None,
         };
 
-        Self { bytes, kind }
+        Some(Self { bytes, kind })
     }
 
     pub fn bytes(&self) -> &[u8] {

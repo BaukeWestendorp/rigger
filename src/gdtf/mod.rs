@@ -478,8 +478,8 @@ impl From<&bundle::Bundle> for Gdtf {
                     gdtf.resources_mut()
                         .add_wheel(ResourceKey::new(path), WheelResource::new(bytes.clone()));
                 } else if first_component == Component::Normal("models".as_ref()) {
-                    gdtf.resources_mut()
-                        .add_model(ResourceKey::new(path), ModelResource::new(path, bytes.clone()));
+                    let Some(resource) = ModelResource::new(path, bytes.clone()) else { continue };
+                    gdtf.resources_mut().add_model(ResourceKey::new(path), resource);
                 }
             }
         }

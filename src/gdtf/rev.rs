@@ -37,7 +37,7 @@ impl DateTime {
 pub struct Revision {
     pub text: String,
     pub date: Option<DateTime>,
-    pub user_id: u32,
+    pub user_id: i32,
     pub modified_by: String,
 }
 
