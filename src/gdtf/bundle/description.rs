@@ -551,7 +551,7 @@ pub struct ChannelSet {
     #[serde(default, rename = "@PhysicalTo")]
     pub physical_to: Option<f32>,
     #[serde(default, rename = "@WheelSlotIndex")]
-    pub wheel_slot_index: Option<u32>,
+    pub wheel_slot_index: Option<i32>,
 }
 
 impl ChannelSet {

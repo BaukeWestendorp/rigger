@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, io::BufReader, path::PathBuf};
+use std::{collections::HashMap, fs, io, path::PathBuf};
 
 use crate::mvr::bundle::{Bundle, GSD_FILE_NAME};
 
@@ -18,10 +18,10 @@ impl FolderSource {
 
 impl SourceLoader for FolderSource {
     fn load_bundle(&self) -> Bundle {
-        let description = quick_xml::de::from_reader(BufReader::new(
+        let mut deserializer = quick_xml::de::Deserializer::from_reader(io::BufReader::new(
             fs::File::open(self.path.join(GSD_FILE_NAME)).unwrap(),
-        ))
-        .unwrap();
+        ));
+        let description = serde_path_to_error::deserialize(&mut deserializer).unwrap();
 
         let mut resources = HashMap::new();
 
@@ -62,9 +62,6 @@ impl SourceLoader for ArchiveSource {
         let file = std::fs::File::open(&self.path).unwrap();
         let mut zip = zip::ZipArchive::new(file).unwrap();
 
-        let desc_file = zip.by_name(GSD_FILE_NAME).unwrap();
-        let description = quick_xml::de::from_reader(std::io::BufReader::new(desc_file)).unwrap();
-
         let mut resources = HashMap::new();
         for i in 0..zip.len() {
             let mut file = zip.by_index(i).unwrap();
@@ -72,10 +69,15 @@ impl SourceLoader for ArchiveSource {
                 continue;
             }
             let mut bytes = Vec::new();
-            std::io::Read::read_to_end(&mut file, &mut bytes).unwrap();
+            io::Read::read_to_end(&mut file, &mut bytes).unwrap();
             let name = String::from_utf8_lossy(file.name_raw()).to_string();
             resources.insert(PathBuf::from(name), bytes);
         }
+
+        let desc_file = zip.by_name(GSD_FILE_NAME).unwrap();
+        let mut deserializer =
+            quick_xml::de::Deserializer::from_reader(io::BufReader::new(desc_file));
+        let description = serde_path_to_error::deserialize(&mut deserializer).unwrap();
 
         Bundle { description, resources, path: Some(self.path.clone()) }
     }
@@ -93,10 +95,7 @@ impl<'a> ArchiveBytesSource<'a> {
 
 impl SourceLoader for ArchiveBytesSource<'_> {
     fn load_bundle(&self) -> Bundle {
-        let mut zip = zip::ZipArchive::new(std::io::Cursor::new(self.bytes)).unwrap();
-
-        let desc_file = zip.by_name(GSD_FILE_NAME).unwrap();
-        let description = quick_xml::de::from_reader(std::io::BufReader::new(desc_file)).unwrap();
+        let mut zip = zip::ZipArchive::new(io::Cursor::new(self.bytes)).unwrap();
 
         let mut resources = HashMap::new();
         for i in 0..zip.len() {
@@ -105,10 +104,15 @@ impl SourceLoader for ArchiveBytesSource<'_> {
                 continue;
             }
             let mut bytes = Vec::new();
-            std::io::Read::read_to_end(&mut file, &mut bytes).unwrap();
+            io::Read::read_to_end(&mut file, &mut bytes).unwrap();
             let name = String::from_utf8_lossy(file.name_raw()).to_string();
             resources.insert(PathBuf::from(name), bytes);
         }
+
+        let desc_file = zip.by_name(GSD_FILE_NAME).unwrap();
+        let mut deserializer =
+            quick_xml::de::Deserializer::from_reader(io::BufReader::new(desc_file));
+        let description = serde_path_to_error::deserialize(&mut deserializer).unwrap();
 
         Bundle { description, resources, path: None }
     }
