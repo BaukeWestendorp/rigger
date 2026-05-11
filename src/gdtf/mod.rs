@@ -151,16 +151,16 @@ impl Gdtf {
         self.description = description.into();
     }
 
-    pub fn fixture_type_id(&self) -> &FixtureTypeId {
-        &self.fixture_type_id
+    pub fn fixture_type_id(&self) -> FixtureTypeId {
+        self.fixture_type_id
     }
 
     pub fn set_fixture_type_id(&mut self, fixture_type_id: impl Into<FixtureTypeId>) {
         self.fixture_type_id = fixture_type_id.into();
     }
 
-    pub fn reference_fixture_type_id(&self) -> Option<&FixtureTypeId> {
-        self.reference_fixture_type_id.as_ref()
+    pub fn reference_fixture_type_id(&self) -> Option<FixtureTypeId> {
+        self.reference_fixture_type_id
     }
 
     pub fn set_reference_fixture_type_id(
