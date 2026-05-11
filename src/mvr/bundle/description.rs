@@ -180,8 +180,8 @@ pub struct Fixture {
     pub position: Option<String>,
     #[serde(default, rename = "Function")]
     pub function: Option<String>,
-    #[serde(rename = "FixtureID")]
-    pub fixture_id: String,
+    #[serde(default, rename = "FixtureID")]
+    pub fixture_id: Option<String>,
     #[serde(default, rename = "FixtureIDNumeric")]
     pub fixture_id_numeric: Option<i32>,
     #[serde(default, rename = "FixtureTypeId")]
@@ -490,8 +490,8 @@ pub struct Projector {
     pub connections: Option<Connections>,
     #[serde(default, rename = "ChildList")]
     pub child_list: Option<Box<ChildList>>,
-    #[serde(rename = "FixtureID")]
-    pub fixture_id: String,
+    #[serde(default, rename = "FixtureID")]
+    pub fixture_id: Option<String>,
     #[serde(default, rename = "FixtureIDNumeric")]
     pub fixture_id_numeric: Option<i32>,
     #[serde(default, rename = "FixtureTypeId")]
@@ -710,8 +710,8 @@ pub struct Support {
     pub overwrites: Option<Overwrites>,
     #[serde(default, rename = "Connections")]
     pub connections: Option<Connections>,
-    #[serde(rename = "FixtureID")]
-    pub fixture_id: String,
+    #[serde(default, rename = "FixtureID")]
+    pub fixture_id: Option<String>,
     #[serde(default, rename = "FixtureIDNumeric")]
     pub fixture_id_numeric: Option<i32>,
     #[serde(default, rename = "FixtureTypeId")]
@@ -821,8 +821,8 @@ pub struct Truss {
     pub child_position: Option<String>,
     #[serde(default, rename = "ChildList")]
     pub child_list: Option<Box<ChildList>>,
-    #[serde(rename = "FixtureID")]
-    pub fixture_id: String,
+    #[serde(default, rename = "FixtureID")]
+    pub fixture_id: Option<String>,
     #[serde(default, rename = "FixtureIDNumeric")]
     pub fixture_id_numeric: Option<i32>,
     #[serde(default, rename = "FixtureTypeId")]
@@ -891,8 +891,8 @@ pub struct VideoScreen {
     pub connections: Option<Connections>,
     #[serde(default, rename = "ChildList")]
     pub child_list: Option<Box<ChildList>>,
-    #[serde(rename = "FixtureID")]
-    pub fixture_id: String,
+    #[serde(default, rename = "FixtureID")]
+    pub fixture_id: Option<String>,
     #[serde(default, rename = "FixtureIDNumeric")]
     pub fixture_id_numeric: Option<i32>,
     #[serde(default, rename = "FixtureTypeId")]

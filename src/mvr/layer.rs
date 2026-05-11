@@ -573,7 +573,7 @@ impl bundle::FromBundle for FixtureObject {
         Self {
             id: build_id_from_multipatch(
                 &source.multipatch,
-                Some(source.fixture_id.to_owned()),
+                source.fixture_id.clone(),
                 source.fixture_id_numeric,
                 source.custom_id,
                 source.custom_id_type,
@@ -715,7 +715,7 @@ impl bundle::FromBundle for SupportObject {
             gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
             id: build_id_from_multipatch(
                 &source.multipatch,
-                Some(source.fixture_id.to_owned()),
+                source.fixture_id.clone(),
                 source.fixture_id_numeric,
                 source.custom_id,
                 source.custom_id_type,
@@ -840,7 +840,7 @@ impl bundle::FromBundle for TrussObject {
             gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
             id: build_id_from_multipatch(
                 &source.multipatch,
-                Some(source.fixture_id.to_owned()),
+                source.fixture_id.clone(),
                 source.fixture_id_numeric,
                 source.custom_id,
                 source.custom_id_type,
@@ -957,7 +957,7 @@ impl bundle::FromBundle for VideoScreenObject {
             gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
             id: build_id_from_multipatch(
                 &source.multipatch,
-                Some(source.fixture_id.to_owned()),
+                source.fixture_id.clone(),
                 source.fixture_id_numeric,
                 source.custom_id,
                 source.custom_id_type,
@@ -1075,7 +1075,7 @@ impl bundle::FromBundle for ProjectorObject {
             gdtf: build_gdtf_info(&source.gdtf_spec, &source.gdtf_mode),
             id: build_id_from_multipatch(
                 &source.multipatch,
-                Some(source.fixture_id.to_owned()),
+                source.fixture_id.clone(),
                 source.fixture_id_numeric,
                 source.custom_id,
                 source.custom_id_type,
