@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::{
     CieColor, DmxAddress, gdtf,
     mvr::{
-        self, Node, NodeId, ResourceKey,
+        self, NodeId, ResourceKey,
         aux::{Class, MappingDefinition, Position},
         bundle::{self, FromBundle as _},
         geo::Geometry,
@@ -28,6 +28,10 @@ pub struct Layer {
 }
 
 impl Layer {
+    pub fn id(&self) -> NodeId<Self> {
+        self.id
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -38,12 +42,6 @@ impl Layer {
 
     pub fn objects(&self) -> &[Object] {
         &self.objects
-    }
-}
-
-impl Node for Layer {
-    fn id(&self) -> mvr::NodeId<Self> {
-        self.id
     }
 }
 
@@ -78,6 +76,10 @@ pub struct Object {
 }
 
 impl Object {
+    pub fn id(&self) -> NodeId<Self> {
+        self.id
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -276,12 +278,6 @@ impl Object {
     }
 }
 
-impl Node for Object {
-    fn id(&self) -> mvr::NodeId<Self> {
-        self.id
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum ObjectKind {
     SceneObject(SceneObject),
@@ -316,6 +312,7 @@ pub struct SceneObject {
 }
 
 impl SceneObject {
+    // FIXME: Find a better way to get the data from ObjectIdentifier
     pub fn id(&self) -> &ObjectIdentifier {
         &self.id
     }
@@ -1128,21 +1125,17 @@ pub enum ObjectIdentifier {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct GdtfInfo {
-    gdtf_resource: ResourceKey,
-    gdtf_mode: String,
+    resource: ResourceKey,
+    mode: String,
 }
 
 impl GdtfInfo {
-    pub fn new(resource: ResourceKey, gdtf_mode: impl Into<String>) -> Self {
-        Self { gdtf_resource: resource, gdtf_mode: gdtf_mode.into() }
+    pub fn resource(&self) -> &ResourceKey {
+        &self.resource
     }
 
-    pub fn gdtf_resource(&self) -> &ResourceKey {
-        &self.gdtf_resource
-    }
-
-    pub fn gdtf_mode(&self) -> &str {
-        &self.gdtf_mode
+    pub fn mode(&self) -> &str {
+        &self.mode
     }
 }
 
@@ -1708,10 +1701,10 @@ fn build_gdtf_info(gdtf_spec: &Option<String>, gdtf_mode: &Option<String>) -> Op
                 return None;
             }
 
-            Some(GdtfInfo::new(
-                ResourceKey::new(PathBuf::from(spec).with_extension("gdtf")),
-                mode.to_owned(),
-            ))
+            Some(GdtfInfo {
+                resource: ResourceKey::new(PathBuf::from(spec).with_extension("gdtf")),
+                mode: mode.to_owned(),
+            })
         }
         _ => None,
     }

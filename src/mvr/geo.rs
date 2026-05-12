@@ -5,18 +5,14 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Geometry {
-    local_transform: glam::Affine3A,
+    pub(crate) local_transform: glam::Affine3A,
 
-    model: ResourceKey,
+    pub(crate) model: ResourceKey,
 }
 
 impl Geometry {
     pub fn local_transform(&self) -> glam::Affine3A {
         self.local_transform
-    }
-
-    pub fn set_local_transform(&mut self, local_transform: glam::Affine3A) {
-        self.local_transform = local_transform;
     }
 
     pub fn model(&self) -> &ResourceKey {

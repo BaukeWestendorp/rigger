@@ -5,7 +5,7 @@ use std::{
 };
 
 use rigger::mvr::{
-    Mvr, Node as _, NodeId,
+    Mvr, NodeId,
     layer::{Layer, Object, ObjectIdentifier, ObjectKind, ScaleHandling, SourceType, Transmission},
     resource::ResourceKey,
 };
@@ -48,7 +48,7 @@ fn object_by_uuid<'a>(mvr: &'a Mvr, uuid: &str) -> &'a Object {
         None
     }
 
-    for layer in mvr.layers().iter() {
+    for layer in mvr.layers() {
         if let Some(obj) = find_object(layer.objects(), id) {
             return obj;
         }
@@ -59,7 +59,7 @@ fn object_by_uuid<'a>(mvr: &'a Mvr, uuid: &str) -> &'a Object {
 
 fn layer_by_uuid<'a>(mvr: &'a Mvr, uuid: &str) -> &'a Layer {
     let id: NodeId<Layer> = NodeId::from_str(uuid).unwrap();
-    mvr.layers().get(id).unwrap_or_else(|| panic!("Layer {uuid} not found"))
+    mvr.layer(&id).unwrap_or_else(|| panic!("Layer {uuid} not found"))
 }
 
 #[test]
@@ -85,7 +85,7 @@ fn test_provider_defaults_when_missing() {
 #[test]
 fn test_layer_count_and_names() {
     let mvr = load_complete_mvr();
-    let mut layers = mvr.layers().iter().collect::<Vec<_>>();
+    let mut layers = mvr.layers().collect::<Vec<_>>();
     layers.sort_by_key(|l| l.name());
     assert_eq!(layers.len(), 3);
     assert_eq!(layers[0].name(), "Complete Object Layer");
@@ -104,7 +104,7 @@ fn test_layer_lookup_by_id() {
 fn test_layer_lookup_returns_none_for_unknown_id() {
     let mvr = load_complete_mvr();
     let id: NodeId<Layer> = NodeId::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    assert!(mvr.layers().get(id).is_none());
+    assert!(mvr.layer(&id).is_none());
 }
 
 #[test]
@@ -124,14 +124,14 @@ fn test_layer_without_matrix_has_identity_transform() {
 #[test]
 fn test_classes() {
     let mvr = load_complete_mvr();
-    let mut classes = mvr.classes().iter().collect::<Vec<_>>();
+    let mut classes = mvr.classes().collect::<Vec<_>>();
     classes.sort_by_key(|c| c.name());
     assert_eq!(classes.len(), 2);
     assert_eq!(classes[0].name(), "Class 1");
     assert_eq!(classes[1].name(), "Class 2");
 
     let id = NodeId::from_str("deadbeef-0000-0000-0000-000000000064").unwrap();
-    let class = mvr.classes().get(id).expect("Expected Class 1 by id");
+    let class = mvr.class(&id).expect("Expected Class 1 by id");
     assert_eq!(class.name(), "Class 1");
     assert_eq!(class.id(), id);
 }
@@ -139,24 +139,24 @@ fn test_classes() {
 #[test]
 fn test_positions() {
     let mvr = load_complete_mvr();
-    let mut positions = mvr.positions().iter().collect::<Vec<_>>();
+    let mut positions = mvr.positions().collect::<Vec<_>>();
     positions.sort_by_key(|p| p.name());
     assert_eq!(positions.len(), 2);
     assert_eq!(positions[0].name(), "Position 1");
     assert_eq!(positions[1].name(), "Position 2");
 
     let id = NodeId::from_str("deadbeef-0000-0000-0000-000000000071").unwrap();
-    let pos = mvr.positions().get(id).expect("Expected Position 1 by id");
+    let pos = mvr.position(&id).expect("Expected Position 1 by id");
     assert_eq!(pos.name(), "Position 1");
 }
 
 #[test]
 fn test_symdefs() {
     let mvr = load_complete_mvr();
-    assert_eq!(mvr.symdefs().len(), 5);
+    assert_eq!(mvr.symdefs().count(), 5);
 
     let id = NodeId::from_str("deadbeef-0000-0000-0000-000000000066").unwrap();
-    let symdef = mvr.symdefs().get(id).expect("Expected Symdef 'Symbol 1' by id");
+    let symdef = mvr.symdef(&id).expect("Expected Symdef 'Symbol 1' by id");
     assert_eq!(symdef.name(), "Symbol 1");
     assert_eq!(symdef.id(), id);
 }
@@ -164,10 +164,10 @@ fn test_symdefs() {
 #[test]
 fn test_mapping_definitions() {
     let mvr = load_complete_mvr();
-    assert_eq!(mvr.mapping_definitions().len(), 7);
+    assert_eq!(mvr.mapping_definitions().count(), 7);
 
     let id = NodeId::from_str("deadbeef-0000-0000-0000-000000000073").unwrap();
-    let md = mvr.mapping_definitions().get(id).expect("Expected MappingDefinition 'Mapping 1'");
+    let md = mvr.mapping_definition(&id).expect("Expected MappingDefinition 'Mapping 1'");
     assert_eq!(md.name(), "Mapping 1");
     assert_eq!(md.size_x(), 1920);
     assert_eq!(md.size_y(), 1080);
@@ -181,11 +181,11 @@ fn test_mapping_definition_scale_handling_variants() {
     let mvr = load_complete_mvr();
 
     let id_ignore = NodeId::from_str("deadbeef-0000-0000-0000-000000000088").unwrap();
-    let md_ignore = mvr.mapping_definitions().get(id_ignore).unwrap();
+    let md_ignore = mvr.mapping_definition(&id_ignore).unwrap();
     assert_eq!(md_ignore.scale_handling(), ScaleHandling::ScaleIgnoreRatio);
 
     let id_center = NodeId::from_str("deadbeef-0000-0000-0000-000000000089").unwrap();
-    let md_center = mvr.mapping_definitions().get(id_center).unwrap();
+    let md_center = mvr.mapping_definition(&id_center).unwrap();
     assert_eq!(md_center.scale_handling(), ScaleHandling::KeepSizeCenter);
 }
 
@@ -225,7 +225,7 @@ fn test_object_class_is_resolved() {
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000005");
 
     let class_id = obj.class().expect("Expected class on Complete SceneObject 1");
-    let class = mvr.classes().get(class_id).expect("Expected class to be resolvable");
+    let class = mvr.class(&class_id).expect("Expected class to be resolvable");
     assert_eq!(class.name(), "Class 1");
 }
 
@@ -339,8 +339,8 @@ fn test_gdtf_info_present() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000009");
     let info = obj.gdtf_info().expect("Expected GdtfInfo on Complete Fixture 1");
-    assert_eq!(info.gdtf_resource(), &ResourceKey::new("Robe Lighting@Robin Spiider.gdtf"));
-    assert_eq!(info.gdtf_mode(), "Mode 1 - Standard 16 bit");
+    assert_eq!(info.resource(), &ResourceKey::new("Robe Lighting@Robin Spiider.gdtf"));
+    assert_eq!(info.mode(), "Mode 1 - Standard 16 bit");
 }
 
 #[test]
@@ -593,7 +593,7 @@ fn test_fixture_position_reference() {
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000009");
     let f = obj.as_fixture_object().unwrap();
     let pos_id = f.position().expect("Expected position reference");
-    let pos = mvr.positions().get(pos_id).expect("Expected position to resolve");
+    let pos = mvr.position(&pos_id).expect("Expected position to resolve");
     assert_eq!(pos.name(), "Position 1");
 }
 
@@ -667,7 +667,7 @@ fn test_truss_fields() {
     assert_eq!(t.unit_number(), Some(2013));
 
     let pos_id = t.position().expect("Expected position reference on truss");
-    let pos = mvr.positions().get(pos_id).expect("Expected position to resolve");
+    let pos = mvr.position(&pos_id).expect("Expected position to resolve");
     assert_eq!(pos.name(), "Position 1");
 
     assert_eq!(t.child_objects().len(), 1);

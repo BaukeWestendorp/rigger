@@ -149,7 +149,7 @@ fn draw_object(
         let position = convert_coordinate_space(object_world).translation;
         match fixture.gdtf() {
             Some(gdtf_info) => {
-                let _gdtf = state.mvr.resources().gdtf(gdtf_info.gdtf_resource()).unwrap();
+                let _gdtf = state.mvr.resources().gdtf(gdtf_info.resource()).unwrap();
             }
             None => {
                 d.draw_sphere(Vector3::new(position.x, position.y, position.z), 0.1, Color::RED);

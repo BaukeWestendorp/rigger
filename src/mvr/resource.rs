@@ -2,64 +2,41 @@ use std::{
     collections::HashMap,
     fmt,
     path::{Path, PathBuf},
+    rc::Rc,
 };
 
 use crate::gdtf::Gdtf;
 
-#[derive(Clone, PartialEq, Default)]
+#[derive(Clone, PartialEq)]
 pub struct Resources {
-    gdtfs: HashMap<ResourceKey, Gdtf>,
-    models: HashMap<ResourceKey, ModelResource>,
-    textures: HashMap<ResourceKey, TextureResource>,
+    pub(crate) gdtfs: HashMap<ResourceKey, Rc<Gdtf>>,
+    pub(crate) models: HashMap<ResourceKey, Rc<ModelResource>>,
+    pub(crate) textures: HashMap<ResourceKey, Rc<TextureResource>>,
 }
 
 impl Resources {
     pub fn gdtfs(&self) -> impl Iterator<Item = (&ResourceKey, &Gdtf)> {
-        self.gdtfs.iter()
+        self.gdtfs.iter().map(|(k, v)| (k, v.as_ref()))
     }
 
     pub fn gdtf(&self, key: &ResourceKey) -> Option<&Gdtf> {
-        self.gdtfs.get(key)
-    }
-
-    pub fn add_gdtf(&mut self, key: ResourceKey, gdtf: Gdtf) {
-        self.gdtfs.insert(key, gdtf);
-    }
-
-    pub fn remove_gdtf(&mut self, key: &ResourceKey) -> Option<Gdtf> {
-        self.gdtfs.remove(key)
+        self.gdtfs.get(key).map(|v| v.as_ref())
     }
 
     pub fn models(&self) -> impl Iterator<Item = (&ResourceKey, &ModelResource)> {
-        self.models.iter()
+        self.models.iter().map(|(k, v)| (k, v.as_ref()))
     }
 
     pub fn model(&self, key: &ResourceKey) -> Option<&ModelResource> {
-        self.models.get(key)
-    }
-
-    pub fn add_model(&mut self, key: ResourceKey, data: ModelResource) {
-        self.models.insert(key, data);
-    }
-
-    pub fn remove_model(&mut self, key: &ResourceKey) -> Option<ModelResource> {
-        self.models.remove(key)
+        self.models.get(key).map(|v| v.as_ref())
     }
 
     pub fn textures(&self) -> impl Iterator<Item = (&ResourceKey, &TextureResource)> {
-        self.textures.iter()
+        self.textures.iter().map(|(k, v)| (k, v.as_ref()))
     }
 
     pub fn texture(&self, key: &ResourceKey) -> Option<&TextureResource> {
-        self.textures.get(key)
-    }
-
-    pub fn add_texture(&mut self, key: ResourceKey, data: TextureResource) {
-        self.textures.insert(key, data);
-    }
-
-    pub fn remove_texture(&mut self, key: &ResourceKey) -> Option<TextureResource> {
-        self.textures.remove(key)
+        self.textures.get(key).map(|v| v.as_ref())
     }
 }
 
@@ -96,7 +73,7 @@ pub struct ModelResource {
 }
 
 impl ModelResource {
-    pub fn new(file_name: &Path, bytes: Vec<u8>) -> Self {
+    pub(crate) fn new(file_name: &Path, bytes: Vec<u8>) -> Self {
         let kind =
             match file_name.extension().and_then(|s| s.to_str()).map(|s| s.to_ascii_lowercase()) {
                 Some(ext) if ext == "3ds" => ModelKind::ThreeDs,
@@ -153,7 +130,7 @@ pub struct TextureResource {
 }
 
 impl TextureResource {
-    pub fn new(file_name: &Path, bytes: Vec<u8>) -> Self {
+    pub(crate) fn new(file_name: &Path, bytes: Vec<u8>) -> Self {
         let kind =
             match file_name.extension().and_then(|s| s.to_str()).map(|s| s.to_ascii_lowercase()) {
                 Some(ext) if ext == "png" => TextureKind::Png,

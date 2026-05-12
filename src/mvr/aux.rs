@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 use crate::mvr::{
-    self as mvr, Node, NodeId, bundle,
+    self as mvr, NodeId, bundle,
     geo::Geometry,
     layer::{ScaleHandling, Source},
 };
@@ -9,7 +9,7 @@ use crate::mvr::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct Class {
     name: String,
-    id: NodeId<Class>,
+    id: NodeId<Self>,
 }
 
 impl bundle::FromBundle for Class {
@@ -22,21 +22,19 @@ impl bundle::FromBundle for Class {
 }
 
 impl Class {
+    pub fn id(&self) -> NodeId<Self> {
+        self.id
+    }
+
     pub fn name(&self) -> &str {
         &self.name
-    }
-}
-
-impl Node for Class {
-    fn id(&self) -> NodeId<Self> {
-        self.id
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Position {
     name: String,
-    id: NodeId<Position>,
+    id: NodeId<Self>,
 }
 
 impl bundle::FromBundle for Position {
@@ -49,21 +47,19 @@ impl bundle::FromBundle for Position {
 }
 
 impl Position {
+    pub fn id(&self) -> NodeId<Self> {
+        self.id
+    }
+
     pub fn name(&self) -> &str {
         &self.name
-    }
-}
-
-impl Node for Position {
-    fn id(&self) -> NodeId<Self> {
-        self.id
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Symdef {
     name: String,
-    id: NodeId<Symdef>,
+    id: NodeId<Self>,
 
     geometries: Vec<Geometry>,
 }
@@ -73,14 +69,12 @@ impl Symdef {
         &self.name
     }
 
+    pub fn id(&self) -> NodeId<Self> {
+        self.id
+    }
+
     pub fn geometries(&self) -> &[Geometry] {
         &self.geometries
-    }
-}
-
-impl Node for Symdef {
-    fn id(&self) -> NodeId<Self> {
-        self.id
     }
 }
 
@@ -103,7 +97,7 @@ impl bundle::FromBundle for Symdef {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MappingDefinition {
     name: String,
-    id: NodeId<MappingDefinition>,
+    id: NodeId<Self>,
 
     size_x: u32,
     size_y: u32,
@@ -137,6 +131,10 @@ impl MappingDefinition {
         &self.name
     }
 
+    pub fn id(&self) -> NodeId<Self> {
+        self.id
+    }
+
     pub fn size_x(&self) -> u32 {
         self.size_x
     }
@@ -151,11 +149,5 @@ impl MappingDefinition {
 
     pub fn scale_handling(&self) -> ScaleHandling {
         self.scale_handling
-    }
-}
-
-impl Node for MappingDefinition {
-    fn id(&self) -> NodeId<Self> {
-        self.id
     }
 }
