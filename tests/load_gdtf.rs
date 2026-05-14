@@ -166,7 +166,7 @@ fn test_gdtf_attributes() {
 
     let pan = gdtf.attribute(&AttributeName::Pan).unwrap();
     assert_eq!(pan.name(), &AttributeName::Pan);
-    assert_eq!(pan.pretty(), "Pan");
+    assert_eq!(pan.pretty_name(), "Pan");
     assert_eq!(pan.activation_group(), Some(&NodePath::from_str("PanTilt").unwrap()));
     assert_eq!(pan.feature(), Some(&NodePath::from_str("Position.PanTilt").unwrap()));
     assert_eq!(pan.main_attribute(), None);
@@ -176,7 +176,7 @@ fn test_gdtf_attributes() {
 
     let tilt = gdtf.attribute(&AttributeName::Tilt).unwrap();
     assert_eq!(tilt.name(), &AttributeName::Tilt);
-    assert_eq!(tilt.pretty(), "Tilt");
+    assert_eq!(tilt.pretty_name(), "Tilt");
     assert_eq!(tilt.activation_group(), Some(&NodePath::from_str("PanTilt").unwrap()));
     assert_eq!(tilt.feature(), Some(&NodePath::from_str("Position.PanTilt").unwrap()));
     assert_eq!(tilt.main_attribute(), None);
@@ -186,7 +186,7 @@ fn test_gdtf_attributes() {
 
     let dimmer = gdtf.attribute(&AttributeName::Dimmer).unwrap();
     assert_eq!(dimmer.name(), &AttributeName::Dimmer);
-    assert_eq!(dimmer.pretty(), "Dimmer");
+    assert_eq!(dimmer.pretty_name(), "Dimmer");
     assert_eq!(dimmer.activation_group(), None);
     assert_eq!(dimmer.feature(), Some(&NodePath::from_str("Dimmer.Dimmer").unwrap()));
     assert_eq!(dimmer.main_attribute(), None);
@@ -196,7 +196,7 @@ fn test_gdtf_attributes() {
 
     let color_r = gdtf.attribute(&AttributeName::ColorAddR).unwrap();
     assert_eq!(color_r.name(), &AttributeName::ColorAddR);
-    assert_eq!(color_r.pretty(), "R");
+    assert_eq!(color_r.pretty_name(), "R");
     assert_eq!(color_r.activation_group(), None);
     assert_eq!(color_r.feature(), Some(&NodePath::from_str("Color.Color").unwrap()));
     assert_eq!(color_r.main_attribute(), None);
@@ -206,7 +206,7 @@ fn test_gdtf_attributes() {
 
     let color_g = gdtf.attribute(&AttributeName::ColorAddG).unwrap();
     assert_eq!(color_g.name(), &AttributeName::ColorAddG);
-    assert_eq!(color_g.pretty(), "G");
+    assert_eq!(color_g.pretty_name(), "G");
     assert_eq!(color_g.activation_group(), None);
     assert_eq!(color_g.feature(), Some(&NodePath::from_str("Color.Color").unwrap()));
     assert_eq!(color_g.main_attribute(), None);
@@ -216,7 +216,7 @@ fn test_gdtf_attributes() {
 
     let color_b = gdtf.attribute(&AttributeName::ColorAddB).unwrap();
     assert_eq!(color_b.name(), &AttributeName::ColorAddB);
-    assert_eq!(color_b.pretty(), "B");
+    assert_eq!(color_b.pretty_name(), "B");
     assert_eq!(color_b.activation_group(), None);
     assert_eq!(color_b.feature(), Some(&NodePath::from_str("Color.Color").unwrap()));
     assert_eq!(color_b.main_attribute(), None);
@@ -226,7 +226,7 @@ fn test_gdtf_attributes() {
 
     let gobo1 = gdtf.attribute(&AttributeName::Gobo(1)).unwrap();
     assert_eq!(gobo1.name(), &AttributeName::Gobo(1));
-    assert_eq!(gobo1.pretty(), "Gobo 1");
+    assert_eq!(gobo1.pretty_name(), "Gobo 1");
     assert_eq!(gobo1.activation_group(), None);
     assert_eq!(gobo1.feature(), Some(&NodePath::from_str("Gobo.Gobo").unwrap()));
     assert_eq!(gobo1.main_attribute(), None);
@@ -236,7 +236,7 @@ fn test_gdtf_attributes() {
 
     let zoom = gdtf.attribute(&AttributeName::Zoom).unwrap();
     assert_eq!(zoom.name(), &AttributeName::Zoom);
-    assert_eq!(zoom.pretty(), "Zoom");
+    assert_eq!(zoom.pretty_name(), "Zoom");
     assert_eq!(zoom.activation_group(), None);
     assert_eq!(zoom.feature(), Some(&NodePath::from_str("Beam.Beam").unwrap()));
     assert_eq!(zoom.main_attribute(), None);
@@ -246,7 +246,7 @@ fn test_gdtf_attributes() {
 
     let focus1 = gdtf.attribute(&AttributeName::Focus(1)).unwrap();
     assert_eq!(focus1.name(), &AttributeName::Focus(1));
-    assert_eq!(focus1.pretty(), "Focus");
+    assert_eq!(focus1.pretty_name(), "Focus");
     assert_eq!(focus1.activation_group(), None);
     assert_eq!(focus1.feature(), Some(&NodePath::from_str("Focus.Focus").unwrap()));
     assert_eq!(focus1.main_attribute(), None);
@@ -256,7 +256,7 @@ fn test_gdtf_attributes() {
 
     let shutter1 = gdtf.attribute(&AttributeName::Shutter(1)).unwrap();
     assert_eq!(shutter1.name(), &AttributeName::Shutter(1));
-    assert_eq!(shutter1.pretty(), "Shutter");
+    assert_eq!(shutter1.pretty_name(), "Shutter");
     assert_eq!(shutter1.activation_group(), None);
     assert_eq!(shutter1.feature(), Some(&NodePath::from_str("Control.Control").unwrap()));
     assert_eq!(shutter1.main_attribute(), None);

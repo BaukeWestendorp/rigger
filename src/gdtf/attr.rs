@@ -128,7 +128,7 @@ impl Attribute {
         &self.name
     }
 
-    pub fn pretty(&self) -> &str {
+    pub fn pretty_name(&self) -> &str {
         &self.pretty
     }
 
