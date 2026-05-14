@@ -1,4 +1,4 @@
-use crate::gdtf::{Name, Node, ResourceKey, bundle};
+use crate::gdtf::{Name, ResourceKey, bundle};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
@@ -48,12 +48,6 @@ impl Model {
 
     pub fn svg_front_offset(&self) -> glam::Vec2 {
         self.svg_front_offset
-    }
-}
-
-impl Node for Model {
-    fn name(&self) -> Option<Name> {
-        Some(self.name().clone())
     }
 }
 

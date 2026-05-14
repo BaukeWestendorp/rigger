@@ -7,6 +7,7 @@ use std::{
 use uuid::Uuid;
 
 use crate::gdtf::{
+    attr::AttributeName,
     bundle::FromBundle as _,
     proto::Protocols,
     resource::{ModelResource, ResourceKey, Resources, ThumbnailResource, WheelResource},
@@ -24,7 +25,7 @@ pub mod resource;
 pub mod rev;
 pub mod wheel;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Gdtf {
     version: Version,
 
@@ -38,26 +39,47 @@ pub struct Gdtf {
     thumbnail_offset: glam::I16Vec2,
     can_have_children: bool,
 
-    activation_groups: NodeContainer<attr::ActivationGroup>,
-    feature_groups: NodeContainer<attr::FeatureGroup>,
-    attributes: NodeContainer<attr::Attribute>,
+    activation_groups: Vec<attr::ActivationGroup>,
+    activation_groups_by_name: HashMap<Name, usize>,
 
-    wheels: NodeContainer<wheel::Wheel>,
+    feature_groups: Vec<attr::FeatureGroup>,
+    feature_groups_by_name: HashMap<Name, usize>,
 
-    emitters: NodeContainer<phys::Emitter>,
-    filters: NodeContainer<phys::Filter>,
+    attributes: Vec<attr::Attribute>,
+    attributes_by_name: HashMap<AttributeName, usize>,
+
+    wheels: Vec<wheel::Wheel>,
+    wheels_by_name: HashMap<Name, usize>,
+
+    emitters: Vec<phys::Emitter>,
+    emitters_by_name: HashMap<Name, usize>,
+
+    filters: Vec<phys::Filter>,
+    filters_by_name: HashMap<Name, usize>,
+
     color_space: Option<phys::ColorSpace>,
-    additional_color_spaces: NodeContainer<phys::ColorSpace>,
-    gamuts: NodeContainer<phys::Gamut>,
-    dmx_profiles: NodeContainer<phys::DmxProfile>,
+
+    additional_color_spaces: Vec<phys::ColorSpace>,
+    additional_color_spaces_by_name: HashMap<Name, usize>,
+
+    gamuts: Vec<phys::Gamut>,
+    gamuts_by_name: HashMap<Name, usize>,
+
+    dmx_profiles: Vec<phys::DmxProfile>,
+    dmx_profiles_by_name: HashMap<Name, usize>,
+
     cri_groups: Vec<phys::CriGroup>,
+
     properties: phys::Properties,
 
-    models: NodeContainer<model::Model>,
+    models: Vec<model::Model>,
+    models_by_name: HashMap<Name, usize>,
 
-    geometries: NodeContainer<geo::Geometry>,
+    geometries: Vec<geo::Geometry>,
+    geometries_by_name: HashMap<Name, usize>,
 
-    dmx_modes: NodeContainer<dmx::DmxMode>,
+    dmx_modes: Vec<dmx::DmxMode>,
+    dmx_modes_by_name: HashMap<Name, dmx::DmxMode>,
 
     revisions: Vec<rev::Revision>,
 
@@ -67,43 +89,6 @@ pub struct Gdtf {
 }
 
 impl Gdtf {
-    pub fn new(
-        name: impl Into<String>,
-        manufacturer: impl Into<String>,
-        description: impl Into<String>,
-    ) -> Self {
-        Self {
-            version: Version::new(1, 2),
-            name: name.into(),
-            short_name: None,
-            long_name: None,
-            manufacturer: manufacturer.into(),
-            description: description.into(),
-            fixture_type_id: FixtureTypeId::new(Uuid::new_v4()),
-            reference_fixture_type_id: None,
-            thumbnail_offset: glam::I16Vec2::new(0, 0),
-            can_have_children: false,
-            activation_groups: NodeContainer::new(),
-            feature_groups: NodeContainer::new(),
-            attributes: NodeContainer::new(),
-            wheels: NodeContainer::new(),
-            emitters: NodeContainer::new(),
-            filters: NodeContainer::new(),
-            color_space: None,
-            additional_color_spaces: NodeContainer::new(),
-            gamuts: NodeContainer::new(),
-            dmx_profiles: NodeContainer::new(),
-            cri_groups: Vec::new(),
-            properties: phys::Properties::new(),
-            models: NodeContainer::new(),
-            geometries: NodeContainer::new(),
-            dmx_modes: NodeContainer::new(),
-            revisions: Vec::new(),
-            protocols: Protocols::new(),
-            resources: Resources::new(),
-        }
-    }
-
     pub fn from_folder(path: impl Into<PathBuf>) -> Self {
         Self::from(&bundle::Bundle::from_folder(path))
     }
@@ -120,203 +105,159 @@ impl Gdtf {
         &self.version
     }
 
-    pub fn set_version(&mut self, version: Version) {
-        self.version = version;
-    }
-
     pub fn name(&self) -> &str {
         self.name.as_str()
-    }
-
-    pub fn set_name(&mut self, name: impl Into<String>) {
-        self.name = name.into();
     }
 
     pub fn short_name(&self) -> Option<&str> {
         self.short_name.as_deref()
     }
 
-    pub fn set_short_name(&mut self, short_name: Option<impl Into<String>>) {
-        self.short_name = short_name.map(|s| s.into());
-    }
-
     pub fn long_name(&self) -> Option<&str> {
         self.long_name.as_deref()
-    }
-
-    pub fn set_long_name(&mut self, long_name: Option<impl Into<String>>) {
-        self.long_name = long_name.map(|s| s.into());
     }
 
     pub fn manufacturer(&self) -> &str {
         &self.manufacturer
     }
 
-    pub fn set_manufacturer(&mut self, manufacturer: impl Into<String>) {
-        self.manufacturer = manufacturer.into();
-    }
-
     pub fn description(&self) -> &str {
         &self.description
-    }
-
-    pub fn set_description(&mut self, description: impl Into<String>) {
-        self.description = description.into();
     }
 
     pub fn fixture_type_id(&self) -> FixtureTypeId {
         self.fixture_type_id
     }
 
-    pub fn set_fixture_type_id(&mut self, fixture_type_id: impl Into<FixtureTypeId>) {
-        self.fixture_type_id = fixture_type_id.into();
-    }
-
     pub fn reference_fixture_type_id(&self) -> Option<FixtureTypeId> {
         self.reference_fixture_type_id
-    }
-
-    pub fn set_reference_fixture_type_id(
-        &mut self,
-        reference_fixture_type_id: Option<impl Into<FixtureTypeId>>,
-    ) {
-        self.reference_fixture_type_id = reference_fixture_type_id.map(Into::into);
     }
 
     pub fn thumbnail_offset(&self) -> glam::I16Vec2 {
         self.thumbnail_offset
     }
 
-    pub fn set_thumbnail_offset(&mut self, thumbnail_offset: glam::I16Vec2) {
-        self.thumbnail_offset = thumbnail_offset;
-    }
-
     pub fn can_have_children(&self) -> bool {
         self.can_have_children
     }
 
-    pub fn set_can_have_children(&mut self, can_have_children: bool) {
-        self.can_have_children = can_have_children;
-    }
-
-    pub fn activation_groups(&self) -> &NodeContainer<attr::ActivationGroup> {
+    pub fn activation_groups(&self) -> &[attr::ActivationGroup] {
         &self.activation_groups
     }
 
-    pub fn activation_groups_mut(&mut self) -> &mut NodeContainer<attr::ActivationGroup> {
-        &mut self.activation_groups
+    pub fn activation_group(&self, name: &Name) -> Option<&attr::ActivationGroup> {
+        let ix = self.activation_groups_by_name.get(name)?;
+        Some(&self.activation_groups[*ix])
     }
 
-    pub fn feature_groups(&self) -> &NodeContainer<attr::FeatureGroup> {
+    pub fn feature_groups(&self) -> &[attr::FeatureGroup] {
         &self.feature_groups
     }
 
-    pub fn feature_groups_mut(&mut self) -> &mut NodeContainer<attr::FeatureGroup> {
-        &mut self.feature_groups
+    pub fn feature_group(&self, name: &Name) -> Option<&attr::FeatureGroup> {
+        let ix = self.feature_groups_by_name.get(name)?;
+        Some(&self.feature_groups[*ix])
     }
 
-    pub fn attributes(&self) -> &NodeContainer<attr::Attribute> {
+    pub fn attributes(&self) -> &[attr::Attribute] {
         &self.attributes
     }
 
-    pub fn attributes_mut(&mut self) -> &mut NodeContainer<attr::Attribute> {
-        &mut self.attributes
+    pub fn attribute(&self, name: &AttributeName) -> Option<&attr::Attribute> {
+        let ix = self.attributes_by_name.get(name)?;
+        Some(&self.attributes[*ix])
     }
 
-    pub fn wheels(&self) -> &NodeContainer<wheel::Wheel> {
+    pub fn wheels(&self) -> &[wheel::Wheel] {
         &self.wheels
     }
 
-    pub fn wheels_mut(&mut self) -> &mut NodeContainer<wheel::Wheel> {
-        &mut self.wheels
+    pub fn wheel(&self, name: &Name) -> Option<&wheel::Wheel> {
+        let ix = self.wheels_by_name.get(name)?;
+        Some(&self.wheels[*ix])
     }
 
-    pub fn emitters(&self) -> &NodeContainer<phys::Emitter> {
+    pub fn emitters(&self) -> &[phys::Emitter] {
         &self.emitters
     }
 
-    pub fn emitters_mut(&mut self) -> &mut NodeContainer<phys::Emitter> {
-        &mut self.emitters
+    pub fn emitter(&self, name: &Name) -> Option<&phys::Emitter> {
+        let ix = self.emitters_by_name.get(name)?;
+        Some(&self.emitters[*ix])
     }
 
-    pub fn filters(&self) -> &NodeContainer<phys::Filter> {
+    pub fn filters(&self) -> &[phys::Filter] {
         &self.filters
     }
 
-    pub fn filters_mut(&mut self) -> &mut NodeContainer<phys::Filter> {
-        &mut self.filters
+    pub fn filter(&self, name: &Name) -> Option<&phys::Filter> {
+        let ix = self.filters_by_name.get(name)?;
+        Some(&self.filters[*ix])
     }
 
     pub fn color_space(&self) -> Option<&phys::ColorSpace> {
         self.color_space.as_ref()
     }
 
-    pub fn set_color_space(&mut self, color_space: Option<phys::ColorSpace>) {
-        self.color_space = color_space
-    }
-
-    pub fn additional_color_spaces(&self) -> &NodeContainer<phys::ColorSpace> {
+    pub fn additional_color_spaces(&self) -> &[phys::ColorSpace] {
         &self.additional_color_spaces
     }
 
-    pub fn additional_color_spaces_mut(&mut self) -> &mut NodeContainer<phys::ColorSpace> {
-        &mut self.additional_color_spaces
+    pub fn additional_color_space(&self, name: &Name) -> Option<&phys::ColorSpace> {
+        let ix = self.additional_color_spaces_by_name.get(name)?;
+        Some(&self.additional_color_spaces[*ix])
     }
 
-    pub fn gamuts(&self) -> &NodeContainer<phys::Gamut> {
+    pub fn gamuts(&self) -> &[phys::Gamut] {
         &self.gamuts
     }
 
-    pub fn gamuts_mut(&mut self) -> &mut NodeContainer<phys::Gamut> {
-        &mut self.gamuts
+    pub fn gamut(&self, name: &Name) -> Option<&phys::Gamut> {
+        let ix = self.gamuts_by_name.get(name)?;
+        Some(&self.gamuts[*ix])
     }
 
-    pub fn dmx_profiles(&self) -> &NodeContainer<phys::DmxProfile> {
+    pub fn dmx_profiles(&self) -> &[phys::DmxProfile] {
         &self.dmx_profiles
     }
 
-    pub fn dmx_profiles_mut(&mut self) -> &mut NodeContainer<phys::DmxProfile> {
-        &mut self.dmx_profiles
+    pub fn dmx_profile(&self, name: &Name) -> Option<&phys::DmxProfile> {
+        let ix = self.dmx_profiles_by_name.get(name)?;
+        Some(&self.dmx_profiles[*ix])
     }
 
     pub fn cri_groups(&self) -> &[phys::CriGroup] {
         &self.cri_groups
     }
 
-    pub fn cri_groups_mut(&mut self) -> &mut Vec<phys::CriGroup> {
-        &mut self.cri_groups
-    }
-
     pub fn properties(&self) -> &phys::Properties {
         &self.properties
     }
 
-    pub fn properties_mut(&mut self) -> &mut phys::Properties {
-        &mut self.properties
-    }
-
-    pub fn models(&self) -> &NodeContainer<model::Model> {
+    pub fn models(&self) -> &[model::Model] {
         &self.models
     }
 
-    pub fn models_mut(&mut self) -> &mut NodeContainer<model::Model> {
-        &mut self.models
+    pub fn model(&self, name: &Name) -> Option<&model::Model> {
+        let ix = self.models_by_name.get(name)?;
+        Some(&self.models[*ix])
     }
 
-    pub fn geometries(&self) -> &NodeContainer<geo::Geometry> {
+    pub fn geometries(&self) -> &[geo::Geometry] {
         &self.geometries
     }
 
-    pub fn geometries_mut(&mut self) -> &mut NodeContainer<geo::Geometry> {
-        &mut self.geometries
+    pub fn geometry(&self, name: &Name) -> Option<&geo::Geometry> {
+        let ix = self.geometries_by_name.get(name)?;
+        Some(&self.geometries[*ix])
     }
 
-    pub fn dmx_modes(&self) -> &NodeContainer<dmx::DmxMode> {
+    pub fn dmx_modes(&self) -> &[dmx::DmxMode] {
         &self.dmx_modes
     }
 
-    pub fn dmx_modes_mut(&mut self) -> &mut NodeContainer<dmx::DmxMode> {
-        &mut self.dmx_modes
+    pub fn dmx_mode(&self, name: &Name) -> Option<&dmx::DmxMode> {
+        self.dmx_modes_by_name.get(name)
     }
 
     pub fn revisions(&self) -> &[rev::Revision] {
@@ -338,128 +279,153 @@ impl Gdtf {
     pub fn resources(&self) -> &Resources {
         &self.resources
     }
-
-    pub fn resources_mut(&mut self) -> &mut Resources {
-        &mut self.resources
-    }
 }
 
 impl From<&bundle::Bundle> for Gdtf {
     fn from(bundle: &bundle::Bundle) -> Self {
+        let mut gdtf = Gdtf::default();
+
         let ft = &bundle.description().fixture_type;
 
-        let mut gdtf = Gdtf::new(&ft.name, &ft.manufacturer, &ft.description);
+        gdtf.version = bundle.description().data_version.as_str().into();
+        gdtf.name = ft.name.clone();
+        gdtf.short_name = ft.short_name.clone();
+        gdtf.long_name = ft.long_name.clone();
+        gdtf.manufacturer = ft.manufacturer.clone();
+        gdtf.description = ft.description.clone();
+        gdtf.fixture_type_id = FixtureTypeId::from_str(&ft.fixture_type_id).unwrap();
+        gdtf.can_have_children = ft.can_have_children == bundle::YesNo::Yes;
 
-        gdtf.set_version(bundle.description().data_version.as_str().into());
+        gdtf.reference_fixture_type_id =
+            ft.ref_ft.as_deref().and_then(|s| FixtureTypeId::from_str(s).ok());
 
-        gdtf.set_long_name(ft.long_name.as_ref());
-        gdtf.set_short_name(ft.short_name.as_ref());
-
-        gdtf.set_fixture_type_id(FixtureTypeId::from_str(&ft.fixture_type_id).unwrap());
-
-        let ref_ft = ft.ref_ft.as_deref().and_then(|s| FixtureTypeId::from_str(s).ok());
-        gdtf.set_reference_fixture_type_id(ref_ft);
-
-        gdtf.set_thumbnail_offset(glam::I16Vec2::new(
+        gdtf.thumbnail_offset = glam::I16Vec2::new(
             ft.thumbnail_offset_x.unwrap_or(0) as i16,
             ft.thumbnail_offset_y.unwrap_or(0) as i16,
-        ));
-
-        gdtf.set_can_have_children(ft.can_have_children == bundle::YesNo::Yes);
+        );
 
         if let Some(ags) = &ft.attribute_definitions.activation_groups {
             for ag in &ags.activation_groups {
-                gdtf.activation_groups_mut().add(attr::ActivationGroup::from_bundle(ag, bundle));
+                let ag = attr::ActivationGroup::from_bundle(ag, bundle);
+                let ix = gdtf.activation_groups.len();
+                gdtf.activation_groups_by_name.insert(ag.name().clone(), ix);
+                gdtf.activation_groups.push(ag);
             }
         }
 
         for fg in &ft.attribute_definitions.feature_groups.feature_groups {
-            gdtf.feature_groups_mut().add(attr::FeatureGroup::from_bundle(fg, bundle));
+            let fg = attr::FeatureGroup::from_bundle(fg, bundle);
+            let ix = gdtf.feature_groups.len();
+            gdtf.feature_groups_by_name.insert(fg.name().clone(), ix);
+            gdtf.feature_groups.push(fg);
         }
 
         for attr in &ft.attribute_definitions.attributes.attributes {
-            gdtf.attributes_mut().add(attr::Attribute::from_bundle(attr, bundle));
+            let attr = attr::Attribute::from_bundle(attr, bundle);
+            let ix = gdtf.attributes.len();
+            gdtf.attributes_by_name.insert(attr.name().clone(), ix);
+            gdtf.attributes.push(attr);
         }
 
-        if let Some(ws) = &ft.wheels {
-            for wheel in &ws.wheels {
-                gdtf.wheels_mut().add(wheel::Wheel::from_bundle(wheel, bundle));
+        if let Some(w) = &ft.wheels {
+            for wheel in &w.wheels {
+                let wheel = wheel::Wheel::from_bundle(wheel, bundle);
+                let ix = gdtf.wheels.len();
+                if let Some(name) = wheel.name() {
+                    gdtf.wheels_by_name.insert(name.clone(), ix);
+                }
+                gdtf.wheels.push(wheel);
             }
         };
 
         if let Some(pd) = &ft.physical_descriptions {
             if let Some(e) = &pd.emitters {
                 for emitter in &e.emitters {
-                    gdtf.emitters_mut().add(phys::Emitter::from_bundle(emitter, bundle));
+                    let emitter = phys::Emitter::from_bundle(emitter, bundle);
+                    let ix = gdtf.emitters.len();
+                    gdtf.emitters_by_name.insert(emitter.name().clone(), ix);
+                    gdtf.emitters.push(emitter);
                 }
             }
-        }
 
-        if let Some(pd) = &ft.physical_descriptions {
             if let Some(f) = &pd.filters {
-                for filter in &f.filters {
-                    gdtf.filters_mut().add(phys::Filter::from_bundle(filter, bundle));
+                for f in &f.filters {
+                    let f = phys::Filter::from_bundle(f, bundle);
+                    let ix = gdtf.filters.len();
+                    gdtf.filters_by_name.insert(f.name().clone(), ix);
+                    gdtf.filters.push(f);
                 }
             }
-        }
 
-        let color_space = ft.physical_descriptions.as_ref().and_then(|pd| {
-            pd.color_space.as_ref().map(|cs| phys::ColorSpace::from_bundle(cs, bundle))
-        });
-        gdtf.set_color_space(color_space);
+            if let Some(cs) = &pd.color_space {
+                gdtf.color_space = Some(phys::ColorSpace::from_bundle(cs, bundle));
+            }
 
-        if let Some(pd) = &ft.physical_descriptions {
             if let Some(acs) = &pd.additional_color_spaces {
                 for cs in &acs.color_spaces {
-                    gdtf.additional_color_spaces_mut()
-                        .add(phys::ColorSpace::from_bundle(cs, bundle));
+                    let cs = phys::ColorSpace::from_bundle(cs, bundle);
+                    let ix = gdtf.additional_color_spaces.len();
+                    if let Some(name) = cs.name() {
+                        gdtf.additional_color_spaces_by_name.insert(name.clone(), ix);
+                    }
+                    gdtf.additional_color_spaces.push(cs);
                 }
             }
-        }
 
-        if let Some(pd) = &ft.physical_descriptions {
             if let Some(gs) = &pd.gamuts {
                 for g in &gs.gamuts {
-                    gdtf.gamuts_mut().add(phys::Gamut::from_bundle(g, bundle));
+                    let g = phys::Gamut::from_bundle(g, bundle);
+                    let ix = gdtf.gamuts.len();
+                    if let Some(name) = g.name() {
+                        gdtf.gamuts_by_name.insert(name.clone(), ix);
+                    }
+                    gdtf.gamuts.push(g);
                 }
             }
-        }
 
-        if let Some(pd) = &ft.physical_descriptions {
             if let Some(dps) = &pd.dmx_profiles {
                 for dp in &dps.dmx_profiles {
-                    gdtf.dmx_profiles_mut().add(phys::DmxProfile::from_bundle(dp, bundle));
+                    let dp = phys::DmxProfile::from_bundle(dp, bundle);
+                    let ix = gdtf.dmx_profiles.len();
+                    if let Some(name) = dp.name() {
+                        gdtf.dmx_profiles_by_name.insert(name.clone(), ix);
+                    }
+                    gdtf.dmx_profiles.push(dp);
                 }
             }
-        }
 
-        if let Some(pd) = &ft.physical_descriptions {
             if let Some(cris) = &pd.cr_is {
                 for cri in &cris.cri_groups {
-                    gdtf.cri_groups_mut().push(phys::CriGroup::from_bundle(cri, bundle));
+                    let cri = phys::CriGroup::from_bundle(cri, bundle);
+                    gdtf.cri_groups.push(cri);
                 }
             }
-        }
 
-        let properties = ft
-            .physical_descriptions
-            .as_ref()
-            .and_then(|pd| pd.properties.as_ref().map(|p| phys::Properties::from_bundle(p, bundle)))
-            .unwrap_or_default();
-        *gdtf.properties_mut() = properties;
+            if let Some(p) = &pd.properties {
+                gdtf.properties = phys::Properties::from_bundle(p, bundle);
+            }
+        }
 
         if let Some(ms) = &ft.models {
             for model in &ms.models {
-                gdtf.models_mut().add(model::Model::from_bundle(model, bundle));
+                let m = model::Model::from_bundle(model, bundle);
+                let ix = gdtf.models.len();
+                gdtf.models_by_name.insert(m.name().clone(), ix);
+                gdtf.models.push(m);
             }
         };
 
-        for geometry in &ft.geometries.children {
-            gdtf.geometries_mut().add(geo::Geometry::from_bundle(geometry, bundle));
+        for g in &ft.geometries.children {
+            let g = geo::Geometry::from_bundle(g, bundle);
+            let ix = gdtf.geometries.len();
+            gdtf.geometries_by_name.insert(g.name().clone(), ix);
+            gdtf.geometries.push(g);
         }
 
-        for dmx_mode in &ft.dmx_modes.dmx_modes {
-            gdtf.dmx_modes_mut().add(dmx::DmxMode::from_bundle(dmx_mode, bundle));
+        for dm in &ft.dmx_modes.dmx_modes {
+            let dm = dmx::DmxMode::from_bundle(dm, bundle);
+            gdtf.dmx_modes_by_name.insert(dm.name().clone(), dm.clone());
+            gdtf.dmx_modes.push(dm);
         }
 
         if let Some(r) = &ft.revisions {
@@ -475,28 +441,29 @@ impl From<&bundle::Bundle> for Gdtf {
         for (path, bytes) in bundle.resources() {
             if let Some(first_component) = path.components().next() {
                 if first_component == Component::Normal("wheels".as_ref()) {
-                    gdtf.resources_mut()
-                        .add_wheel(ResourceKey::new(path), WheelResource::new(bytes.clone()));
+                    gdtf.resources
+                        .wheels
+                        .insert(ResourceKey::new(path), WheelResource::new(bytes.clone()));
                 } else if first_component == Component::Normal("models".as_ref()) {
                     let Some(resource) = ModelResource::new(path, bytes.clone()) else { continue };
-                    gdtf.resources_mut().add_model(ResourceKey::new(path), resource);
+                    gdtf.resources.models.insert(ResourceKey::new(path), resource);
                 }
             }
         }
 
         if let Some(thumbnail_png) = bundle.resources().get(Path::new("thumbnail.png")) {
-            gdtf.resources_mut().set_thumbnail_png(ThumbnailResource::new(thumbnail_png.clone()));
+            gdtf.resources.thumbnail_png = Some(ThumbnailResource::new(thumbnail_png.clone()));
         }
 
         if let Some(thumbnail_svg) = bundle.resources().get(Path::new("thumbnail.svg")) {
-            gdtf.resources_mut().set_thumbnail_svg(ThumbnailResource::new(thumbnail_svg.clone()));
+            gdtf.resources.thumbnail_svg = Some(ThumbnailResource::new(thumbnail_svg.clone()));
         }
 
         gdtf
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct FixtureTypeId(Uuid);
 
 impl FixtureTypeId {
@@ -540,6 +507,12 @@ impl Version {
 
     pub fn minor(&self) -> u32 {
         self.minor
+    }
+}
+
+impl Default for Version {
+    fn default() -> Self {
+        Self { major: 1, minor: 2 }
     }
 }
 
@@ -620,57 +593,4 @@ pub(crate) fn parse_optional_name(s: Option<&str>) -> Option<Name> {
         Some(s) => Some(Name::new(*s)),
         None => None,
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct NodeContainer<T: Node> {
-    items: Vec<T>,
-    index: HashMap<Name, usize>,
-}
-
-impl<T: Node> NodeContainer<T> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn add(&mut self, node: T) {
-        // FIXME: Return error if it already exists.
-
-        let index = self.items.len();
-
-        // We can only add this to the index if it has a name.
-        // If it does not have a name, it also cannot be found by name.
-        if let Some(name) = node.name() {
-            self.index.insert(name.to_owned(), index);
-        };
-
-        self.items.push(node);
-    }
-
-    pub fn get(&self, name: &Name) -> Option<&T> {
-        let ix = self.index.get(name)?;
-        self.items.get(*ix)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.items.is_empty()
-    }
-
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-
-    pub fn names(&self) -> impl Iterator<Item = &Name> {
-        self.index.keys()
-    }
-}
-
-impl<T: Node> Default for NodeContainer<T> {
-    fn default() -> Self {
-        Self { items: Vec::default(), index: HashMap::default() }
-    }
-}
-
-pub trait Node {
-    fn name(&self) -> Option<Name>;
 }

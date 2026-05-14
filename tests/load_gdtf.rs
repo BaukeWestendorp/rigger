@@ -71,113 +71,89 @@ fn test_gdtf_feature_groups() {
     let gdtf = load_complete_gdtf();
     assert_eq!(gdtf.feature_groups().len(), 7);
 
-    let position = gdtf.feature_groups().get(&Name::new("Position")).unwrap();
+    let position = gdtf.feature_group(&Name::new("Position")).unwrap();
     assert_eq!(position.name().as_str(), "Position");
     assert_eq!(position.pretty(), "Position");
     assert_eq!(position.features().len(), 1);
-    assert_eq!(position.features().get(&Name::new("PanTilt")).unwrap().name().as_str(), "PanTilt");
+    assert_eq!(position.feature(&Name::new("PanTilt")).unwrap().name().as_str(), "PanTilt");
 
-    let dimmer = gdtf.feature_groups().get(&Name::new("Dimmer")).unwrap();
+    let dimmer = gdtf.feature_group(&Name::new("Dimmer")).unwrap();
     assert_eq!(dimmer.name().as_str(), "Dimmer");
     assert_eq!(dimmer.pretty(), "Dimmer");
     assert_eq!(dimmer.features().len(), 1);
-    assert_eq!(dimmer.features().get(&Name::new("Dimmer")).unwrap().name().as_str(), "Dimmer");
+    assert_eq!(dimmer.feature(&Name::new("Dimmer")).unwrap().name().as_str(), "Dimmer");
 
-    let color = gdtf.feature_groups().get(&Name::new("Color")).unwrap();
+    let color = gdtf.feature_group(&Name::new("Color")).unwrap();
     assert_eq!(color.name().as_str(), "Color");
     assert_eq!(color.pretty(), "Color");
     assert_eq!(color.features().len(), 1);
-    assert_eq!(color.features().get(&Name::new("Color")).unwrap().name().as_str(), "Color");
+    assert_eq!(color.feature(&Name::new("Color")).unwrap().name().as_str(), "Color");
 
-    let gobo = gdtf.feature_groups().get(&Name::new("Gobo")).unwrap();
+    let gobo = gdtf.feature_group(&Name::new("Gobo")).unwrap();
     assert_eq!(gobo.name().as_str(), "Gobo");
     assert_eq!(gobo.pretty(), "Gobo");
     assert_eq!(gobo.features().len(), 1);
-    assert_eq!(gobo.features().get(&Name::new("Gobo")).unwrap().name().as_str(), "Gobo");
+    assert_eq!(gobo.feature(&Name::new("Gobo")).unwrap().name().as_str(), "Gobo");
 
-    let beam = gdtf.feature_groups().get(&Name::new("Beam")).unwrap();
+    let beam = gdtf.feature_group(&Name::new("Beam")).unwrap();
     assert_eq!(beam.name().as_str(), "Beam");
     assert_eq!(beam.pretty(), "Beam");
     assert_eq!(beam.features().len(), 1);
-    assert_eq!(beam.features().get(&Name::new("Beam")).unwrap().name().as_str(), "Beam");
+    assert_eq!(beam.feature(&Name::new("Beam")).unwrap().name().as_str(), "Beam");
 
-    let focus = gdtf.feature_groups().get(&Name::new("Focus")).unwrap();
+    let focus = gdtf.feature_group(&Name::new("Focus")).unwrap();
     assert_eq!(focus.name().as_str(), "Focus");
     assert_eq!(focus.pretty(), "Focus");
     assert_eq!(focus.features().len(), 1);
-    assert_eq!(focus.features().get(&Name::new("Focus")).unwrap().name().as_str(), "Focus");
+    assert_eq!(focus.feature(&Name::new("Focus")).unwrap().name().as_str(), "Focus");
 
-    let control = gdtf.feature_groups().get(&Name::new("Control")).unwrap();
+    let control = gdtf.feature_group(&Name::new("Control")).unwrap();
     assert_eq!(control.name().as_str(), "Control");
     assert_eq!(control.pretty(), "Control");
     assert_eq!(control.features().len(), 1);
-    assert_eq!(control.features().get(&Name::new("Control")).unwrap().name().as_str(), "Control");
+    assert_eq!(control.feature(&Name::new("Control")).unwrap().name().as_str(), "Control");
 }
 
 #[test]
 fn test_gdtf_activation_groups() {
     let gdtf = load_complete_gdtf();
     assert_eq!(gdtf.activation_groups().len(), 17);
+    assert_eq!(gdtf.activation_group(&Name::new("PanTilt")).unwrap(), &ActivationGroup::PanTilt);
+    assert_eq!(gdtf.activation_group(&Name::new("XYZ")).unwrap(), &ActivationGroup::Xyz);
+    assert_eq!(gdtf.activation_group(&Name::new("Rot_XYZ")).unwrap(), &ActivationGroup::RotXyz);
+    assert_eq!(gdtf.activation_group(&Name::new("Scale_XYZ")).unwrap(), &ActivationGroup::ScaleXyz);
+    assert_eq!(gdtf.activation_group(&Name::new("ColorRGB")).unwrap(), &ActivationGroup::ColorRgb);
+    assert_eq!(gdtf.activation_group(&Name::new("ColorHSB")).unwrap(), &ActivationGroup::ColorHsb);
+    assert_eq!(gdtf.activation_group(&Name::new("ColorCIE")).unwrap(), &ActivationGroup::ColorCie);
     assert_eq!(
-        gdtf.activation_groups().get(&Name::new("PanTilt")).unwrap(),
-        &ActivationGroup::PanTilt
-    );
-    assert_eq!(gdtf.activation_groups().get(&Name::new("XYZ")).unwrap(), &ActivationGroup::Xyz);
-    assert_eq!(
-        gdtf.activation_groups().get(&Name::new("Rot_XYZ")).unwrap(),
-        &ActivationGroup::RotXyz
-    );
-    assert_eq!(
-        gdtf.activation_groups().get(&Name::new("Scale_XYZ")).unwrap(),
-        &ActivationGroup::ScaleXyz
-    );
-    assert_eq!(
-        gdtf.activation_groups().get(&Name::new("ColorRGB")).unwrap(),
-        &ActivationGroup::ColorRgb
-    );
-    assert_eq!(
-        gdtf.activation_groups().get(&Name::new("ColorHSB")).unwrap(),
-        &ActivationGroup::ColorHsb
-    );
-    assert_eq!(
-        gdtf.activation_groups().get(&Name::new("ColorCIE")).unwrap(),
-        &ActivationGroup::ColorCie
-    );
-    assert_eq!(
-        gdtf.activation_groups().get(&Name::new("ColorIndirect")).unwrap(),
+        gdtf.activation_group(&Name::new("ColorIndirect")).unwrap(),
         &ActivationGroup::ColorIndirect
     );
-    assert_eq!(gdtf.activation_groups().get(&Name::new("Prism")).unwrap(), &ActivationGroup::Prism);
+    assert_eq!(gdtf.activation_group(&Name::new("Prism")).unwrap(), &ActivationGroup::Prism);
     assert_eq!(
-        gdtf.activation_groups().get(&Name::new("BeamShaper")).unwrap(),
+        gdtf.activation_group(&Name::new("BeamShaper")).unwrap(),
         &ActivationGroup::BeamShaper
     );
+    assert_eq!(gdtf.activation_group(&Name::new("Shaper")).unwrap(), &ActivationGroup::Shaper);
+    assert_eq!(gdtf.activation_group(&Name::new("Gobo1")).unwrap(), &ActivationGroup::Gobo(1));
     assert_eq!(
-        gdtf.activation_groups().get(&Name::new("Shaper")).unwrap(),
-        &ActivationGroup::Shaper
-    );
-    assert_eq!(
-        gdtf.activation_groups().get(&Name::new("Gobo1")).unwrap(),
-        &ActivationGroup::Gobo(1)
-    );
-    assert_eq!(
-        gdtf.activation_groups().get(&Name::new("Gobo1Pos")).unwrap(),
+        gdtf.activation_group(&Name::new("Gobo1Pos")).unwrap(),
         &ActivationGroup::GoboPos(1)
     );
     assert_eq!(
-        gdtf.activation_groups().get(&Name::new("AnimationWheel1")).unwrap(),
+        gdtf.activation_group(&Name::new("AnimationWheel1")).unwrap(),
         &ActivationGroup::AnimationWheel(1)
     );
     assert_eq!(
-        gdtf.activation_groups().get(&Name::new("AnimationWheel1Pos")).unwrap(),
+        gdtf.activation_group(&Name::new("AnimationWheel1Pos")).unwrap(),
         &ActivationGroup::AnimationWheelPos(1)
     );
     assert_eq!(
-        gdtf.activation_groups().get(&Name::new("AnimationSystem1")).unwrap(),
+        gdtf.activation_group(&Name::new("AnimationSystem1")).unwrap(),
         &ActivationGroup::AnimationSystem(1)
     );
     assert_eq!(
-        gdtf.activation_groups().get(&Name::new("AnimationSystem1Pos")).unwrap(),
+        gdtf.activation_group(&Name::new("AnimationSystem1Pos")).unwrap(),
         &ActivationGroup::AnimationSystemPos(1)
     );
 }
@@ -188,7 +164,7 @@ fn test_gdtf_attributes() {
 
     assert_eq!(gdtf.attributes().len(), 10);
 
-    let pan = gdtf.attributes().get(&Name::new("Pan")).unwrap();
+    let pan = gdtf.attribute(&AttributeName::Pan).unwrap();
     assert_eq!(pan.name(), &AttributeName::Pan);
     assert_eq!(pan.pretty(), "Pan");
     assert_eq!(pan.activation_group(), Some(&NodePath::from_str("PanTilt").unwrap()));
@@ -198,7 +174,7 @@ fn test_gdtf_attributes() {
     assert_eq!(pan.color(), None);
     assert!(pan.sub_physical_units().is_empty());
 
-    let tilt = gdtf.attributes().get(&Name::new("Tilt")).unwrap();
+    let tilt = gdtf.attribute(&AttributeName::Tilt).unwrap();
     assert_eq!(tilt.name(), &AttributeName::Tilt);
     assert_eq!(tilt.pretty(), "Tilt");
     assert_eq!(tilt.activation_group(), Some(&NodePath::from_str("PanTilt").unwrap()));
@@ -208,7 +184,7 @@ fn test_gdtf_attributes() {
     assert_eq!(tilt.color(), None);
     assert!(tilt.sub_physical_units().is_empty());
 
-    let dimmer = gdtf.attributes().get(&Name::new("Dimmer")).unwrap();
+    let dimmer = gdtf.attribute(&AttributeName::Dimmer).unwrap();
     assert_eq!(dimmer.name(), &AttributeName::Dimmer);
     assert_eq!(dimmer.pretty(), "Dimmer");
     assert_eq!(dimmer.activation_group(), None);
@@ -218,7 +194,7 @@ fn test_gdtf_attributes() {
     assert_eq!(dimmer.color(), None);
     assert!(dimmer.sub_physical_units().is_empty());
 
-    let color_r = gdtf.attributes().get(&Name::new("ColorAdd_R")).unwrap();
+    let color_r = gdtf.attribute(&AttributeName::ColorAddR).unwrap();
     assert_eq!(color_r.name(), &AttributeName::ColorAddR);
     assert_eq!(color_r.pretty(), "R");
     assert_eq!(color_r.activation_group(), None);
@@ -228,7 +204,7 @@ fn test_gdtf_attributes() {
     assert_color(color_r.color().unwrap(), CieColor::new(0.7347, 0.2653, 0.2126));
     assert!(color_r.sub_physical_units().is_empty());
 
-    let color_g = gdtf.attributes().get(&Name::new("ColorAdd_G")).unwrap();
+    let color_g = gdtf.attribute(&AttributeName::ColorAddG).unwrap();
     assert_eq!(color_g.name(), &AttributeName::ColorAddG);
     assert_eq!(color_g.pretty(), "G");
     assert_eq!(color_g.activation_group(), None);
@@ -238,7 +214,7 @@ fn test_gdtf_attributes() {
     assert_color(color_g.color().unwrap(), CieColor::new(0.1596, 0.8404, 0.7152));
     assert!(color_g.sub_physical_units().is_empty());
 
-    let color_b = gdtf.attributes().get(&Name::new("ColorAdd_B")).unwrap();
+    let color_b = gdtf.attribute(&AttributeName::ColorAddB).unwrap();
     assert_eq!(color_b.name(), &AttributeName::ColorAddB);
     assert_eq!(color_b.pretty(), "B");
     assert_eq!(color_b.activation_group(), None);
@@ -248,7 +224,7 @@ fn test_gdtf_attributes() {
     assert_color(color_b.color().unwrap(), CieColor::new(0.0366, 0.0001, 0.0722));
     assert!(color_b.sub_physical_units().is_empty());
 
-    let gobo1 = gdtf.attributes().get(&Name::new("Gobo1")).unwrap();
+    let gobo1 = gdtf.attribute(&AttributeName::Gobo(1)).unwrap();
     assert_eq!(gobo1.name(), &AttributeName::Gobo(1));
     assert_eq!(gobo1.pretty(), "Gobo 1");
     assert_eq!(gobo1.activation_group(), None);
@@ -258,7 +234,7 @@ fn test_gdtf_attributes() {
     assert_eq!(gobo1.color(), None);
     assert!(gobo1.sub_physical_units().is_empty());
 
-    let zoom = gdtf.attributes().get(&Name::new("Zoom")).unwrap();
+    let zoom = gdtf.attribute(&AttributeName::Zoom).unwrap();
     assert_eq!(zoom.name(), &AttributeName::Zoom);
     assert_eq!(zoom.pretty(), "Zoom");
     assert_eq!(zoom.activation_group(), None);
@@ -268,7 +244,7 @@ fn test_gdtf_attributes() {
     assert_eq!(zoom.color(), None);
     assert!(zoom.sub_physical_units().is_empty());
 
-    let focus1 = gdtf.attributes().get(&Name::new("Focus1")).unwrap();
+    let focus1 = gdtf.attribute(&AttributeName::Focus(1)).unwrap();
     assert_eq!(focus1.name(), &AttributeName::Focus(1));
     assert_eq!(focus1.pretty(), "Focus");
     assert_eq!(focus1.activation_group(), None);
@@ -278,7 +254,7 @@ fn test_gdtf_attributes() {
     assert_eq!(focus1.color(), None);
     assert!(focus1.sub_physical_units().is_empty());
 
-    let shutter1 = gdtf.attributes().get(&Name::new("Shutter1")).unwrap();
+    let shutter1 = gdtf.attribute(&AttributeName::Shutter(1)).unwrap();
     assert_eq!(shutter1.name(), &AttributeName::Shutter(1));
     assert_eq!(shutter1.pretty(), "Shutter");
     assert_eq!(shutter1.activation_group(), None);
@@ -309,30 +285,30 @@ fn assert_color(actual: CieColor, expected: CieColor) {
 fn test_gdtf_wheel_count() {
     let gdtf = load_complete_gdtf();
     assert_eq!(gdtf.wheels().len(), 2);
-    assert!(gdtf.wheels().get(&Name::new("ColorWheel")).is_some());
-    assert!(gdtf.wheels().get(&Name::new("GoboWheel")).is_some());
+    assert!(gdtf.wheel(&Name::new("ColorWheel")).is_some());
+    assert!(gdtf.wheel(&Name::new("GoboWheel")).is_some());
 }
 
 #[test]
 fn test_gdtf_color_wheel_slots() {
     let gdtf = load_complete_gdtf();
-    let wheel = gdtf.wheels().get(&Name::new("ColorWheel")).unwrap();
+    let wheel = gdtf.wheel(&Name::new("ColorWheel")).unwrap();
     assert_eq!(wheel.slots().len(), 4);
 
-    let open = wheel.slots().get(&Name::new("Open")).unwrap();
+    let open = wheel.slot(&Name::new("Open")).unwrap();
     assert_eq!(open.color(), &SlotColor::Cie(CieColor::new(0.3127, 0.3290, 100.0)));
     assert_eq!(open.content(), None);
     assert_eq!(open.file(), None);
 
-    let red = wheel.slots().get(&Name::new("Red")).unwrap();
+    let red = wheel.slot(&Name::new("Red")).unwrap();
     assert_eq!(red.color(), &SlotColor::Filter(NodePath::from_str("RedFilter").unwrap()));
     assert_eq!(red.content(), None);
 
-    let green = wheel.slots().get(&Name::new("Green")).unwrap();
+    let green = wheel.slot(&Name::new("Green")).unwrap();
     assert_eq!(green.color(), &SlotColor::Filter(NodePath::from_str("GreenFilter").unwrap()));
     assert_eq!(green.content(), None);
 
-    let blue = wheel.slots().get(&Name::new("Blue")).unwrap();
+    let blue = wheel.slot(&Name::new("Blue")).unwrap();
     assert_eq!(blue.color(), &SlotColor::Cie(CieColor::new(0.1500, 0.0600, 5.0)));
     assert_eq!(blue.content(), None);
 }
@@ -340,13 +316,13 @@ fn test_gdtf_color_wheel_slots() {
 #[test]
 fn test_gdtf_gobo_wheel_open_and_closed_slots() {
     let gdtf = load_complete_gdtf();
-    let wheel = gdtf.wheels().get(&Name::new("GoboWheel")).unwrap();
+    let wheel = gdtf.wheel(&Name::new("GoboWheel")).unwrap();
 
-    let open = wheel.slots().get(&Name::new("Open")).unwrap();
+    let open = wheel.slot(&Name::new("Open")).unwrap();
     assert_eq!(open.content(), None);
     assert_eq!(open.file(), None);
 
-    let closed = wheel.slots().get(&Name::new("Closed")).unwrap();
+    let closed = wheel.slot(&Name::new("Closed")).unwrap();
     assert_eq!(closed.content(), None);
     assert_eq!(closed.file(), None);
 }
@@ -354,9 +330,9 @@ fn test_gdtf_gobo_wheel_open_and_closed_slots() {
 #[test]
 fn test_gdtf_gobo_wheel_gobo_slot() {
     let gdtf = load_complete_gdtf();
-    let wheel = gdtf.wheels().get(&Name::new("GoboWheel")).unwrap();
+    let wheel = gdtf.wheel(&Name::new("GoboWheel")).unwrap();
 
-    let gobo = wheel.slots().get(&Name::new("Gobo1")).unwrap();
+    let gobo = wheel.slot(&Name::new("Gobo1")).unwrap();
     assert_eq!(gobo.file().map(|k| k.relative_path()), Some(Path::new("wheels/gobo1.png")));
     assert_eq!(gobo.content(), None);
 }
@@ -364,9 +340,9 @@ fn test_gdtf_gobo_wheel_gobo_slot() {
 #[test]
 fn test_gdtf_gobo_wheel_prism_slot() {
     let gdtf = load_complete_gdtf();
-    let wheel = gdtf.wheels().get(&Name::new("GoboWheel")).unwrap();
+    let wheel = gdtf.wheel(&Name::new("GoboWheel")).unwrap();
 
-    let prism = wheel.slots().get(&Name::new("Prism")).unwrap();
+    let prism = wheel.slot(&Name::new("Prism")).unwrap();
     let WheelSlotContent::Prism(facets) = prism.content().unwrap() else {
         panic!("expected Prism content");
     };
@@ -376,9 +352,9 @@ fn test_gdtf_gobo_wheel_prism_slot() {
 #[test]
 fn test_gdtf_gobo_wheel_animation_slot() {
     let gdtf = load_complete_gdtf();
-    let wheel = gdtf.wheels().get(&Name::new("GoboWheel")).unwrap();
+    let wheel = gdtf.wheel(&Name::new("GoboWheel")).unwrap();
 
-    let anim = wheel.slots().get(&Name::new("AnimWheel")).unwrap();
+    let anim = wheel.slot(&Name::new("AnimWheel")).unwrap();
     assert_eq!(anim.file().map(|k| k.relative_path()), Some(Path::new("wheels/animwheel.png")));
 
     let WheelSlotContent::AnimationSystem(sys) = anim.content().unwrap() else {
@@ -395,7 +371,7 @@ fn test_physical_descriptions_emitters() {
     let gdtf = load_complete_gdtf();
     assert_eq!(gdtf.emitters().len(), 4);
 
-    let white = gdtf.emitters().get(&Name::new("WhiteLight")).unwrap();
+    let white = gdtf.emitter(&Name::new("WhiteLight")).unwrap();
     assert_eq!(white.name().as_str(), "WhiteLight");
     assert_eq!(white.color(), EmitterColor::Color(CieColor::new(0.3127, 0.3290, 100.0)));
     assert_eq!(white.diode_part(), Some("LED-WW-3000K"));
@@ -417,18 +393,18 @@ fn test_physical_descriptions_emitters() {
     assert_eq!(m1.interpolation_to(), InterpolationTo::Step);
     assert_eq!(m1.points().len(), 0);
 
-    let red = gdtf.emitters().get(&Name::new("RedLED")).unwrap();
+    let red = gdtf.emitter(&Name::new("RedLED")).unwrap();
     assert_eq!(red.color(), EmitterColor::DominantWaveLength(630.0));
     assert_eq!(red.diode_part(), Some("LED-R-630nm"));
     assert_eq!(red.measurements()[0].interpolation_to(), InterpolationTo::Linear);
     assert_eq!(red.measurements()[0].points().len(), 3);
 
-    let green = gdtf.emitters().get(&Name::new("GreenLED")).unwrap();
+    let green = gdtf.emitter(&Name::new("GreenLED")).unwrap();
     assert_eq!(green.color(), EmitterColor::DominantWaveLength(525.0));
     assert_eq!(green.diode_part(), None);
     assert_eq!(green.measurements()[0].interpolation_to(), InterpolationTo::Log);
 
-    let blue = gdtf.emitters().get(&Name::new("BlueLED")).unwrap();
+    let blue = gdtf.emitter(&Name::new("BlueLED")).unwrap();
     assert_eq!(blue.color(), EmitterColor::DominantWaveLength(465.0));
 }
 
@@ -437,7 +413,7 @@ fn test_physical_descriptions_filters() {
     let gdtf = load_complete_gdtf();
     assert_eq!(gdtf.filters().len(), 2);
 
-    let red = gdtf.filters().get(&Name::new("RedFilter")).unwrap();
+    let red = gdtf.filter(&Name::new("RedFilter")).unwrap();
     assert_eq!(red.name().as_str(), "RedFilter");
     assert_color(red.color(), CieColor::new(0.7347, 0.2653, 25.0));
     assert_eq!(red.measurements().len(), 2);
@@ -455,7 +431,7 @@ fn test_physical_descriptions_filters() {
     assert_eq!(m1.transmission(), 0.12);
     assert_eq!(m1.points().len(), 0);
 
-    let green = gdtf.filters().get(&Name::new("GreenFilter")).unwrap();
+    let green = gdtf.filter(&Name::new("GreenFilter")).unwrap();
     assert_color(green.color(), CieColor::new(0.1596, 0.8404, 70.0));
     assert_eq!(green.measurements()[0].transmission(), 0.70);
 }
@@ -470,7 +446,7 @@ fn test_physical_descriptions_color_spaces() {
 
     assert_eq!(gdtf.additional_color_spaces().len(), 2);
 
-    let custom = gdtf.additional_color_spaces().get(&Name::new("CustomSpace")).unwrap();
+    let custom = gdtf.additional_color_space(&Name::new("CustomSpace")).unwrap();
     assert_eq!(custom.name().unwrap().as_str(), "CustomSpace");
     let ColorSpaceMode::Custom { red, green, blue, white_point } = custom.mode() else {
         panic!("expected Custom mode");
@@ -480,7 +456,7 @@ fn test_physical_descriptions_color_spaces() {
     assert_color(*blue, CieColor::new(0.1500, 0.0600, 0.0722));
     assert_color(*white_point, CieColor::new(0.3127, 0.3290, 1.0000));
 
-    let pro_photo = gdtf.additional_color_spaces().get(&Name::new("ProPhotoSpace")).unwrap();
+    let pro_photo = gdtf.additional_color_space(&Name::new("ProPhotoSpace")).unwrap();
     assert_eq!(pro_photo.mode(), &ColorSpaceMode::ProPhoto);
 }
 
@@ -489,7 +465,7 @@ fn test_physical_descriptions_gamuts() {
     let gdtf = load_complete_gdtf();
     assert_eq!(gdtf.gamuts().len(), 1);
 
-    let gamut = gdtf.gamuts().get(&Name::new("FullGamut")).unwrap();
+    let gamut = gdtf.gamut(&Name::new("FullGamut")).unwrap();
     assert_eq!(gamut.name().unwrap().as_str(), "FullGamut");
     assert_eq!(gamut.points().len(), 3);
     assert_color(gamut.points()[0], CieColor::new(0.7347, 0.2653, 0.2126));
@@ -502,7 +478,7 @@ fn test_physical_descriptions_dmx_profiles() {
     let gdtf = load_complete_gdtf();
     assert_eq!(gdtf.dmx_profiles().len(), 1);
 
-    let profile = gdtf.dmx_profiles().get(&Name::new("DimmerCurve")).unwrap();
+    let profile = gdtf.dmx_profile(&Name::new("DimmerCurve")).unwrap();
     assert_eq!(profile.name().unwrap().as_str(), "DimmerCurve");
     assert_eq!(profile.points().len(), 3);
 

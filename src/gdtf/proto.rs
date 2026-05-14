@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr as _};
 
-use crate::gdtf::{Name, bundle};
+use crate::gdtf::{NodePath, bundle};
 
 fn parse_hex_u16(s: &str) -> Option<u16> {
     let s = s.trim();
@@ -8,7 +8,7 @@ fn parse_hex_u16(s: &str) -> Option<u16> {
     u16::from_str_radix(s, 16).ok()
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Protocols {
     rdm: Option<Rdm>,
     art_net: Option<ArtNet>,
@@ -138,7 +138,7 @@ impl bundle::FromBundle for Rdm {
 #[derive(Debug, Clone, PartialEq)]
 pub struct DmxPersonality {
     value: Option<u16>,
-    dmx_mode: Option<Name>,
+    dmx_mode: Option<NodePath>,
 }
 
 impl DmxPersonality {
@@ -146,7 +146,7 @@ impl DmxPersonality {
         self.value
     }
 
-    pub fn dmx_mode(&self) -> Option<&Name> {
+    pub fn dmx_mode(&self) -> Option<&NodePath> {
         self.dmx_mode.as_ref()
     }
 }
@@ -156,7 +156,7 @@ impl bundle::FromBundle for DmxPersonality {
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         let value = source.value.as_ref().and_then(|id| parse_hex_u16(id));
-        Self { value, dmx_mode: source.dmx_mode.as_ref().map(Name::new) }
+        Self { value, dmx_mode: source.dmx_mode.as_ref().map(|s| NodePath::from_str(s).unwrap()) }
     }
 }
 

@@ -1,11 +1,12 @@
 use std::{
+    collections::HashMap,
     fmt,
     str::{self, FromStr as _},
 };
 
 use crate::{
     CieColor,
-    gdtf::{Name, Node, NodeContainer, NodePath, bundle},
+    gdtf::{Name, NodePath, bundle},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -30,18 +31,18 @@ pub enum ActivationGroup {
     Custom(String),
 }
 
+impl ActivationGroup {
+    pub fn name(&self) -> Name {
+        Name::new(self.to_string())
+    }
+}
+
 impl bundle::FromBundle for ActivationGroup {
     type Source = bundle::ActivationGroup;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         let name = Name::new(&source.name);
         ActivationGroup::from_str(name.as_str()).unwrap()
-    }
-}
-
-impl Node for ActivationGroup {
-    fn name(&self) -> Option<Name> {
-        Some(Name::new(self.to_string()))
     }
 }
 
@@ -153,12 +154,6 @@ impl Attribute {
 
     pub fn sub_physical_units(&self) -> &[SubPhysicalUnit] {
         &self.sub_physical_units
-    }
-}
-
-impl Node for Attribute {
-    fn name(&self) -> Option<Name> {
-        Some(Name::new(self.name.to_string()))
     }
 }
 
@@ -1493,12 +1488,6 @@ impl Feature {
     }
 }
 
-impl Node for Feature {
-    fn name(&self) -> Option<Name> {
-        Some(self.name.clone())
-    }
-}
-
 impl bundle::FromBundle for Feature {
     type Source = bundle::Feature;
 
@@ -1511,7 +1500,8 @@ impl bundle::FromBundle for Feature {
 pub struct FeatureGroup {
     name: Name,
     pretty: String,
-    features: NodeContainer<Feature>,
+    features: Vec<Feature>,
+    features_by_name: HashMap<Name, usize>,
 }
 
 impl FeatureGroup {
@@ -1523,14 +1513,13 @@ impl FeatureGroup {
         &self.pretty
     }
 
-    pub fn features(&self) -> &NodeContainer<Feature> {
+    pub fn features(&self) -> &[Feature] {
         &self.features
     }
-}
 
-impl Node for FeatureGroup {
-    fn name(&self) -> Option<Name> {
-        Some(self.name.clone())
+    pub fn feature(&self, name: &Name) -> Option<&Feature> {
+        let ix = self.features_by_name.get(name)?;
+        Some(&self.features[*ix])
     }
 }
 
@@ -1538,14 +1527,22 @@ impl bundle::FromBundle for FeatureGroup {
     type Source = bundle::FeatureGroup;
 
     fn from_bundle(feature_group: &Self::Source, bundle: &bundle::Bundle) -> Self {
-        let mut features = NodeContainer::default();
-        for f in &feature_group.features {
-            features.add(Feature::from_bundle(f, bundle));
+        let mut features = Vec::new();
+        let mut features_by_name = HashMap::default();
+        for (i, feature) in feature_group.features.iter().enumerate() {
+            let f = Feature::from_bundle(feature, bundle);
+            features_by_name.insert(f.name().clone(), i);
+            features.push(f);
         }
 
         let name = Name::new(&feature_group.name);
 
-        Self { pretty: feature_group.pretty.to_owned().unwrap_or(name.to_string()), name, features }
+        Self {
+            pretty: feature_group.pretty.to_owned().unwrap_or(name.to_string()),
+            name,
+            features,
+            features_by_name,
+        }
     }
 }
 

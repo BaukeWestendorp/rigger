@@ -27,19 +27,18 @@ pub use node::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Mvr {
-    pub(crate) version: Version,
-    pub(crate) provider: Provider,
-    pub(crate) path: Option<PathBuf>,
+    version: Version,
+    provider: Provider,
+    path: Option<PathBuf>,
 
-    pub(crate) resources: Resources,
+    resources: Resources,
 
-    pub(crate) symdefs: HashMap<NodeId<aux::Symdef>, Rc<aux::Symdef>>,
-    pub(crate) classes: HashMap<NodeId<aux::Class>, Rc<aux::Class>>,
-    pub(crate) mapping_definitions:
-        HashMap<NodeId<aux::MappingDefinition>, Rc<aux::MappingDefinition>>,
-    pub(crate) positions: HashMap<NodeId<aux::Position>, Rc<aux::Position>>,
+    symdefs: HashMap<NodeId<aux::Symdef>, Rc<aux::Symdef>>,
+    classes: HashMap<NodeId<aux::Class>, Rc<aux::Class>>,
+    mapping_definitions: HashMap<NodeId<aux::MappingDefinition>, Rc<aux::MappingDefinition>>,
+    positions: HashMap<NodeId<aux::Position>, Rc<aux::Position>>,
 
-    pub(crate) layers: HashMap<NodeId<layer::Layer>, Rc<layer::Layer>>,
+    layers: HashMap<NodeId<layer::Layer>, Rc<layer::Layer>>,
 }
 
 impl Mvr {

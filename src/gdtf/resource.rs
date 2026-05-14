@@ -6,36 +6,19 @@ use std::{
 
 #[derive(Clone, PartialEq, Default)]
 pub struct Resources {
-    models: HashMap<ResourceKey, ModelResource>,
-    wheels: HashMap<ResourceKey, WheelResource>,
-    thumbnail_png: Option<ThumbnailResource>,
-    thumbnail_svg: Option<ThumbnailResource>,
+    pub(in crate::gdtf) models: HashMap<ResourceKey, ModelResource>,
+    pub(in crate::gdtf) wheels: HashMap<ResourceKey, WheelResource>,
+    pub(in crate::gdtf) thumbnail_png: Option<ThumbnailResource>,
+    pub(in crate::gdtf) thumbnail_svg: Option<ThumbnailResource>,
 }
 
 impl Resources {
-    pub fn new() -> Self {
-        Self {
-            models: HashMap::new(),
-            wheels: HashMap::new(),
-            thumbnail_png: None,
-            thumbnail_svg: None,
-        }
-    }
-
     pub fn models(&self) -> impl Iterator<Item = (&ResourceKey, &ModelResource)> {
         self.models.iter()
     }
 
     pub fn model(&self, key: &ResourceKey) -> Option<&ModelResource> {
         self.models.get(key)
-    }
-
-    pub fn add_model(&mut self, key: ResourceKey, data: ModelResource) {
-        self.models.insert(key, data);
-    }
-
-    pub fn remove_model(&mut self, key: &ResourceKey) -> Option<ModelResource> {
-        self.models.remove(key)
     }
 
     pub fn wheels(&self) -> impl Iterator<Item = (&ResourceKey, &WheelResource)> {
@@ -46,36 +29,12 @@ impl Resources {
         self.wheels.get(key)
     }
 
-    pub fn add_wheel(&mut self, key: ResourceKey, data: WheelResource) {
-        self.wheels.insert(key, data);
-    }
-
-    pub fn remove_wheel(&mut self, key: &ResourceKey) -> Option<WheelResource> {
-        self.wheels.remove(key)
-    }
-
     pub fn thumbnail_png(&self) -> Option<&ThumbnailResource> {
         self.thumbnail_png.as_ref()
     }
 
-    pub fn set_thumbnail_png(&mut self, thumbnail: ThumbnailResource) {
-        self.thumbnail_png = Some(thumbnail);
-    }
-
-    pub fn remove_thumbnail_png(&mut self) -> Option<ThumbnailResource> {
-        self.thumbnail_png.take()
-    }
-
     pub fn thumbnail_svg(&self) -> Option<&ThumbnailResource> {
         self.thumbnail_svg.as_ref()
-    }
-
-    pub fn set_thumbnail_svg(&mut self, thumbnail: ThumbnailResource) {
-        self.thumbnail_svg = Some(thumbnail);
-    }
-
-    pub fn remove_thumbnail_svg(&mut self) -> Option<ThumbnailResource> {
-        self.thumbnail_svg.take()
     }
 }
 

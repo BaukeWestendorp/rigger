@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    gdtf::{Name, Node, NodePath, bundle},
+    gdtf::{Name, NodePath, bundle},
     util,
 };
 
@@ -21,6 +21,10 @@ pub struct DmxMode {
 }
 
 impl DmxMode {
+    pub fn name(&self) -> &Name {
+        &self.name
+    }
+
     pub fn description(&self) -> Option<&str> {
         self.description.as_deref()
     }
@@ -39,12 +43,6 @@ impl DmxMode {
 
     pub fn ft_macros(&self) -> &[FtMacro] {
         &self.ft_macros
-    }
-}
-
-impl Node for DmxMode {
-    fn name(&self) -> Option<Name> {
-        Some(self.name.clone())
     }
 }
 

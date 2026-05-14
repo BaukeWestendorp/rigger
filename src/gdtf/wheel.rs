@@ -1,15 +1,17 @@
-use std::str::FromStr as _;
+use std::{collections::HashMap, str::FromStr as _};
 
 use crate::{
     CieColor,
-    gdtf::{Name, Node, NodeContainer, NodePath, ResourceKey, bundle, parse_optional_name},
+    gdtf::{Name, NodePath, ResourceKey, bundle, parse_optional_name},
     util,
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Wheel {
     name: Option<Name>,
-    slots: NodeContainer<WheelSlot>,
+
+    slots: Vec<WheelSlot>,
+    slots_by_name: HashMap<Name, usize>,
 }
 
 impl Wheel {
@@ -17,14 +19,13 @@ impl Wheel {
         self.name.as_ref()
     }
 
-    pub fn slots(&self) -> &NodeContainer<WheelSlot> {
+    pub fn slots(&self) -> &[WheelSlot] {
         &self.slots
     }
-}
 
-impl Node for Wheel {
-    fn name(&self) -> Option<Name> {
-        self.name.clone()
+    pub fn slot(&self, name: &Name) -> Option<&WheelSlot> {
+        let ix = self.slots_by_name.get(name)?;
+        Some(&self.slots[*ix])
     }
 }
 
@@ -32,12 +33,15 @@ impl bundle::FromBundle for Wheel {
     type Source = bundle::Wheel;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
-        let mut slots = NodeContainer::default();
-        for slot in &source.slots {
-            slots.add(WheelSlot::from_bundle(slot, bundle));
+        let mut slots = Vec::new();
+        let mut slots_by_name = HashMap::new();
+        for (ix, slot) in source.slots.iter().enumerate() {
+            let slot = WheelSlot::from_bundle(slot, bundle);
+            slots_by_name.insert(slot.name().clone(), ix);
+            slots.push(slot);
         }
 
-        Self { name: parse_optional_name(source.name.as_deref()), slots }
+        Self { name: parse_optional_name(source.name.as_deref()), slots, slots_by_name }
     }
 }
 
@@ -64,12 +68,6 @@ impl WheelSlot {
 
     pub fn content(&self) -> Option<&WheelSlotContent> {
         self.content.as_ref()
-    }
-}
-
-impl Node for WheelSlot {
-    fn name(&self) -> Option<Name> {
-        Some(self.name.clone())
     }
 }
 

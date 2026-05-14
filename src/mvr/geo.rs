@@ -5,9 +5,9 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Geometry {
-    pub(crate) local_transform: glam::Affine3A,
+    pub(in crate::mvr) local_transform: glam::Affine3A,
 
-    pub(crate) model: ResourceKey,
+    pub(in crate::mvr) model: ResourceKey,
 }
 
 impl Geometry {

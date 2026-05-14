@@ -2,7 +2,7 @@ use std::str::FromStr as _;
 
 use crate::{
     CieColor,
-    gdtf::{Name, Node, bundle, parse_optional_name},
+    gdtf::{Name, bundle, parse_optional_name},
     util,
 };
 
@@ -29,12 +29,6 @@ impl Emitter {
 
     pub fn measurements(&self) -> &[EmitterMeasurement] {
         &self.measurements
-    }
-}
-
-impl Node for Emitter {
-    fn name(&self) -> Option<Name> {
-        Some(self.name.clone())
     }
 }
 
@@ -129,12 +123,6 @@ impl Filter {
 
     pub fn measurements(&self) -> &[FilterMeasurement] {
         &self.measurements
-    }
-}
-
-impl Node for Filter {
-    fn name(&self) -> Option<Name> {
-        Some(self.name.clone())
     }
 }
 
@@ -260,12 +248,6 @@ impl ColorSpace {
     }
 }
 
-impl Node for ColorSpace {
-    fn name(&self) -> Option<Name> {
-        self.name.clone()
-    }
-}
-
 impl bundle::FromBundle for ColorSpace {
     type Source = bundle::ColorSpace;
 
@@ -316,12 +298,6 @@ impl Gamut {
     }
 }
 
-impl Node for Gamut {
-    fn name(&self) -> Option<Name> {
-        self.name.clone()
-    }
-}
-
 impl bundle::FromBundle for Gamut {
     type Source = bundle::Gamut;
 
@@ -344,12 +320,6 @@ impl DmxProfile {
 
     pub fn points(&self) -> &[DmxPoint] {
         &self.points
-    }
-}
-
-impl Node for DmxProfile {
-    fn name(&self) -> Option<Name> {
-        self.name.clone()
     }
 }
 
@@ -452,16 +422,12 @@ impl bundle::FromBundle for Cri {
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Properties {
-    operating_temperature: Option<OperatingTemperature>,
-    weight: Option<f32>,
-    leg_height: Option<f32>,
+    pub(in crate::gdtf) operating_temperature: Option<OperatingTemperature>,
+    pub(in crate::gdtf) weight: Option<f32>,
+    pub(in crate::gdtf) leg_height: Option<f32>,
 }
 
 impl Properties {
-    pub fn new() -> Self {
-        Self { operating_temperature: None, weight: None, leg_height: None }
-    }
-
     pub fn operating_temperature(&self) -> Option<&OperatingTemperature> {
         self.operating_temperature.as_ref()
     }

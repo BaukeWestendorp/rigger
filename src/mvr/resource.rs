@@ -9,9 +9,9 @@ use crate::gdtf::Gdtf;
 
 #[derive(Clone, PartialEq)]
 pub struct Resources {
-    pub(crate) gdtfs: HashMap<ResourceKey, Rc<Gdtf>>,
-    pub(crate) models: HashMap<ResourceKey, Rc<ModelResource>>,
-    pub(crate) textures: HashMap<ResourceKey, Rc<TextureResource>>,
+    pub(in crate::mvr) gdtfs: HashMap<ResourceKey, Rc<Gdtf>>,
+    pub(in crate::mvr) models: HashMap<ResourceKey, Rc<ModelResource>>,
+    pub(in crate::mvr) textures: HashMap<ResourceKey, Rc<TextureResource>>,
 }
 
 impl Resources {
@@ -73,7 +73,7 @@ pub struct ModelResource {
 }
 
 impl ModelResource {
-    pub(crate) fn new(file_name: &Path, bytes: Vec<u8>) -> Self {
+    pub(in crate::mvr) fn new(file_name: &Path, bytes: Vec<u8>) -> Self {
         let kind =
             match file_name.extension().and_then(|s| s.to_str()).map(|s| s.to_ascii_lowercase()) {
                 Some(ext) if ext == "3ds" => ModelKind::ThreeDs,
@@ -130,7 +130,7 @@ pub struct TextureResource {
 }
 
 impl TextureResource {
-    pub(crate) fn new(file_name: &Path, bytes: Vec<u8>) -> Self {
+    pub(in crate::mvr) fn new(file_name: &Path, bytes: Vec<u8>) -> Self {
         let kind =
             match file_name.extension().and_then(|s| s.to_str()).map(|s| s.to_ascii_lowercase()) {
                 Some(ext) if ext == "png" => TextureKind::Png,
