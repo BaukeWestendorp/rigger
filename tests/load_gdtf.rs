@@ -170,7 +170,7 @@ fn test_gdtf_attributes() {
     assert_eq!(pan.activation_group(), Some(&NodePath::from_str("PanTilt").unwrap()));
     assert_eq!(pan.feature(), Some(&NodePath::from_str("Position.PanTilt").unwrap()));
     assert_eq!(pan.main_attribute(), None);
-    assert_eq!(pan.physical_unit(), Some(PhysicalUnit::Angle));
+    assert_eq!(pan.physical_unit(), PhysicalUnit::Angle);
     assert_eq!(pan.color(), None);
     assert!(pan.sub_physical_units().is_empty());
 
@@ -180,7 +180,7 @@ fn test_gdtf_attributes() {
     assert_eq!(tilt.activation_group(), Some(&NodePath::from_str("PanTilt").unwrap()));
     assert_eq!(tilt.feature(), Some(&NodePath::from_str("Position.PanTilt").unwrap()));
     assert_eq!(tilt.main_attribute(), None);
-    assert_eq!(tilt.physical_unit(), Some(PhysicalUnit::Angle));
+    assert_eq!(tilt.physical_unit(), PhysicalUnit::Angle);
     assert_eq!(tilt.color(), None);
     assert!(tilt.sub_physical_units().is_empty());
 
@@ -190,7 +190,7 @@ fn test_gdtf_attributes() {
     assert_eq!(dimmer.activation_group(), None);
     assert_eq!(dimmer.feature(), Some(&NodePath::from_str("Dimmer.Dimmer").unwrap()));
     assert_eq!(dimmer.main_attribute(), None);
-    assert_eq!(dimmer.physical_unit(), Some(PhysicalUnit::LuminousIntensity));
+    assert_eq!(dimmer.physical_unit(), PhysicalUnit::LuminousIntensity);
     assert_eq!(dimmer.color(), None);
     assert!(dimmer.sub_physical_units().is_empty());
 
@@ -200,7 +200,7 @@ fn test_gdtf_attributes() {
     assert_eq!(color_r.activation_group(), None);
     assert_eq!(color_r.feature(), Some(&NodePath::from_str("Color.Color").unwrap()));
     assert_eq!(color_r.main_attribute(), None);
-    assert_eq!(color_r.physical_unit(), Some(PhysicalUnit::ColorComponent));
+    assert_eq!(color_r.physical_unit(), PhysicalUnit::ColorComponent);
     assert_color(color_r.color().unwrap(), CieColor::new(0.7347, 0.2653, 0.2126));
     assert!(color_r.sub_physical_units().is_empty());
 
@@ -210,7 +210,7 @@ fn test_gdtf_attributes() {
     assert_eq!(color_g.activation_group(), None);
     assert_eq!(color_g.feature(), Some(&NodePath::from_str("Color.Color").unwrap()));
     assert_eq!(color_g.main_attribute(), None);
-    assert_eq!(color_g.physical_unit(), Some(PhysicalUnit::ColorComponent));
+    assert_eq!(color_g.physical_unit(), PhysicalUnit::ColorComponent);
     assert_color(color_g.color().unwrap(), CieColor::new(0.1596, 0.8404, 0.7152));
     assert!(color_g.sub_physical_units().is_empty());
 
@@ -220,7 +220,7 @@ fn test_gdtf_attributes() {
     assert_eq!(color_b.activation_group(), None);
     assert_eq!(color_b.feature(), Some(&NodePath::from_str("Color.Color").unwrap()));
     assert_eq!(color_b.main_attribute(), None);
-    assert_eq!(color_b.physical_unit(), Some(PhysicalUnit::ColorComponent));
+    assert_eq!(color_b.physical_unit(), PhysicalUnit::ColorComponent);
     assert_color(color_b.color().unwrap(), CieColor::new(0.0366, 0.0001, 0.0722));
     assert!(color_b.sub_physical_units().is_empty());
 
@@ -230,7 +230,7 @@ fn test_gdtf_attributes() {
     assert_eq!(gobo1.activation_group(), None);
     assert_eq!(gobo1.feature(), Some(&NodePath::from_str("Gobo.Gobo").unwrap()));
     assert_eq!(gobo1.main_attribute(), None);
-    assert_eq!(gobo1.physical_unit(), None);
+    assert_eq!(gobo1.physical_unit(), PhysicalUnit::None);
     assert_eq!(gobo1.color(), None);
     assert!(gobo1.sub_physical_units().is_empty());
 
@@ -240,7 +240,7 @@ fn test_gdtf_attributes() {
     assert_eq!(zoom.activation_group(), None);
     assert_eq!(zoom.feature(), Some(&NodePath::from_str("Beam.Beam").unwrap()));
     assert_eq!(zoom.main_attribute(), None);
-    assert_eq!(zoom.physical_unit(), Some(PhysicalUnit::Angle));
+    assert_eq!(zoom.physical_unit(), PhysicalUnit::Angle);
     assert_eq!(zoom.color(), None);
     assert!(zoom.sub_physical_units().is_empty());
 
@@ -250,7 +250,7 @@ fn test_gdtf_attributes() {
     assert_eq!(focus1.activation_group(), None);
     assert_eq!(focus1.feature(), Some(&NodePath::from_str("Focus.Focus").unwrap()));
     assert_eq!(focus1.main_attribute(), None);
-    assert_eq!(focus1.physical_unit(), Some(PhysicalUnit::Length));
+    assert_eq!(focus1.physical_unit(), PhysicalUnit::Length);
     assert_eq!(focus1.color(), None);
     assert!(focus1.sub_physical_units().is_empty());
 
@@ -260,19 +260,19 @@ fn test_gdtf_attributes() {
     assert_eq!(shutter1.activation_group(), None);
     assert_eq!(shutter1.feature(), Some(&NodePath::from_str("Control.Control").unwrap()));
     assert_eq!(shutter1.main_attribute(), None);
-    assert_eq!(shutter1.physical_unit(), Some(PhysicalUnit::Frequency));
+    assert_eq!(shutter1.physical_unit(), PhysicalUnit::Frequency);
     assert_eq!(shutter1.color(), None);
 
     let sub_units = shutter1.sub_physical_units();
     assert_eq!(sub_units.len(), 2);
 
     assert_eq!(sub_units[0].r#type(), SubPhysicalUnitType::Duration);
-    assert_eq!(sub_units[0].physical_unit(), Some(PhysicalUnit::Time));
+    assert_eq!(sub_units[0].physical_unit(), PhysicalUnit::Time);
     assert_eq!(sub_units[0].physical_from(), 0.0);
     assert_eq!(sub_units[0].physical_to(), 1.0);
 
     assert_eq!(sub_units[1].r#type(), SubPhysicalUnitType::DutyCycle);
-    assert_eq!(sub_units[1].physical_unit(), Some(PhysicalUnit::Percent));
+    assert_eq!(sub_units[1].physical_unit(), PhysicalUnit::Percent);
     assert_eq!(sub_units[1].physical_from(), 0.0);
     assert_eq!(sub_units[1].physical_to(), 100.0);
 }

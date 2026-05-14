@@ -117,7 +117,7 @@ pub struct Attribute {
     activation_group: Option<NodePath>,
     feature: Option<NodePath>,
     main_attribute: Option<NodePath>,
-    physical_unit: Option<PhysicalUnit>,
+    physical_unit: PhysicalUnit,
     color: Option<CieColor>,
 
     sub_physical_units: Vec<SubPhysicalUnit>,
@@ -144,7 +144,7 @@ impl Attribute {
         self.main_attribute.as_ref()
     }
 
-    pub fn physical_unit(&self) -> Option<PhysicalUnit> {
+    pub fn physical_unit(&self) -> PhysicalUnit {
         self.physical_unit
     }
 
@@ -1546,8 +1546,10 @@ impl bundle::FromBundle for FeatureGroup {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
 pub enum PhysicalUnit {
+    #[default]
+    None,
     Percent,
     Length,
     Mass,
@@ -1572,30 +1574,30 @@ pub enum PhysicalUnit {
 }
 
 impl PhysicalUnit {
-    pub fn from_bundle(physical_unit: &bundle::PhysicalUnit) -> Option<Self> {
+    pub fn from_bundle(physical_unit: &bundle::PhysicalUnit) -> Self {
         match physical_unit {
-            bundle::PhysicalUnit::None => None,
-            bundle::PhysicalUnit::Percent => Some(PhysicalUnit::Percent),
-            bundle::PhysicalUnit::Length => Some(PhysicalUnit::Length),
-            bundle::PhysicalUnit::Mass => Some(PhysicalUnit::Mass),
-            bundle::PhysicalUnit::Time => Some(PhysicalUnit::Time),
-            bundle::PhysicalUnit::Temperature => Some(PhysicalUnit::Temperature),
-            bundle::PhysicalUnit::LuminousIntensity => Some(PhysicalUnit::LuminousIntensity),
-            bundle::PhysicalUnit::Angle => Some(PhysicalUnit::Angle),
-            bundle::PhysicalUnit::Force => Some(PhysicalUnit::Force),
-            bundle::PhysicalUnit::Frequency => Some(PhysicalUnit::Frequency),
-            bundle::PhysicalUnit::Current => Some(PhysicalUnit::Current),
-            bundle::PhysicalUnit::Voltage => Some(PhysicalUnit::Voltage),
-            bundle::PhysicalUnit::Power => Some(PhysicalUnit::Power),
-            bundle::PhysicalUnit::Energy => Some(PhysicalUnit::Energy),
-            bundle::PhysicalUnit::Area => Some(PhysicalUnit::Area),
-            bundle::PhysicalUnit::Volume => Some(PhysicalUnit::Volume),
-            bundle::PhysicalUnit::Speed => Some(PhysicalUnit::Speed),
-            bundle::PhysicalUnit::Acceleration => Some(PhysicalUnit::Acceleration),
-            bundle::PhysicalUnit::AngularSpeed => Some(PhysicalUnit::AngularSpeed),
-            bundle::PhysicalUnit::AngularAccc => Some(PhysicalUnit::AngularAccc),
-            bundle::PhysicalUnit::WaveLength => Some(PhysicalUnit::WaveLength),
-            bundle::PhysicalUnit::ColorComponent => Some(PhysicalUnit::ColorComponent),
+            bundle::PhysicalUnit::None => PhysicalUnit::None,
+            bundle::PhysicalUnit::Percent => PhysicalUnit::Percent,
+            bundle::PhysicalUnit::Length => PhysicalUnit::Length,
+            bundle::PhysicalUnit::Mass => PhysicalUnit::Mass,
+            bundle::PhysicalUnit::Time => PhysicalUnit::Time,
+            bundle::PhysicalUnit::Temperature => PhysicalUnit::Temperature,
+            bundle::PhysicalUnit::LuminousIntensity => PhysicalUnit::LuminousIntensity,
+            bundle::PhysicalUnit::Angle => PhysicalUnit::Angle,
+            bundle::PhysicalUnit::Force => PhysicalUnit::Force,
+            bundle::PhysicalUnit::Frequency => PhysicalUnit::Frequency,
+            bundle::PhysicalUnit::Current => PhysicalUnit::Current,
+            bundle::PhysicalUnit::Voltage => PhysicalUnit::Voltage,
+            bundle::PhysicalUnit::Power => PhysicalUnit::Power,
+            bundle::PhysicalUnit::Energy => PhysicalUnit::Energy,
+            bundle::PhysicalUnit::Area => PhysicalUnit::Area,
+            bundle::PhysicalUnit::Volume => PhysicalUnit::Volume,
+            bundle::PhysicalUnit::Speed => PhysicalUnit::Speed,
+            bundle::PhysicalUnit::Acceleration => PhysicalUnit::Acceleration,
+            bundle::PhysicalUnit::AngularSpeed => PhysicalUnit::AngularSpeed,
+            bundle::PhysicalUnit::AngularAccc => PhysicalUnit::AngularAccc,
+            bundle::PhysicalUnit::WaveLength => PhysicalUnit::WaveLength,
+            bundle::PhysicalUnit::ColorComponent => PhysicalUnit::ColorComponent,
         }
     }
 }
@@ -1603,7 +1605,7 @@ impl PhysicalUnit {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SubPhysicalUnit {
     r#type: SubPhysicalUnitType,
-    physical_unit: Option<PhysicalUnit>,
+    physical_unit: PhysicalUnit,
     physical_from: f32,
     physical_to: f32,
 }
@@ -1613,7 +1615,7 @@ impl SubPhysicalUnit {
         self.r#type
     }
 
-    pub fn physical_unit(&self) -> Option<PhysicalUnit> {
+    pub fn physical_unit(&self) -> PhysicalUnit {
         self.physical_unit
     }
 
@@ -1632,7 +1634,11 @@ impl bundle::FromBundle for SubPhysicalUnit {
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         Self {
             r#type: SubPhysicalUnitType::from_bundle(&source.r#type, bundle),
-            physical_unit: source.physical_unit.as_ref().and_then(PhysicalUnit::from_bundle),
+            physical_unit: source
+                .physical_unit
+                .as_ref()
+                .map(PhysicalUnit::from_bundle)
+                .unwrap_or_default(),
             physical_from: source.physical_from.unwrap_or(0.0),
             physical_to: source.physical_to.unwrap_or(1.0),
         }
