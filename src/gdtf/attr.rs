@@ -1509,7 +1509,7 @@ impl FeatureGroup {
         &self.name
     }
 
-    pub fn pretty(&self) -> &str {
+    pub fn pretty_name(&self) -> &str {
         &self.pretty
     }
 
@@ -1568,7 +1568,7 @@ pub enum PhysicalUnit {
     Speed,
     Acceleration,
     AngularSpeed,
-    AngularAccc,
+    AngularAcceleration,
     WaveLength,
     ColorComponent,
 }
@@ -1595,9 +1595,38 @@ impl PhysicalUnit {
             PhysicalUnit::Speed => "m/s",
             PhysicalUnit::Acceleration => "m/s²",
             PhysicalUnit::AngularSpeed => "°/s",
-            PhysicalUnit::AngularAccc => "°/s²",
+            PhysicalUnit::AngularAcceleration => "°/s²",
             PhysicalUnit::WaveLength => "nm",
             PhysicalUnit::ColorComponent => "",
+        }
+    }
+}
+
+impl fmt::Display for PhysicalUnit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PhysicalUnit::None => write!(f, "No Unit"),
+            PhysicalUnit::Percent => write!(f, "Percent"),
+            PhysicalUnit::Length => write!(f, "Length"),
+            PhysicalUnit::Mass => write!(f, "Mass"),
+            PhysicalUnit::Time => write!(f, "Time"),
+            PhysicalUnit::Temperature => write!(f, "Temperature"),
+            PhysicalUnit::LuminousIntensity => write!(f, "Luminous Intensity"),
+            PhysicalUnit::Angle => write!(f, "Angle"),
+            PhysicalUnit::Force => write!(f, "Force"),
+            PhysicalUnit::Frequency => write!(f, "Frequency"),
+            PhysicalUnit::Current => write!(f, "Current"),
+            PhysicalUnit::Voltage => write!(f, "Voltage"),
+            PhysicalUnit::Power => write!(f, "Power"),
+            PhysicalUnit::Energy => write!(f, "Energy"),
+            PhysicalUnit::Area => write!(f, "Area"),
+            PhysicalUnit::Volume => write!(f, "Volumne"),
+            PhysicalUnit::Speed => write!(f, "Speed"),
+            PhysicalUnit::Acceleration => write!(f, "Acceleration"),
+            PhysicalUnit::AngularSpeed => write!(f, "Angular Speed"),
+            PhysicalUnit::AngularAcceleration => write!(f, "Angular Acceleration"),
+            PhysicalUnit::WaveLength => write!(f, "Wave Length"),
+            PhysicalUnit::ColorComponent => write!(f, "Color Component"),
         }
     }
 }
@@ -1624,7 +1653,7 @@ impl PhysicalUnit {
             bundle::PhysicalUnit::Speed => PhysicalUnit::Speed,
             bundle::PhysicalUnit::Acceleration => PhysicalUnit::Acceleration,
             bundle::PhysicalUnit::AngularSpeed => PhysicalUnit::AngularSpeed,
-            bundle::PhysicalUnit::AngularAccc => PhysicalUnit::AngularAccc,
+            bundle::PhysicalUnit::AngularAccc => PhysicalUnit::AngularAcceleration,
             bundle::PhysicalUnit::WaveLength => PhysicalUnit::WaveLength,
             bundle::PhysicalUnit::ColorComponent => PhysicalUnit::ColorComponent,
         }

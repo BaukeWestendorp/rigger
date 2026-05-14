@@ -73,43 +73,43 @@ fn test_gdtf_feature_groups() {
 
     let position = gdtf.feature_group(&Name::new("Position")).unwrap();
     assert_eq!(position.name().as_str(), "Position");
-    assert_eq!(position.pretty(), "Position");
+    assert_eq!(position.pretty_name(), "Position");
     assert_eq!(position.features().len(), 1);
     assert_eq!(position.feature(&Name::new("PanTilt")).unwrap().name().as_str(), "PanTilt");
 
     let dimmer = gdtf.feature_group(&Name::new("Dimmer")).unwrap();
     assert_eq!(dimmer.name().as_str(), "Dimmer");
-    assert_eq!(dimmer.pretty(), "Dimmer");
+    assert_eq!(dimmer.pretty_name(), "Dimmer");
     assert_eq!(dimmer.features().len(), 1);
     assert_eq!(dimmer.feature(&Name::new("Dimmer")).unwrap().name().as_str(), "Dimmer");
 
     let color = gdtf.feature_group(&Name::new("Color")).unwrap();
     assert_eq!(color.name().as_str(), "Color");
-    assert_eq!(color.pretty(), "Color");
+    assert_eq!(color.pretty_name(), "Color");
     assert_eq!(color.features().len(), 1);
     assert_eq!(color.feature(&Name::new("Color")).unwrap().name().as_str(), "Color");
 
     let gobo = gdtf.feature_group(&Name::new("Gobo")).unwrap();
     assert_eq!(gobo.name().as_str(), "Gobo");
-    assert_eq!(gobo.pretty(), "Gobo");
+    assert_eq!(gobo.pretty_name(), "Gobo");
     assert_eq!(gobo.features().len(), 1);
     assert_eq!(gobo.feature(&Name::new("Gobo")).unwrap().name().as_str(), "Gobo");
 
     let beam = gdtf.feature_group(&Name::new("Beam")).unwrap();
     assert_eq!(beam.name().as_str(), "Beam");
-    assert_eq!(beam.pretty(), "Beam");
+    assert_eq!(beam.pretty_name(), "Beam");
     assert_eq!(beam.features().len(), 1);
     assert_eq!(beam.feature(&Name::new("Beam")).unwrap().name().as_str(), "Beam");
 
     let focus = gdtf.feature_group(&Name::new("Focus")).unwrap();
     assert_eq!(focus.name().as_str(), "Focus");
-    assert_eq!(focus.pretty(), "Focus");
+    assert_eq!(focus.pretty_name(), "Focus");
     assert_eq!(focus.features().len(), 1);
     assert_eq!(focus.feature(&Name::new("Focus")).unwrap().name().as_str(), "Focus");
 
     let control = gdtf.feature_group(&Name::new("Control")).unwrap();
     assert_eq!(control.name().as_str(), "Control");
-    assert_eq!(control.pretty(), "Control");
+    assert_eq!(control.pretty_name(), "Control");
     assert_eq!(control.features().len(), 1);
     assert_eq!(control.feature(&Name::new("Control")).unwrap().name().as_str(), "Control");
 }
