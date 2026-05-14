@@ -1574,6 +1574,35 @@ pub enum PhysicalUnit {
 }
 
 impl PhysicalUnit {
+    pub fn suffix(&self) -> &str {
+        match self {
+            PhysicalUnit::None => "",
+            PhysicalUnit::Percent => "%",
+            PhysicalUnit::Length => "m",
+            PhysicalUnit::Mass => "kg",
+            PhysicalUnit::Time => "s",
+            PhysicalUnit::Temperature => "K",
+            PhysicalUnit::LuminousIntensity => "cd",
+            PhysicalUnit::Angle => "°",
+            PhysicalUnit::Force => "N",
+            PhysicalUnit::Frequency => "Hz",
+            PhysicalUnit::Current => "A",
+            PhysicalUnit::Voltage => "V",
+            PhysicalUnit::Power => "W",
+            PhysicalUnit::Energy => "J",
+            PhysicalUnit::Area => "m²",
+            PhysicalUnit::Volume => "m³",
+            PhysicalUnit::Speed => "m/s",
+            PhysicalUnit::Acceleration => "m/s²",
+            PhysicalUnit::AngularSpeed => "°/s",
+            PhysicalUnit::AngularAccc => "°/s²",
+            PhysicalUnit::WaveLength => "nm",
+            PhysicalUnit::ColorComponent => "",
+        }
+    }
+}
+
+impl PhysicalUnit {
     pub fn from_bundle(physical_unit: &bundle::PhysicalUnit) -> Self {
         match physical_unit {
             bundle::PhysicalUnit::None => PhysicalUnit::None,
