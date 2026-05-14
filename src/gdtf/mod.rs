@@ -252,6 +252,19 @@ impl Gdtf {
         Some(&self.geometries[*ix])
     }
 
+    pub fn geometry_node(&self, node_path: &NodePath) -> Option<&geo::Geometry> {
+        if node_path.is_empty() {
+            return None;
+        }
+
+        let mut current: Option<&geo::Geometry> = self.geometry(&node_path.parts()[0]);
+        for name in &node_path.parts()[1..] {
+            current = current?.child(name);
+        }
+
+        current
+    }
+
     pub fn dmx_modes(&self) -> &[dmx::DmxMode] {
         &self.dmx_modes
     }
@@ -532,10 +545,10 @@ impl From<&str> for Version {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct NodePath(Vec<String>);
+pub struct NodePath(Vec<Name>);
 
 impl NodePath {
-    pub fn parts(&self) -> &[String] {
+    pub fn parts(&self) -> &[Name] {
         &self.0
     }
 
@@ -544,7 +557,7 @@ impl NodePath {
     }
 
     pub fn to_dotted_string(&self) -> String {
-        self.0.join(".")
+        self.0.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(".")
     }
 }
 
@@ -561,7 +574,8 @@ impl str::FromStr for NodePath {
         if s.is_empty() {
             return Ok(NodePath(Vec::new()));
         }
-        let parts: Vec<String> = s.split('.').map(|part| part.trim().to_string()).collect();
+        let parts: Vec<Name> =
+            s.split('.').map(|part| Name::new(part.trim().to_string())).collect();
         Ok(NodePath(parts))
     }
 }

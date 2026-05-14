@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     CieColor,
-    gdtf::{Name, NodePath, bundle},
+    gdtf::{Gdtf, Name, NodePath, bundle},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -121,6 +121,7 @@ pub struct Attribute {
     color: Option<CieColor>,
 
     sub_physical_units: Vec<SubPhysicalUnit>,
+    sub_physical_units_by_type: HashMap<SubPhysicalUnitType, usize>,
 }
 
 impl Attribute {
@@ -132,16 +133,32 @@ impl Attribute {
         &self.pretty
     }
 
-    pub fn activation_group(&self) -> Option<&NodePath> {
+    pub fn activation_group_node(&self) -> Option<&NodePath> {
         self.activation_group.as_ref()
     }
 
-    pub fn feature(&self) -> Option<&NodePath> {
+    pub fn activation_group<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a ActivationGroup> {
+        let activation_group = self.activation_group_node()?.parts().get(0)?;
+        gdtf.activation_group(activation_group)
+    }
+
+    pub fn feature_node(&self) -> Option<&NodePath> {
         self.feature.as_ref()
     }
 
-    pub fn main_attribute(&self) -> Option<&NodePath> {
+    pub fn feature<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Feature> {
+        let feature_group = self.feature_node()?.parts().get(0)?;
+        let feature = self.feature_node()?.parts().get(1)?;
+        gdtf.feature_group(feature_group)?.feature(feature)
+    }
+
+    pub fn main_attribute_node(&self) -> Option<&NodePath> {
         self.main_attribute.as_ref()
+    }
+
+    pub fn main_attribute<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Attribute> {
+        let main_attribute = self.main_attribute_node()?.parts().get(0)?;
+        gdtf.attribute(&AttributeName::from_str(main_attribute.as_str()).unwrap())
     }
 
     pub fn physical_unit(&self) -> PhysicalUnit {
@@ -155,12 +172,28 @@ impl Attribute {
     pub fn sub_physical_units(&self) -> &[SubPhysicalUnit] {
         &self.sub_physical_units
     }
+
+    pub fn sub_physical_unit(&self, r#type: &SubPhysicalUnitType) -> Option<&SubPhysicalUnit> {
+        let ix = self.sub_physical_units_by_type.get(r#type)?;
+        Some(&self.sub_physical_units[*ix])
+    }
 }
 
 impl bundle::FromBundle for Attribute {
     type Source = bundle::Attribute;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+        let sub_physical_units: Vec<SubPhysicalUnit> = source
+            .sub_physical_units
+            .iter()
+            .map(|spu| SubPhysicalUnit::from_bundle(spu, bundle))
+            .collect();
+        let sub_physical_units_by_type = sub_physical_units
+            .iter()
+            .enumerate()
+            .map(|(ix, spu)| (spu.r#type().clone(), ix))
+            .collect();
+
         Self {
             name: AttributeName::from_str(&source.name).unwrap(),
             pretty: source.pretty.to_owned(),
@@ -179,11 +212,8 @@ impl bundle::FromBundle for Attribute {
                     .inspect_err(|_| eprintln!("Failed to parse color: {c}. Defaulting to white."))
                     .unwrap_or_default()
             }),
-            sub_physical_units: source
-                .sub_physical_units
-                .iter()
-                .map(|spu| SubPhysicalUnit::from_bundle(spu, bundle))
-                .collect(),
+            sub_physical_units,
+            sub_physical_units_by_type,
         }
     }
 }
@@ -1620,7 +1650,7 @@ impl fmt::Display for PhysicalUnit {
             PhysicalUnit::Power => write!(f, "Power"),
             PhysicalUnit::Energy => write!(f, "Energy"),
             PhysicalUnit::Area => write!(f, "Area"),
-            PhysicalUnit::Volume => write!(f, "Volumne"),
+            PhysicalUnit::Volume => write!(f, "Volume"),
             PhysicalUnit::Speed => write!(f, "Speed"),
             PhysicalUnit::Acceleration => write!(f, "Acceleration"),
             PhysicalUnit::AngularSpeed => write!(f, "Angular Speed"),
@@ -1716,6 +1746,23 @@ pub enum SubPhysicalUnitType {
     Value,
     RatioHorizontal,
     RatioVertical,
+}
+impl fmt::Display for SubPhysicalUnitType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SubPhysicalUnitType::PlacementOffset => write!(f, "PlacementOffset"),
+            SubPhysicalUnitType::Amplitude => write!(f, "Amplitude"),
+            SubPhysicalUnitType::AmplitudeMin => write!(f, "AmplitudeMin"),
+            SubPhysicalUnitType::AmplitudeMax => write!(f, "AmplitudeMax"),
+            SubPhysicalUnitType::Duration => write!(f, "Duration"),
+            SubPhysicalUnitType::DutyCycle => write!(f, "DutyCycle"),
+            SubPhysicalUnitType::TimeOffset => write!(f, "TimeOffset"),
+            SubPhysicalUnitType::MinimumOpening => write!(f, "MinimumOpening"),
+            SubPhysicalUnitType::Value => write!(f, "Value"),
+            SubPhysicalUnitType::RatioHorizontal => write!(f, "RatioHorizontal"),
+            SubPhysicalUnitType::RatioVertical => write!(f, "RatioVertical"),
+        }
+    }
 }
 
 impl bundle::FromBundle for SubPhysicalUnitType {

@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr as _};
 
 use crate::{
     CieColor,
-    gdtf::{Name, NodePath, ResourceKey, bundle, parse_optional_name},
+    gdtf::{Gdtf, Name, NodePath, ResourceKey, bundle, parse_optional_name, phys::Filter},
     util,
 };
 
@@ -130,6 +130,18 @@ impl bundle::FromBundle for WheelSlot {
 pub enum SlotColor {
     Filter(NodePath),
     Cie(CieColor),
+}
+
+impl SlotColor {
+    pub fn filter<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Filter> {
+        match self {
+            SlotColor::Filter(filter_node) => {
+                let filter_name = filter_node.parts().get(0)?;
+                gdtf.filter(filter_name)
+            }
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

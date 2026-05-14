@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr as _};
 
-use crate::gdtf::{NodePath, bundle};
+use crate::gdtf::{Gdtf, NodePath, bundle, dmx::DmxMode};
 
 fn parse_hex_u16(s: &str) -> Option<u16> {
     let s = s.trim();
@@ -146,8 +146,13 @@ impl DmxPersonality {
         self.value
     }
 
-    pub fn dmx_mode(&self) -> Option<&NodePath> {
+    pub fn dmx_mode_node(&self) -> Option<&NodePath> {
         self.dmx_mode.as_ref()
+    }
+
+    pub fn dmx_mode<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a DmxMode> {
+        let dmx_mode_name = self.dmx_mode_node()?.parts().get(0)?;
+        gdtf.dmx_mode(dmx_mode_name)
     }
 }
 
