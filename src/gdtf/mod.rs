@@ -243,26 +243,24 @@ impl Gdtf {
         Some(&self.models[*ix])
     }
 
-    pub fn geometries(&self) -> &[geo::Geometry] {
+    pub fn root_geometries(&self) -> &[geo::Geometry] {
         &self.geometries
     }
 
     pub fn geometry(&self, name: &Name) -> Option<&geo::Geometry> {
-        let ix = self.geometries_by_name.get(name)?;
-        Some(&self.geometries[*ix])
-    }
-
-    pub fn geometry_node(&self, node_path: &NodePath) -> Option<&geo::Geometry> {
-        if node_path.is_empty() {
-            return None;
+        fn find<'a>(geometries: &'a [geo::Geometry], name: &Name) -> Option<&'a geo::Geometry> {
+            for geometry in geometries {
+                if geometry.name() == name {
+                    return Some(geometry);
+                }
+                if let Some(found) = find(geometry.children(), name) {
+                    return Some(found);
+                }
+            }
+            None
         }
 
-        let mut current: Option<&geo::Geometry> = self.geometry(&node_path.parts()[0]);
-        for name in &node_path.parts()[1..] {
-            current = current?.child(name);
-        }
-
-        current
+        find(&self.geometries, name)
     }
 
     pub fn dmx_modes(&self) -> &[dmx::DmxMode] {
@@ -477,6 +475,7 @@ impl From<&bundle::Bundle> for Gdtf {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct FixtureTypeId(Uuid);
 
 impl FixtureTypeId {
@@ -545,6 +544,7 @@ impl From<&str> for Version {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct NodePath(Vec<Name>);
 
 impl NodePath {
@@ -581,6 +581,7 @@ impl str::FromStr for NodePath {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Name(String);
 
 impl Name {

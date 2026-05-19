@@ -52,26 +52,26 @@ impl Geometry {
         }
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         match self {
-            Geometry::Basic(v) => v.model_node(),
-            Geometry::Axis(v) => v.model_node(),
-            Geometry::FilterBeam(v) => v.model_node(),
-            Geometry::FilterColor(v) => v.model_node(),
-            Geometry::FilterGobo(v) => v.model_node(),
-            Geometry::FilterShaper(v) => v.model_node(),
-            Geometry::Beam(v) => v.model_node(),
-            Geometry::MediaServerLayer(v) => v.model_node(),
-            Geometry::MediaServerCamera(v) => v.model_node(),
-            Geometry::MediaServerMaster(v) => v.model_node(),
-            Geometry::Display(v) => v.model_node(),
-            Geometry::GeometryReference(v) => v.model_node(),
-            Geometry::Laser(v) => v.model_node(),
-            Geometry::WiringObject(v) => v.model_node(),
-            Geometry::Inventory(v) => v.model_node(),
-            Geometry::Structure(v) => v.model_node(),
-            Geometry::Support(v) => v.model_node(),
-            Geometry::Magnet(v) => v.model_node(),
+            Geometry::Basic(v) => v.model_name(),
+            Geometry::Axis(v) => v.model_name(),
+            Geometry::FilterBeam(v) => v.model_name(),
+            Geometry::FilterColor(v) => v.model_name(),
+            Geometry::FilterGobo(v) => v.model_name(),
+            Geometry::FilterShaper(v) => v.model_name(),
+            Geometry::Beam(v) => v.model_name(),
+            Geometry::MediaServerLayer(v) => v.model_name(),
+            Geometry::MediaServerCamera(v) => v.model_name(),
+            Geometry::MediaServerMaster(v) => v.model_name(),
+            Geometry::Display(v) => v.model_name(),
+            Geometry::GeometryReference(v) => v.model_name(),
+            Geometry::Laser(v) => v.model_name(),
+            Geometry::WiringObject(v) => v.model_name(),
+            Geometry::Inventory(v) => v.model_name(),
+            Geometry::Structure(v) => v.model_name(),
+            Geometry::Support(v) => v.model_name(),
+            Geometry::Magnet(v) => v.model_name(),
         }
     }
 
@@ -224,7 +224,7 @@ impl bundle::FromBundle for Geometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BasicGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -235,12 +235,12 @@ impl BasicGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -269,7 +269,7 @@ impl bundle::FromBundle for BasicGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,
@@ -280,7 +280,7 @@ impl bundle::FromBundle for BasicGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct AxisGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -291,12 +291,12 @@ impl AxisGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -325,7 +325,7 @@ impl bundle::FromBundle for AxisGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,
@@ -336,7 +336,7 @@ impl bundle::FromBundle for AxisGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FilterBeamGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -347,12 +347,12 @@ impl FilterBeamGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -381,7 +381,7 @@ impl bundle::FromBundle for FilterBeamGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,
@@ -392,7 +392,7 @@ impl bundle::FromBundle for FilterBeamGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FilterColorGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -403,12 +403,12 @@ impl FilterColorGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -437,7 +437,7 @@ impl bundle::FromBundle for FilterColorGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,
@@ -448,7 +448,7 @@ impl bundle::FromBundle for FilterColorGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FilterGoboGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -459,12 +459,12 @@ impl FilterGoboGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -493,7 +493,7 @@ impl bundle::FromBundle for FilterGoboGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,
@@ -504,7 +504,7 @@ impl bundle::FromBundle for FilterGoboGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct FilterShaperGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -515,12 +515,12 @@ impl FilterShaperGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -549,7 +549,7 @@ impl bundle::FromBundle for FilterShaperGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,
@@ -560,7 +560,7 @@ impl bundle::FromBundle for FilterShaperGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BeamGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     lamp_type: LampType,
     power_consumption: f32,
@@ -583,12 +583,12 @@ impl BeamGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -670,7 +670,7 @@ impl bundle::FromBundle for BeamGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             lamp_type: source
                 .lamp_type
@@ -749,7 +749,7 @@ impl bundle::FromBundle for BeamType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MediaServerLayerGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -760,12 +760,12 @@ impl MediaServerLayerGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -794,7 +794,7 @@ impl bundle::FromBundle for MediaServerLayerGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,
@@ -805,7 +805,7 @@ impl bundle::FromBundle for MediaServerLayerGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MediaServerCameraGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -816,12 +816,12 @@ impl MediaServerCameraGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -850,7 +850,7 @@ impl bundle::FromBundle for MediaServerCameraGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,
@@ -861,7 +861,7 @@ impl bundle::FromBundle for MediaServerCameraGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MediaServerMasterGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -872,12 +872,12 @@ impl MediaServerMasterGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -906,7 +906,7 @@ impl bundle::FromBundle for MediaServerMasterGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,
@@ -917,7 +917,7 @@ impl bundle::FromBundle for MediaServerMasterGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct DisplayGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     texture: String,
     children: Vec<Geometry>,
@@ -929,12 +929,12 @@ impl DisplayGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -967,7 +967,7 @@ impl bundle::FromBundle for DisplayGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             texture: source.texture.clone().unwrap(),
             children,
@@ -979,7 +979,7 @@ impl bundle::FromBundle for DisplayGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ReferenceGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     geometry: NodePath,
     children: Vec<Geometry>,
@@ -993,12 +993,12 @@ impl ReferenceGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -1040,7 +1040,7 @@ impl bundle::FromBundle for ReferenceGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             geometry: match &source.geometry {
                 Some(name) => NodePath::from_str(name).unwrap(),
@@ -1070,7 +1070,7 @@ impl bundle::FromBundle for ReferenceGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct LaserGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     color_type: LaserColorType,
     output_strength: f32,
@@ -1092,12 +1092,12 @@ impl LaserGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -1171,7 +1171,7 @@ impl bundle::FromBundle for LaserGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             color_type: match source.color_type {
                 bundle::LaserColorType::Rgb => LaserColorType::Rgb,
@@ -1218,7 +1218,7 @@ impl Protocol {
 #[derive(Debug, Clone, PartialEq)]
 pub struct WiringObjectGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     connector_type: Name,
     local_transform: glam::Affine3A,
     component_type: WiringComponentType,
@@ -1239,12 +1239,12 @@ impl WiringObjectGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -1360,7 +1360,7 @@ impl bundle::FromBundle for WiringObjectGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             connector_type: Name::new(source.connector_type.as_ref().unwrap()),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             component_type,
@@ -1488,18 +1488,18 @@ impl bundle::FromBundle for PinOrientation {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct PinPatch {
-    to_wiring_object: NodePath,
+    to_wiring_object: Name,
     from_pin: i32,
     to_pin: i32,
 }
 
 impl PinPatch {
-    pub fn to_wiring_object_node(&self) -> &NodePath {
+    pub fn to_wiring_object_name(&self) -> &Name {
         &self.to_wiring_object
     }
 
     pub fn to_wiring_object<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Geometry> {
-        gdtf.geometry_node(self.to_wiring_object_node())
+        gdtf.geometry(self.to_wiring_object_name())
     }
 
     pub fn from_pin(&self) -> i32 {
@@ -1516,7 +1516,7 @@ impl bundle::FromBundle for PinPatch {
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            to_wiring_object: source.to_wiring_object.as_ref().unwrap().parse().unwrap(),
+            to_wiring_object: Name::new(source.to_wiring_object.as_ref().unwrap()),
             from_pin: source.from_pin.unwrap(),
             to_pin: source.to_pin.unwrap(),
         }
@@ -1526,7 +1526,7 @@ impl bundle::FromBundle for PinPatch {
 #[derive(Debug, Clone, PartialEq)]
 pub struct InventoryGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     count: u32,
     children: Vec<Geometry>,
@@ -1538,12 +1538,12 @@ impl InventoryGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -1576,7 +1576,7 @@ impl bundle::FromBundle for InventoryGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             count: source.count.unwrap_or(0),
             children,
@@ -1588,9 +1588,9 @@ impl bundle::FromBundle for InventoryGeometry {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructureGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
-    linked_geometry: NodePath,
+    linked_geometry: Name,
     structure_type: StructureType,
     cross_section_type: CrossSectionType,
     children: Vec<Geometry>,
@@ -1602,12 +1602,12 @@ impl StructureGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -1615,12 +1615,12 @@ impl StructureGeometry {
         self.local_transform
     }
 
-    pub fn linked_geometry_node(&self) -> &NodePath {
+    pub fn linked_geometry_name(&self) -> &Name {
         &self.linked_geometry
     }
 
     pub fn linked_geometry<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Geometry> {
-        gdtf.geometry_node(self.linked_geometry_node())
+        gdtf.geometry(self.linked_geometry_name())
     }
 
     pub fn structure_type(&self) -> &StructureType {
@@ -1652,9 +1652,9 @@ impl bundle::FromBundle for StructureGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
-            linked_geometry: NodePath::from_str(source.linked_geometry.as_ref().unwrap()).unwrap(),
+            linked_geometry: Name::new(source.linked_geometry.as_ref().unwrap()),
             structure_type: source
                 .structure_type
                 .as_ref()
@@ -1705,7 +1705,7 @@ pub enum CrossSectionType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SupportGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     support_type: SupportType,
     capacity_force: glam::Vec3A,
@@ -1719,12 +1719,12 @@ impl SupportGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -1765,7 +1765,7 @@ impl bundle::FromBundle for SupportGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             support_type: match source.support_type {
                 bundle::SupportType::Rope => SupportType::Rope {
@@ -1810,7 +1810,7 @@ pub enum SupportType {
 #[derive(Debug, Clone, PartialEq)]
 pub struct MagnetGeometry {
     name: Name,
-    model: Option<NodePath>,
+    model: Option<Name>,
     local_transform: glam::Affine3A,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -1821,12 +1821,12 @@ impl MagnetGeometry {
         &self.name
     }
 
-    pub fn model_node(&self) -> Option<&NodePath> {
+    pub fn model_name(&self) -> Option<&Name> {
         self.model.as_ref()
     }
 
     pub fn model<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Model> {
-        let model_name = self.model_node()?.parts().get(0)?;
+        let model_name = self.model_name()?;
         gdtf.model(model_name)
     }
 
@@ -1855,7 +1855,7 @@ impl bundle::FromBundle for MagnetGeometry {
 
         Self {
             name: Name::new(&source.name),
-            model: source.model.as_ref().map(|s| NodePath::from_str(s).unwrap()),
+            model: source.model.as_ref().map(Name::new),
             local_transform: util::parse_affine3a_from_mat4(&source.position),
             children,
             children_by_name,

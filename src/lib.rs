@@ -8,6 +8,7 @@ use std::str::{self, FromStr as _};
 pub use glam;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct CieColor {
     x: f32,
     y: f32,
@@ -55,6 +56,7 @@ impl str::FromStr for CieColor {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct DmxAddress {
     absolute: u32,
     dmx_break: u8,

@@ -147,6 +147,8 @@ pub struct DmxChannel {
 
     logical_channels: Vec<LogicalChannel>,
     logical_channels_by_attribute: HashMap<Name, usize>,
+
+    name: Name,
 }
 
 impl DmxChannel {
@@ -167,7 +169,9 @@ impl DmxChannel {
             Some(initial_function_node) => {
                 let geometry_name = self.geometry_node().parts().get(0)?;
 
-                let dmx_channel_name = initial_function_node.parts().get(0)?;
+                let mut dmx_channel_split =
+                    initial_function_node.parts().get(0)?.as_str().split('_');
+                let dmx_channel_geometry = dmx_channel_split.next()?;
 
                 let logical_channel_name = initial_function_node.parts().get(1)?;
                 let logical_channel = self.logical_channel(logical_channel_name)?;
@@ -175,7 +179,7 @@ impl DmxChannel {
                 let channel_function_name = initial_function_node.parts().get(2)?;
                 let channel_function = logical_channel.channel_function(channel_function_name)?;
 
-                if dmx_channel_name != geometry_name {
+                if dmx_channel_geometry != geometry_name.as_str() {
                     return None;
                 }
 
@@ -210,6 +214,10 @@ impl DmxChannel {
         let ix = self.logical_channels_by_attribute.get(name)?;
         Some(&self.logical_channels[*ix])
     }
+
+    pub fn name(&self) -> &Name {
+        &self.name
+    }
 }
 
 impl bundle::FromBundle for DmxChannel {
@@ -229,6 +237,18 @@ impl bundle::FromBundle for DmxChannel {
             })
             .collect();
 
+        let geometry = NodePath::from_str(&source.geometry).unwrap();
+
+        let name = {
+            let geometry_name = geometry.parts().get(0).expect("Missing geometry name").clone();
+            let attribute_name = logical_channels
+                .first()
+                .and_then(|lc| lc.attribute_node().parts().get(0))
+                .expect("Missing attribute name")
+                .clone();
+            Name::new(&format!("{}_{}", geometry_name, attribute_name))
+        };
+
         Self {
             dmx_break: DmxBreak::from_str(&source.dmx_break).unwrap(),
             offset: DmxOffset::from_str(&source.offset).unwrap(),
@@ -241,9 +261,11 @@ impl bundle::FromBundle for DmxChannel {
             } else {
                 Some(DmxValue::from_str(&source.highlight).unwrap())
             },
-            geometry: NodePath::from_str(&source.geometry).unwrap(),
+            geometry,
             logical_channels,
             logical_channels_by_attribute,
+
+            name,
         }
     }
 }
@@ -585,7 +607,7 @@ impl bundle::FromBundle for ChannelFunction {
                 other => Some(other.to_string()),
             },
             dmx_from: DmxValue::from_str(&source.dmx_from).unwrap(),
-            default: DmxValue::from_str(&source.dmx_from).unwrap(),
+            default: DmxValue::from_str(&source.default).unwrap(),
             physical_from: source.physical_from.unwrap_or(0.0),
             physical_to: source.physical_to.unwrap_or(1.0),
             real_fade: util::parse_possibly_negative_duration(source.real_fade.unwrap_or(0.0)),
@@ -785,7 +807,7 @@ impl Relation {
 
     pub fn master<'s>(&self, dmx_mode: &'s DmxMode) -> Option<&'s DmxChannel> {
         let name = self.master.parts().get(0)?;
-        dmx_mode.dmx_channels().iter().find(|c| c.geometry_node().parts().get(0) == Some(name))
+        dmx_mode.dmx_channels().iter().find(|c| c.name() == name)
     }
 
     pub fn follower<'s>(
@@ -794,10 +816,7 @@ impl Relation {
     ) -> Option<(&'s DmxChannel, &'s LogicalChannel, &'s ChannelFunction)> {
         let parts = self.follower.parts();
         let channel_name = parts.get(0)?;
-        let channel = dmx_mode
-            .dmx_channels()
-            .iter()
-            .find(|c| c.geometry_node().parts().get(0) == Some(channel_name))?;
+        let channel = dmx_mode.dmx_channels().iter().find(|c| c.name() == channel_name)?;
 
         let logical_name = parts.get(1)?;
         let logical = channel.logical_channel(logical_name)?;
@@ -1011,6 +1030,24 @@ impl DmxValue {
     pub fn from_u32(value: u32, shifting: bool) -> Self {
         DmxValue { value, bytes: 4, shifting }
     }
+
+    pub fn value(&self) -> u32 {
+        self.value
+    }
+
+    pub fn bytes(&self) -> u8 {
+        self.bytes
+    }
+
+    pub fn shifting(&self) -> bool {
+        self.shifting
+    }
+
+    pub fn to_normalized(&self) -> f64 {
+        let bytes = self.bytes as u32;
+        let max_value = (1u64 << (bytes * 8)) - 1;
+        self.value as f64 / max_value as f64
+    }
 }
 
 impl Default for DmxValue {
@@ -1023,45 +1060,32 @@ impl str::FromStr for DmxValue {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.trim();
+        let (value_str, bytes_str) = match s.split_once('/') {
+            Some(v) => v,
+            None => todo!("handle error"),
+        };
 
-        let (value_s, rest) = s.split_once('/').ok_or_else(|| {
-            todo!();
-        })?;
+        let (bytes_str, shifting) = match bytes_str.strip_suffix('s') {
+            Some(stripped) => (stripped, true),
+            None => (bytes_str, false),
+        };
 
-        let value = match value_s.trim().parse::<u32>() {
+        let value = match value_str.parse::<u32>() {
             Ok(v) => v,
-            Err(_) => match value_s.trim().parse::<i64>() {
-                Ok(v) => {
-                    if v < 0 {
-                        eprintln!("DmxValue contained negative value. Clamping.");
-                        0
-                    } else if v > u32::MAX as i64 {
-                        eprintln!("DmxValue exceeded u32::MAX. Clamping.");
-                        u32::MAX
-                    } else {
-                        v as u32
-                    }
-                }
-                Err(_) => todo!(),
-            },
+            Err(_) => todo!("handle error"),
+        };
+        let bytes = match bytes_str.parse::<u8>() {
+            Ok(b) => b.max(1),
+            Err(_) => todo!("handle error"),
         };
 
-        let rest = rest.trim();
-        let (bytes_s, shifting) = if let Some(bytes_s) = rest.strip_suffix('s') {
-            (bytes_s, true)
-        } else {
-            (rest, false)
-        };
-
-        let bytes_u32: u32 = bytes_s.parse().map_err(|_| {
-            todo!();
-        })?;
-        if bytes_u32 == 0 || bytes_u32 > u8::MAX as u32 {
-            todo!();
+        match bytes {
+            1 => Ok(DmxValue::from_u8(value as u8, shifting)),
+            2 => Ok(DmxValue::from_u16(value as u16, shifting)),
+            3 => Ok(DmxValue::from_u24(value as u32, shifting)),
+            4 => Ok(DmxValue::from_u32(value as u32, shifting)),
+            _ => todo!(),
         }
-
-        Ok(DmxValue { value, bytes: bytes_u32 as u8, shifting })
     }
 }
 
@@ -1077,7 +1101,7 @@ impl fmt::Display for DmxValue {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DmxOffset {
-    Offsets(Vec<u32>),
+    Physical(Vec<u32>),
     Virtual,
 }
 
@@ -1100,6 +1124,6 @@ impl str::FromStr for DmxOffset {
             values.push(v);
         }
 
-        Ok(DmxOffset::Offsets(values))
+        Ok(DmxOffset::Physical(values))
     }
 }

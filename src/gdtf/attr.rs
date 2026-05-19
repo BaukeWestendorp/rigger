@@ -10,6 +10,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum ActivationGroup {
     PanTilt,
     Xyz,
@@ -111,6 +112,7 @@ impl str::FromStr for ActivationGroup {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Attribute {
     name: AttributeName,
     pretty: String,
@@ -1507,7 +1509,43 @@ impl str::FromStr for AttributeName {
     }
 }
 
+impl serde::Serialize for AttributeName {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for AttributeName {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct AttributeNameVisitor;
+
+        impl<'de> serde::de::Visitor<'de> for AttributeNameVisitor {
+            type Value = AttributeName;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a string representing an AttributeName")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<AttributeName, E>
+            where
+                E: serde::de::Error,
+            {
+                value.parse().map_err(|_| E::custom(format!("invalid AttributeName: {}", value)))
+            }
+        }
+
+        deserializer.deserialize_str(AttributeNameVisitor)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Feature {
     name: Name,
 }
@@ -1527,6 +1565,7 @@ impl bundle::FromBundle for Feature {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct FeatureGroup {
     name: Name,
     pretty: String,
@@ -1577,6 +1616,7 @@ impl bundle::FromBundle for FeatureGroup {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum PhysicalUnit {
     #[default]
     None,
@@ -1691,6 +1731,7 @@ impl PhysicalUnit {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct SubPhysicalUnit {
     r#type: SubPhysicalUnitType,
     physical_unit: PhysicalUnit,
@@ -1734,6 +1775,7 @@ impl bundle::FromBundle for SubPhysicalUnit {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum SubPhysicalUnitType {
     PlacementOffset,
     Amplitude,
@@ -1747,6 +1789,7 @@ pub enum SubPhysicalUnitType {
     RatioHorizontal,
     RatioVertical,
 }
+
 impl fmt::Display for SubPhysicalUnitType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
