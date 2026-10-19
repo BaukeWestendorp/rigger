@@ -6,22 +6,16 @@ A Rust library for reading [MVR](https://www.gdtf.eu/mvr/prologue/introduction/)
 
 ## Overview
 
-*MVR* (My Virtual Rig) and *GDTF* (General Device Type Format) are open standards used to describe lighting rigs and fixtures in entertainment production. While MVR files contain scene and rig data, GDTF files define the specific characteristics and geometry of individual fixtures.
+_MVR_ (My Virtual Rig) and _GDTF_ (General Device Type Format) are open standards used to describe lighting rigs and fixtures in entertainment production. While MVR files contain scene and rig data, GDTF files define the specific characteristics and geometry of individual fixtures.
 
 Because these formats support thousands of devices across multiple manufacturers, their data structures are large and rely heavily on optional fields. This means it's non-trivial to read commonly used data like the channel count of a fixture's DMX mode. This often makes directly reading the structures verbose and difficult to manage.
 
 `rigger` abstracts this complexity by providing lookup tables and high-level helper functions. The goal is to let you extract the data you actually need without navigating the deep, nested specifications of the underlying XML. Though, if you want to manually find anything defined in the description files, you can.
 
-## Preview
-
-Preview of the `mvr_viewer` example that uses Raylib to preview the contents of an MVR file. Currently it does not show the fixtures yet, as reading of the GDTF geometry tree is not yet implemented.
-
-To run the example use `cargo run --example mvr_viewer <PATH_TO_MVR>`.
-
-![Preview of the MVR Viewer example](mvr_example.png)
-
 ## Progress
+
 ### MVR
+
 - [x] Load bundle from folder
 - [x] Load bundle from `.mvr` archive
 - [x] Load bundle from bytes.
@@ -30,7 +24,9 @@ To run the example use `cargo run --example mvr_viewer <PATH_TO_MVR>`.
 - [ ] Add tests for invalid or malformed inputs
 - [ ] Local to world transforms
 - [ ] Write documentation
+
 ### GDTF
+
 - [x] Load bundle from folder
 - [x] Load bundle from `.gdtf` archive
 - [x] Load bundle from bytes
@@ -40,6 +36,7 @@ To run the example use `cargo run --example mvr_viewer <PATH_TO_MVR>`.
 - [ ] Write documentation
 
 ## Contributing
+
 Contributions are welcome. If you find a file that this library fails to parse correctly or want to request a feature or suggest a change, feel free to open an issue!
 
 ## License
