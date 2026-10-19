@@ -1,4 +1,7 @@
-use crate::gdtf::{Name, ResourceKey, bundle};
+use crate::{
+    gdtf::{Name, ResourceKey, bundle},
+    math::Vec2,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Model {
@@ -8,9 +11,9 @@ pub struct Model {
     height: f32,
     primitive_type: PrimitiveType,
     resources: Vec<ResourceKey>,
-    svg_offset: glam::Vec2,
-    svg_side_offset: glam::Vec2,
-    svg_front_offset: glam::Vec2,
+    svg_offset: Vec2,
+    svg_side_offset: Vec2,
+    svg_front_offset: Vec2,
 }
 
 impl Model {
@@ -38,20 +41,20 @@ impl Model {
         &self.resources
     }
 
-    pub fn svg_offset(&self) -> glam::Vec2 {
+    pub fn svg_offset(&self) -> Vec2 {
         self.svg_offset
     }
 
-    pub fn svg_side_offset(&self) -> glam::Vec2 {
+    pub fn svg_side_offset(&self) -> Vec2 {
         self.svg_side_offset
     }
 
-    pub fn svg_front_offset(&self) -> glam::Vec2 {
+    pub fn svg_front_offset(&self) -> Vec2 {
         self.svg_front_offset
     }
 }
 
-impl bundle::FromBundle for Model {
+impl<'src> bundle::FromBundle<'src> for Model {
     type Source = bundle::Model;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -72,15 +75,15 @@ impl bundle::FromBundle for Model {
             height: source.height,
             primitive_type: (&source.primitive_type).into(),
             resources: files,
-            svg_offset: glam::Vec2::new(
+            svg_offset: Vec2::new(
                 source.svg_offset_x.unwrap_or(0.0),
                 source.svg_offset_y.unwrap_or(0.0),
             ),
-            svg_side_offset: glam::Vec2::new(
+            svg_side_offset: Vec2::new(
                 source.svg_offset_x.unwrap_or(0.0),
                 source.svg_offset_y.unwrap_or(0.0),
             ),
-            svg_front_offset: glam::Vec2::new(
+            svg_front_offset: Vec2::new(
                 source.svg_offset_x.unwrap_or(0.0),
                 source.svg_offset_y.unwrap_or(0.0),
             ),

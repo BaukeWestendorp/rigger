@@ -4,10 +4,15 @@ use std::{
     str::FromStr as _,
 };
 
-use rigger::mvr::{
-    Mvr, NodeId,
-    layer::{Layer, Object, ObjectIdentifier, ObjectKind, ScaleHandling, SourceType, Transmission},
-    resource::ResourceKey,
+use rigger::{
+    Transform, Vec3,
+    mvr::{
+        Mvr, NodeId,
+        layer::{
+            Layer, Object, ObjectIdentifier, ObjectKind, ScaleHandling, SourceType, Transmission,
+        },
+        resource::ResourceKey,
+    },
 };
 
 fn load_complete_mvr() -> Mvr {
@@ -118,7 +123,7 @@ fn test_empty_layer_has_no_objects() {
 fn test_layer_without_matrix_has_identity_transform() {
     let mvr = load_complete_mvr();
     let layer = layer_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000001");
-    assert_eq!(layer.local_transform(), glam::Affine3A::IDENTITY);
+    assert_eq!(layer.local_transform(), Transform::IDENTITY);
 }
 
 #[test]
@@ -240,7 +245,7 @@ fn test_object_without_class_has_none() {
 fn test_object_local_transform_identity_when_no_matrix() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000003");
-    assert_eq!(obj.local_transform(), glam::Affine3A::IDENTITY);
+    assert_eq!(obj.local_transform(), Transform::IDENTITY);
 }
 
 #[test]
@@ -465,8 +470,8 @@ fn test_alignments() {
     let aligns = obj.alignments().expect("Expected alignments");
     assert_eq!(aligns.len(), 1);
     assert_eq!(aligns[0].geometry().to_string(), "Beam1");
-    assert_eq!(aligns[0].up(), glam::Vec3A::new(0.0, 0.0, 1.0));
-    assert_eq!(aligns[0].direction(), glam::Vec3A::new(0.0, 0.0, -1.0));
+    assert_eq!(aligns[0].up(), Vec3::new(0.0, 0.0, 1.0));
+    assert_eq!(aligns[0].direction(), Vec3::new(0.0, 0.0, -1.0));
 }
 
 #[test]

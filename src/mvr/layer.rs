@@ -9,20 +9,20 @@ use uuid::Uuid;
 
 use crate::{
     CieColor, DmxAddress, gdtf,
+    math::{self, Transform, Vec3},
     mvr::{
         self, NodeId, ResourceKey,
         aux::{Class, MappingDefinition, Position},
         bundle::{self, FromBundle as _},
         geo::Geometry,
     },
-    util,
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Layer {
     id: mvr::NodeId<Layer>,
     name: String,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
 
     objects: Vec<Object>,
 }
@@ -36,7 +36,7 @@ impl Layer {
         &self.name
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -59,7 +59,7 @@ impl bundle::FromBundle for Layer {
         Layer {
             id: uuid.into(),
             name: source.name.clone(),
-            local_transform: util::parse_affine3a_or_identity(source.matrix.as_deref()),
+            local_transform: math::parse_transform_or_identity(source.matrix.as_deref()),
             objects,
         }
     }
@@ -70,7 +70,7 @@ pub struct Object {
     id: mvr::NodeId<Object>,
     name: String,
     class: Option<mvr::NodeId<Class>>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
 
     kind: ObjectKind,
 }
@@ -88,7 +88,7 @@ impl Object {
         self.class
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -479,6 +479,47 @@ pub struct FixtureObject {
 impl FixtureObject {
     pub fn id(&self) -> &ObjectIdentifier {
         &self.id
+    }
+
+    pub fn id_u32(&self) -> anyhow::Result<u32> {
+        match &self.id {
+            ObjectIdentifier::Multipatch(_) => {
+                anyhow::bail!("Multipatch node IDs are not yet supported for fixture");
+            }
+            ObjectIdentifier::Single {
+                fixture_id,
+                fixture_id_numeric,
+                custom_id,
+                custom_id_type: _,
+            } => {
+                if let Some(numeric_id) = fixture_id_numeric {
+                    if *numeric_id < 0 {
+                        anyhow::bail!("Negative numeric fixture ID for fixture");
+                    }
+                    let numeric_id_u32 = u32::try_from(*numeric_id).map_err(|_| {
+                        anyhow::anyhow!("Fixture ID out of range for u32 for fixture.")
+                    })?;
+                    Ok(numeric_id_u32)
+                } else if let Some(id_str) = fixture_id {
+                    match id_str.parse::<u32>() {
+                        Ok(parsed_id) => Ok(parsed_id),
+                        Err(_) => {
+                            anyhow::bail!("Could not parse fixture_id '{}' as u32.", id_str);
+                        }
+                    }
+                } else if let Some(custom_id) = custom_id {
+                    if *custom_id < 0 {
+                        anyhow::bail!("Negative numeric custom ID for fixture");
+                    }
+                    let custom_id_u32 = u32::try_from(*custom_id).map_err(|_| {
+                        anyhow::anyhow!("Custom ID out of range for u32 for fixture.")
+                    })?;
+                    Ok(custom_id_u32)
+                } else {
+                    anyhow::bail!("No valid fixture ID found for fixture");
+                }
+            }
+        }
     }
 
     pub fn gdtf(&self) -> Option<&GdtfInfo> {
@@ -1130,6 +1171,10 @@ pub struct GdtfInfo {
 }
 
 impl GdtfInfo {
+    pub fn new(resource: ResourceKey, mode: impl Into<String>) -> Self {
+        Self { resource, mode: mode.into() }
+    }
+
     pub fn resource(&self) -> &ResourceKey {
         &self.resource
     }
@@ -1194,8 +1239,8 @@ impl bundle::FromBundle for NetworkAddress {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Alignment {
     geometry: gdtf::NodePath,
-    up: glam::Vec3A,
-    direction: glam::Vec3A,
+    up: Vec3,
+    direction: Vec3,
 }
 
 impl Alignment {
@@ -1204,11 +1249,11 @@ impl Alignment {
         &self.geometry
     }
 
-    pub fn up(&self) -> glam::Vec3A {
+    pub fn up(&self) -> Vec3 {
         self.up
     }
 
-    pub fn direction(&self) -> glam::Vec3A {
+    pub fn direction(&self) -> Vec3 {
         self.direction
     }
 }
@@ -1222,8 +1267,8 @@ impl bundle::FromBundle for Alignment {
                 source.geometry.as_ref().expect("FIXME: handle missing geometry"),
             )
             .unwrap(),
-            up: util::parse_vec3(&source.up),
-            direction: util::parse_vec3(&source.direction),
+            up: math::parse_vec3(&source.up),
+            direction: math::parse_vec3(&source.direction),
         }
     }
 }
@@ -1624,7 +1669,7 @@ fn build_object(child: &bundle::ChildListContent, bundle: &bundle::Bundle) -> Ob
         id: Uuid::from_str(uuid_str).unwrap().into(),
         name: name.to_string(),
         class: classing.map(|classing| NodeId::new(Uuid::from_str(classing).unwrap())),
-        local_transform: util::parse_affine3a_or_identity(matrix),
+        local_transform: math::parse_transform_or_identity(matrix),
         kind,
     }
 }

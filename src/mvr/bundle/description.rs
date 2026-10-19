@@ -313,7 +313,7 @@ pub struct GroupObject {
     #[serde(default, rename = "Classing")]
     pub classing: Option<String>,
     #[serde(default, rename = "ChildList")]
-    /// TODO: Spec bug? Spec says 0-1 children, but XSD does not say minOccurs="0".
+    /// FIXME: Spec bug? Spec says 0-1 children, but XSD does not say minOccurs="0".
     pub child_list: Box<ChildList>,
 }
 

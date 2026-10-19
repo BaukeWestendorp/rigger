@@ -1,11 +1,12 @@
+use std::str;
+
 pub mod gdtf;
 pub mod mvr;
-pub(crate) mod util;
 
-use std::str::{self, FromStr as _};
+mod math;
+mod util;
 
-/// Re-export of glam.
-pub use glam;
+pub use math::*;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -55,7 +56,7 @@ impl str::FromStr for CieColor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct DmxAddress {
     absolute: u32,
@@ -86,14 +87,6 @@ impl DmxAddress {
     pub fn with_dmx_break(mut self, dmx_break: u8) -> Self {
         self.dmx_break = dmx_break;
         self
-    }
-}
-
-impl mvr::bundle::FromBundle for DmxAddress {
-    type Source = mvr::bundle::Address;
-
-    fn from_bundle(source: &Self::Source, _bundle: &mvr::bundle::Bundle) -> Self {
-        DmxAddress::from_str(&source.content).unwrap()
     }
 }
 

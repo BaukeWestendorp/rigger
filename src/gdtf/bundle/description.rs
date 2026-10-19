@@ -96,23 +96,6 @@ pub struct Attributes {
 
 #[derive(Debug, Clone, PartialEq)]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct BasicGeometryAttributes {
-    #[serde(rename = "@Name")]
-    pub name: String,
-    #[serde(default, rename = "@Model")]
-    pub model: Option<String>,
-    #[serde(default = "BasicGeometryAttributes::default_position", rename = "@Position")]
-    pub position: String,
-}
-
-impl BasicGeometryAttributes {
-    #[must_use]
-    pub fn default_position() -> String {
-        String::from("{1,0,0,0}{0,1,0,0}{0,0,1,0}{0,0,0,1}")
-    }
-}
-#[derive(Debug, Clone, PartialEq)]
-#[derive(serde::Serialize, serde::Deserialize)]
 pub struct BasicGeometryType {
     #[serde(rename = "@Name")]
     pub name: String,

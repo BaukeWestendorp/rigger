@@ -1,19 +1,23 @@
 use std::{
     collections::HashMap,
+    fmt,
     path::{Component, Path, PathBuf},
     str::{self, FromStr as _},
 };
 
 use uuid::Uuid;
 
-use crate::gdtf::{
-    attr::AttributeName,
-    bundle::FromBundle as _,
-    proto::Protocols,
-    resource::{ModelResource, ResourceKey, Resources, ThumbnailResource, WheelResource},
+use crate::{
+    gdtf::{
+        attr::AttributeName,
+        bundle::FromBundle as _,
+        proto::Protocols,
+        resource::{ModelResource, ResourceKey, Resources, ThumbnailResource, WheelResource},
+    },
+    math::Vec2i,
 };
 
-pub mod bundle;
+mod bundle;
 
 pub mod attr;
 pub mod dmx;
@@ -36,7 +40,7 @@ pub struct Gdtf {
     description: String,
     fixture_type_id: FixtureTypeId,
     reference_fixture_type_id: Option<FixtureTypeId>,
-    thumbnail_offset: glam::I16Vec2,
+    thumbnail_offset: Vec2i,
     can_have_children: bool,
 
     activation_groups: Vec<attr::ActivationGroup>,
@@ -133,7 +137,7 @@ impl Gdtf {
         self.reference_fixture_type_id
     }
 
-    pub fn thumbnail_offset(&self) -> glam::I16Vec2 {
+    pub fn thumbnail_offset(&self) -> Vec2i {
         self.thumbnail_offset
     }
 
@@ -310,9 +314,9 @@ impl From<&bundle::Bundle> for Gdtf {
         gdtf.reference_fixture_type_id =
             ft.ref_ft.as_deref().and_then(|s| FixtureTypeId::from_str(s).ok());
 
-        gdtf.thumbnail_offset = glam::I16Vec2::new(
-            ft.thumbnail_offset_x.unwrap_or(0) as i16,
-            ft.thumbnail_offset_y.unwrap_or(0) as i16,
+        gdtf.thumbnail_offset = Vec2i::new(
+            ft.thumbnail_offset_x.unwrap_or(0) as i32,
+            ft.thumbnail_offset_y.unwrap_or(0) as i32,
         );
 
         if let Some(ags) = &ft.attribute_definitions.activation_groups {
@@ -434,7 +438,8 @@ impl From<&bundle::Bundle> for Gdtf {
         }
 
         for dm in &ft.dmx_modes.dmx_modes {
-            let dm = dmx::DmxMode::from_bundle(dm, bundle);
+            let geometry = dm.geometry.as_ref().and_then(|g| gdtf.geometry(&Name::new(g.clone())));
+            let dm = dmx::DmxMode::from_bundle(&(geometry, dm), bundle);
             gdtf.dmx_modes_by_name.insert(dm.name().clone(), dm.clone());
             gdtf.dmx_modes.push(dm);
         }
@@ -494,6 +499,12 @@ impl From<Uuid> for FixtureTypeId {
     }
 }
 
+impl fmt::Display for FixtureTypeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl str::FromStr for FixtureTypeId {
     type Err = uuid::Error;
 
@@ -548,6 +559,23 @@ impl From<&str> for Version {
 pub struct NodePath(Vec<Name>);
 
 impl NodePath {
+    pub fn new(root: impl Into<Name>) -> Self {
+        Self(vec![root.into()])
+    }
+
+    pub fn join(mut self, part: impl Into<Name>) -> Self {
+        self.0.push(part.into());
+        self
+    }
+
+    pub fn join_path(mut self, path: impl Into<NodePath>) -> Self {
+        let path = path.into();
+        for part in path.0 {
+            self.0.push(part);
+        }
+        self
+    }
+
     pub fn parts(&self) -> &[Name] {
         &self.0
     }
@@ -580,7 +608,7 @@ impl str::FromStr for NodePath {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Name(String);
 

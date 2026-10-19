@@ -3,7 +3,7 @@ use std::{collections::HashMap, str::FromStr as _};
 use crate::{
     DmxAddress,
     gdtf::{Gdtf, Name, NodePath, bundle, model::Model, phys::Emitter},
-    util,
+    math::{self, Transform, Vec3},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -98,7 +98,7 @@ impl Geometry {
         }
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         match self {
             Geometry::Basic(v) => v.local_transform,
             Geometry::Axis(v) => v.local_transform,
@@ -168,7 +168,7 @@ impl Geometry {
     }
 }
 
-impl bundle::FromBundle for Geometry {
+impl<'src> bundle::FromBundle<'src> for Geometry {
     type Source = bundle::Geometry;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -225,7 +225,7 @@ impl bundle::FromBundle for Geometry {
 pub struct BasicGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -244,7 +244,7 @@ impl BasicGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -258,7 +258,7 @@ impl BasicGeometry {
     }
 }
 
-impl bundle::FromBundle for BasicGeometry {
+impl<'src> bundle::FromBundle<'src> for BasicGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -270,7 +270,7 @@ impl bundle::FromBundle for BasicGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -281,7 +281,7 @@ impl bundle::FromBundle for BasicGeometry {
 pub struct AxisGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -300,7 +300,7 @@ impl AxisGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -314,7 +314,7 @@ impl AxisGeometry {
     }
 }
 
-impl bundle::FromBundle for AxisGeometry {
+impl<'src> bundle::FromBundle<'src> for AxisGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -326,7 +326,7 @@ impl bundle::FromBundle for AxisGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -337,7 +337,7 @@ impl bundle::FromBundle for AxisGeometry {
 pub struct FilterBeamGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -356,7 +356,7 @@ impl FilterBeamGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -370,7 +370,7 @@ impl FilterBeamGeometry {
     }
 }
 
-impl bundle::FromBundle for FilterBeamGeometry {
+impl<'src> bundle::FromBundle<'src> for FilterBeamGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -382,7 +382,7 @@ impl bundle::FromBundle for FilterBeamGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -393,7 +393,7 @@ impl bundle::FromBundle for FilterBeamGeometry {
 pub struct FilterColorGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -412,7 +412,7 @@ impl FilterColorGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -426,7 +426,7 @@ impl FilterColorGeometry {
     }
 }
 
-impl bundle::FromBundle for FilterColorGeometry {
+impl<'src> bundle::FromBundle<'src> for FilterColorGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -438,7 +438,7 @@ impl bundle::FromBundle for FilterColorGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -449,7 +449,7 @@ impl bundle::FromBundle for FilterColorGeometry {
 pub struct FilterGoboGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -468,7 +468,7 @@ impl FilterGoboGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -482,7 +482,7 @@ impl FilterGoboGeometry {
     }
 }
 
-impl bundle::FromBundle for FilterGoboGeometry {
+impl<'src> bundle::FromBundle<'src> for FilterGoboGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -494,7 +494,7 @@ impl bundle::FromBundle for FilterGoboGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -505,7 +505,7 @@ impl bundle::FromBundle for FilterGoboGeometry {
 pub struct FilterShaperGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -524,7 +524,7 @@ impl FilterShaperGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -538,7 +538,7 @@ impl FilterShaperGeometry {
     }
 }
 
-impl bundle::FromBundle for FilterShaperGeometry {
+impl<'src> bundle::FromBundle<'src> for FilterShaperGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -550,7 +550,7 @@ impl bundle::FromBundle for FilterShaperGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -561,7 +561,7 @@ impl bundle::FromBundle for FilterShaperGeometry {
 pub struct BeamGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     lamp_type: LampType,
     power_consumption: f32,
     luminous_flux: f32,
@@ -592,7 +592,7 @@ impl BeamGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -659,7 +659,7 @@ impl BeamGeometry {
     }
 }
 
-impl bundle::FromBundle for BeamGeometry {
+impl<'src> bundle::FromBundle<'src> for BeamGeometry {
     type Source = bundle::Beam;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -671,7 +671,7 @@ impl bundle::FromBundle for BeamGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             lamp_type: source
                 .lamp_type
                 .as_ref()
@@ -706,7 +706,7 @@ pub enum LampType {
     Led,
 }
 
-impl bundle::FromBundle for LampType {
+impl<'src> bundle::FromBundle<'src> for LampType {
     type Source = bundle::LampType;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -730,7 +730,7 @@ pub enum BeamType {
     Glow,
 }
 
-impl bundle::FromBundle for BeamType {
+impl<'src> bundle::FromBundle<'src> for BeamType {
     type Source = bundle::BeamType;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -750,7 +750,7 @@ impl bundle::FromBundle for BeamType {
 pub struct MediaServerLayerGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -769,7 +769,7 @@ impl MediaServerLayerGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -783,7 +783,7 @@ impl MediaServerLayerGeometry {
     }
 }
 
-impl bundle::FromBundle for MediaServerLayerGeometry {
+impl<'src> bundle::FromBundle<'src> for MediaServerLayerGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -795,7 +795,7 @@ impl bundle::FromBundle for MediaServerLayerGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -806,7 +806,7 @@ impl bundle::FromBundle for MediaServerLayerGeometry {
 pub struct MediaServerCameraGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -825,7 +825,7 @@ impl MediaServerCameraGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -839,7 +839,7 @@ impl MediaServerCameraGeometry {
     }
 }
 
-impl bundle::FromBundle for MediaServerCameraGeometry {
+impl<'src> bundle::FromBundle<'src> for MediaServerCameraGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -851,7 +851,7 @@ impl bundle::FromBundle for MediaServerCameraGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -862,7 +862,7 @@ impl bundle::FromBundle for MediaServerCameraGeometry {
 pub struct MediaServerMasterGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -881,7 +881,7 @@ impl MediaServerMasterGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -895,7 +895,7 @@ impl MediaServerMasterGeometry {
     }
 }
 
-impl bundle::FromBundle for MediaServerMasterGeometry {
+impl<'src> bundle::FromBundle<'src> for MediaServerMasterGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -907,7 +907,7 @@ impl bundle::FromBundle for MediaServerMasterGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -918,7 +918,7 @@ impl bundle::FromBundle for MediaServerMasterGeometry {
 pub struct DisplayGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     texture: String,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -938,7 +938,7 @@ impl DisplayGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -956,7 +956,7 @@ impl DisplayGeometry {
     }
 }
 
-impl bundle::FromBundle for DisplayGeometry {
+impl<'src> bundle::FromBundle<'src> for DisplayGeometry {
     type Source = bundle::Display;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -968,7 +968,7 @@ impl bundle::FromBundle for DisplayGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             texture: source.texture.clone().unwrap(),
             children,
             children_by_name,
@@ -980,7 +980,7 @@ impl bundle::FromBundle for DisplayGeometry {
 pub struct ReferenceGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     geometry: NodePath,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -1002,7 +1002,7 @@ impl ReferenceGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -1029,7 +1029,7 @@ impl ReferenceGeometry {
     }
 }
 
-impl bundle::FromBundle for ReferenceGeometry {
+impl<'src> bundle::FromBundle<'src> for ReferenceGeometry {
     type Source = bundle::GeometryReference;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1041,7 +1041,7 @@ impl bundle::FromBundle for ReferenceGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             geometry: match &source.geometry {
                 Some(name) => NodePath::from_str(name).unwrap(),
                 None => {
@@ -1071,7 +1071,7 @@ impl bundle::FromBundle for ReferenceGeometry {
 pub struct LaserGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     color_type: LaserColorType,
     output_strength: f32,
     emitter: Option<NodePath>,
@@ -1101,7 +1101,7 @@ impl LaserGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -1160,7 +1160,7 @@ impl LaserGeometry {
     }
 }
 
-impl bundle::FromBundle for LaserGeometry {
+impl<'src> bundle::FromBundle<'src> for LaserGeometry {
     type Source = bundle::Laser;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1172,7 +1172,7 @@ impl bundle::FromBundle for LaserGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             color_type: match source.color_type {
                 bundle::LaserColorType::Rgb => LaserColorType::Rgb,
                 bundle::LaserColorType::SingleWaveLength => {
@@ -1220,7 +1220,7 @@ pub struct WiringObjectGeometry {
     name: Name,
     model: Option<Name>,
     connector_type: Name,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     component_type: WiringComponentType,
     details: WiringObjectDetails,
     signal_layer: i32,
@@ -1252,7 +1252,7 @@ impl WiringObjectGeometry {
         &self.connector_type
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -1298,7 +1298,7 @@ impl WiringObjectGeometry {
     }
 }
 
-impl bundle::FromBundle for WiringObjectGeometry {
+impl<'src> bundle::FromBundle<'src> for WiringObjectGeometry {
     type Source = bundle::WiringObject;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1362,7 +1362,7 @@ impl bundle::FromBundle for WiringObjectGeometry {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
             connector_type: Name::new(source.connector_type.as_ref().unwrap()),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             component_type,
             details,
             signal_layer: source.signal_layer.unwrap_or_default().max(0),
@@ -1424,7 +1424,7 @@ pub enum WiringComponentType {
     NetworkInOut,
 }
 
-impl bundle::FromBundle for WiringComponentType {
+impl<'src> bundle::FromBundle<'src> for WiringComponentType {
     type Source = bundle::WiringComponentType;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -1451,7 +1451,7 @@ pub enum FuseRating {
     Z,
 }
 
-impl bundle::FromBundle for FuseRating {
+impl<'src> bundle::FromBundle<'src> for FuseRating {
     type Source = bundle::WiringFuseRating;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -1473,7 +1473,7 @@ pub enum PinOrientation {
     Bottom,
 }
 
-impl bundle::FromBundle for PinOrientation {
+impl<'src> bundle::FromBundle<'src> for PinOrientation {
     type Source = bundle::WiringOrientation;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -1511,7 +1511,7 @@ impl PinPatch {
     }
 }
 
-impl bundle::FromBundle for PinPatch {
+impl<'src> bundle::FromBundle<'src> for PinPatch {
     type Source = bundle::PinPatch;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -1527,7 +1527,7 @@ impl bundle::FromBundle for PinPatch {
 pub struct InventoryGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     count: u32,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -1547,7 +1547,7 @@ impl InventoryGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -1565,7 +1565,7 @@ impl InventoryGeometry {
     }
 }
 
-impl bundle::FromBundle for InventoryGeometry {
+impl<'src> bundle::FromBundle<'src> for InventoryGeometry {
     type Source = bundle::Inventory;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1577,7 +1577,7 @@ impl bundle::FromBundle for InventoryGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             count: source.count.unwrap_or(0),
             children,
             children_by_name,
@@ -1589,7 +1589,7 @@ impl bundle::FromBundle for InventoryGeometry {
 pub struct StructureGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     linked_geometry: Name,
     structure_type: StructureType,
     cross_section_type: CrossSectionType,
@@ -1611,7 +1611,7 @@ impl StructureGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -1641,7 +1641,7 @@ impl StructureGeometry {
     }
 }
 
-impl bundle::FromBundle for StructureGeometry {
+impl<'src> bundle::FromBundle<'src> for StructureGeometry {
     type Source = bundle::Structure;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1653,7 +1653,7 @@ impl bundle::FromBundle for StructureGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             linked_geometry: Name::new(source.linked_geometry.as_ref().unwrap()),
             structure_type: source
                 .structure_type
@@ -1685,7 +1685,7 @@ pub enum StructureType {
     Detail,
 }
 
-impl bundle::FromBundle for StructureType {
+impl<'src> bundle::FromBundle<'src> for StructureType {
     type Source = bundle::StructureType;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -1706,10 +1706,10 @@ pub enum CrossSectionType {
 pub struct SupportGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     support_type: SupportType,
-    capacity_force: glam::Vec3A,
-    capacity_moment: glam::Vec3A,
+    capacity_force: Vec3,
+    capacity_moment: Vec3,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -1728,7 +1728,7 @@ impl SupportGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -1736,11 +1736,11 @@ impl SupportGeometry {
         &self.support_type
     }
 
-    pub fn capacity_force(&self) -> glam::Vec3A {
+    pub fn capacity_force(&self) -> Vec3 {
         self.capacity_force
     }
 
-    pub fn capacity_moment(&self) -> glam::Vec3A {
+    pub fn capacity_moment(&self) -> Vec3 {
         self.capacity_moment
     }
 
@@ -1754,7 +1754,7 @@ impl SupportGeometry {
     }
 }
 
-impl bundle::FromBundle for SupportGeometry {
+impl<'src> bundle::FromBundle<'src> for SupportGeometry {
     type Source = bundle::Support;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1766,31 +1766,31 @@ impl bundle::FromBundle for SupportGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             support_type: match source.support_type {
                 bundle::SupportType::Rope => SupportType::Rope {
                     cross_section: source.rope_cross_section.clone().unwrap(),
-                    offset: util::parse_vec3(source.rope_offset.as_ref().unwrap()),
+                    offset: math::parse_vec3(source.rope_offset.as_ref().unwrap()),
                 },
                 bundle::SupportType::GroundSupport => SupportType::GroundSupport {
-                    resistance_along: glam::Vec3A::new(
+                    resistance_along: Vec3::new(
                         source.resistance_x.unwrap_or(0.0),
                         source.resistance_y.unwrap_or(0.0),
                         source.resistance_z.unwrap_or(0.0),
                     ),
-                    resistance_around: glam::Vec3A::new(
+                    resistance_around: Vec3::new(
                         source.resistance_xx.unwrap_or(0.0),
                         source.resistance_yy.unwrap_or(0.0),
                         source.resistance_zz.unwrap_or(0.0),
                     ),
                 },
             },
-            capacity_force: glam::Vec3A::new(
+            capacity_force: Vec3::new(
                 source.capacity_x.unwrap_or(0.0),
                 source.capacity_y.unwrap_or(0.0),
                 source.capacity_z.unwrap_or(0.0),
             ),
-            capacity_moment: glam::Vec3A::new(
+            capacity_moment: Vec3::new(
                 source.capacity_xx.unwrap_or(0.0),
                 source.capacity_yy.unwrap_or(0.0),
                 source.capacity_zz.unwrap_or(0.0),
@@ -1803,15 +1803,15 @@ impl bundle::FromBundle for SupportGeometry {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum SupportType {
-    Rope { cross_section: String, offset: glam::Vec3A },
-    GroundSupport { resistance_along: glam::Vec3A, resistance_around: glam::Vec3A },
+    Rope { cross_section: String, offset: Vec3 },
+    GroundSupport { resistance_along: Vec3, resistance_around: Vec3 },
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MagnetGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: glam::Affine3A,
+    local_transform: Transform,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -1830,7 +1830,7 @@ impl MagnetGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> glam::Affine3A {
+    pub fn local_transform(&self) -> Transform {
         self.local_transform
     }
 
@@ -1844,7 +1844,7 @@ impl MagnetGeometry {
     }
 }
 
-impl bundle::FromBundle for MagnetGeometry {
+impl<'src> bundle::FromBundle<'src> for MagnetGeometry {
     type Source = bundle::BasicGeometryType;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1856,7 +1856,7 @@ impl bundle::FromBundle for MagnetGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: util::parse_affine3a_from_mat4(&source.position),
+            local_transform: math::parse_transform_from_mat4(&source.position),
             children,
             children_by_name,
         }

@@ -1,9 +1,9 @@
 use std::{collections::HashMap, str::FromStr as _};
 
 use crate::{
-    CieColor,
+    CieColor, Mat3, Vec2,
     gdtf::{Gdtf, Name, NodePath, ResourceKey, bundle, parse_optional_name, phys::Filter},
-    util,
+    math,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -29,7 +29,7 @@ impl Wheel {
     }
 }
 
-impl bundle::FromBundle for Wheel {
+impl<'src> bundle::FromBundle<'src> for Wheel {
     type Source = bundle::Wheel;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -71,7 +71,7 @@ impl WheelSlot {
     }
 }
 
-impl bundle::FromBundle for WheelSlot {
+impl<'src> bundle::FromBundle<'src> for WheelSlot {
     type Source = bundle::Slot;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -153,7 +153,7 @@ pub enum WheelSlotContent {
 #[derive(Debug, Clone, PartialEq)]
 pub struct PrismFacet {
     color: CieColor,
-    rotation: glam::Mat3,
+    rotation: Mat3,
 }
 
 impl PrismFacet {
@@ -161,12 +161,12 @@ impl PrismFacet {
         self.color
     }
 
-    pub fn rotation(&self) -> glam::Mat3 {
+    pub fn rotation(&self) -> Mat3 {
         self.rotation
     }
 }
 
-impl bundle::FromBundle for PrismFacet {
+impl<'src> bundle::FromBundle<'src> for PrismFacet {
     type Source = bundle::Facet;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -176,29 +176,29 @@ impl bundle::FromBundle for PrismFacet {
                 .as_deref()
                 .and_then(|c| CieColor::from_str(c).ok())
                 .unwrap_or_default(),
-            rotation: util::parse_mat3(&source.rotation),
+            rotation: math::parse_mat3(&source.rotation),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AnimationSystem {
-    p1: glam::Vec2,
-    p2: glam::Vec2,
-    p3: glam::Vec2,
+    p1: Vec2,
+    p2: Vec2,
+    p3: Vec2,
     radius: f32,
 }
 
 impl AnimationSystem {
-    pub fn p1(&self) -> glam::Vec2 {
+    pub fn p1(&self) -> Vec2 {
         self.p1
     }
 
-    pub fn p2(&self) -> glam::Vec2 {
+    pub fn p2(&self) -> Vec2 {
         self.p2
     }
 
-    pub fn p3(&self) -> glam::Vec2 {
+    pub fn p3(&self) -> Vec2 {
         self.p3
     }
 
@@ -207,14 +207,14 @@ impl AnimationSystem {
     }
 }
 
-impl bundle::FromBundle for AnimationSystem {
+impl<'src> bundle::FromBundle<'src> for AnimationSystem {
     type Source = bundle::AnimationSystem;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Self {
-            p1: util::parse_vec2(&source.p1),
-            p2: util::parse_vec2(&source.p2),
-            p3: util::parse_vec2(&source.p3),
+            p1: math::parse_vec2(&source.p1),
+            p2: math::parse_vec2(&source.p2),
+            p3: math::parse_vec2(&source.p3),
             radius: source.radius,
         }
     }

@@ -5,6 +5,8 @@ use std::{
     time::Duration,
 };
 
+use anyhow::Context as _;
+
 use crate::{
     gdtf::{
         Gdtf, Name, NodePath,
@@ -24,11 +26,14 @@ pub struct DmxMode {
     geometry: NodePath,
 
     dmx_channels: Vec<DmxChannel>,
+    dmx_channels_by_name: HashMap<Name, usize>,
     dmx_channels_by_geometry: HashMap<Name, usize>,
     relations: Vec<Relation>,
     relations_by_name: HashMap<Name, usize>,
     ft_macros: Vec<FtMacro>,
     ft_macros_by_name: HashMap<Name, usize>,
+
+    max_channel_offset: u32,
 }
 
 impl DmxMode {
@@ -53,7 +58,12 @@ impl DmxMode {
         &self.dmx_channels
     }
 
-    pub fn dmx_channel(&self, geometry_name: &Name) -> Option<&DmxChannel> {
+    pub fn dmx_channel(&self, name: &Name) -> Option<&DmxChannel> {
+        let ix = self.dmx_channels_by_name.get(name)?;
+        self.dmx_channels.get(*ix)
+    }
+
+    pub fn dmx_channel_by_geometry(&self, geometry_name: &Name) -> Option<&DmxChannel> {
         let ix = self.dmx_channels_by_geometry.get(geometry_name)?;
         self.dmx_channels.get(*ix)
     }
@@ -75,22 +85,64 @@ impl DmxMode {
         let ix = self.ft_macros_by_name.get(name)?;
         self.ft_macros.get(*ix)
     }
+
+    pub fn attributes<'a>(&self, gdtf: &'a Gdtf) -> impl Iterator<Item = &'a Attribute> {
+        self.logical_channels().filter_map(move |lc| lc.attribute(gdtf))
+    }
+
+    pub fn logical_channels(&self) -> impl Iterator<Item = &LogicalChannel> {
+        self.dmx_channels().iter().flat_map(|dc| dc.logical_channels())
+    }
+
+    pub fn logical_channel(
+        &self,
+        attribute_name: &AttributeName,
+    ) -> Option<(&DmxChannel, &LogicalChannel)> {
+        for dc in self.dmx_channels() {
+            if let Some(lc) = dc.logical_channel(attribute_name) {
+                return Some((dc, lc));
+            }
+        }
+        None
+    }
+
+    pub fn channel_functions(
+        &self,
+    ) -> impl Iterator<Item = (&DmxChannel, &LogicalChannel, &ChannelFunction)> {
+        self.dmx_channels().iter().flat_map(|dc| {
+            dc.logical_channels()
+                .iter()
+                .flat_map(move |lc| lc.channel_functions().iter().map(move |cf| (dc, lc, cf)))
+        })
+    }
+
+    pub fn channel_function(&self, cf_path: &ChannelFunctionPath) -> Option<&ChannelFunction> {
+        self.dmx_channel(cf_path.dmx_channel_name())?
+            .logical_channel(&cf_path.attribute_name())?
+            .channel_function(cf_path.channel_function_name())
+    }
+
+    pub fn max_channel_offset(&self) -> u32 {
+        self.max_channel_offset
+    }
 }
 
-impl bundle::FromBundle for DmxMode {
-    type Source = bundle::DmxMode;
+impl<'src> bundle::FromBundle<'src> for DmxMode {
+    type Source = (Option<&'src Geometry>, &'src bundle::DmxMode);
 
-    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+    fn from_bundle((geometry, source): &Self::Source, bundle: &bundle::Bundle) -> Self {
         let dmx_channels: Vec<DmxChannel> = source
             .dmx_channels
             .dmx_channels
             .iter()
             .map(|dc| DmxChannel::from_bundle(dc, bundle))
             .collect();
+        let dmx_channels_by_name: HashMap<Name, usize> =
+            dmx_channels.iter().enumerate().map(|(ix, dc)| (dc.name().clone(), ix)).collect();
         let dmx_channels_by_geometry: HashMap<Name, usize> = dmx_channels
             .iter()
             .enumerate()
-            .filter_map(|(ix, dc)| dc.geometry_node().parts().get(0).map(|name| (name.clone(), ix)))
+            .map(|(ix, dc)| (dc.geometry_name().clone(), ix))
             .collect();
         let relations: Vec<Relation> = source
             .relations
@@ -106,6 +158,51 @@ impl bundle::FromBundle for DmxMode {
             .collect();
         let ft_macros_by_name: HashMap<Name, usize> =
             ft_macros.iter().enumerate().map(|(ix, ftm)| (ftm.name().clone(), ix)).collect();
+
+        let mut max_channel_offset = 0;
+        for dmx_channel in &dmx_channels {
+            match dmx_channel.offset() {
+                DmxOffset::Physical(offsets) => {
+                    let offset = offsets.iter().map(|o| o.saturating_sub(1)).max().unwrap_or(0);
+                    max_channel_offset = u32::max(max_channel_offset, offset)
+                }
+                DmxOffset::Virtual => {
+                    let Some(geometry) = geometry else { continue };
+
+                    find_max_offset(&mut max_channel_offset, geometry);
+
+                    fn find_max_offset(max_channel_offset: &mut u32, geometry: &Geometry) {
+                        match geometry {
+                            Geometry::GeometryReference(reference_geometry) => {
+                                if reference_geometry.breaks().len() > 1 {
+                                    log::warn!("Multiple breaks not yet supported");
+                                }
+
+                                let offset = match reference_geometry.breaks().first() {
+                                    Some(offset) => match offset.absolute().checked_sub_signed(1) {
+                                        Some(offset) => offset,
+                                        None => {
+                                            log::warn!(
+                                                "Found a DMX break offset of 0, while the minimum is 1"
+                                            );
+                                            0
+                                        }
+                                    },
+                                    None => 0,
+                                };
+
+                                *max_channel_offset = u32::max(*max_channel_offset, offset);
+                            }
+                            other_geometry => {
+                                for child_geometry in other_geometry.children() {
+                                    find_max_offset(max_channel_offset, child_geometry);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         Self {
             name: Name::new(&source.name),
@@ -128,11 +225,14 @@ impl bundle::FromBundle for DmxMode {
                 }
             },
             dmx_channels,
+            dmx_channels_by_name,
             dmx_channels_by_geometry,
             relations,
             relations_by_name,
             ft_macros,
             ft_macros_by_name,
+
+            max_channel_offset,
         }
     }
 }
@@ -143,10 +243,10 @@ pub struct DmxChannel {
     offset: DmxOffset,
     initial_function: Option<NodePath>,
     highlight: Option<DmxValue>,
-    geometry: NodePath,
+    geometry: Name,
 
     logical_channels: Vec<LogicalChannel>,
-    logical_channels_by_attribute: HashMap<Name, usize>,
+    logical_channels_by_attribute: HashMap<AttributeName, usize>,
 
     name: Name,
 }
@@ -167,19 +267,18 @@ impl DmxChannel {
     pub fn initial_function<'a>(&'a self) -> Option<(&'a LogicalChannel, &'a ChannelFunction)> {
         match &self.initial_function {
             Some(initial_function_node) => {
-                let geometry_name = self.geometry_node().parts().get(0)?;
-
                 let mut dmx_channel_split =
                     initial_function_node.parts().get(0)?.as_str().split('_');
                 let dmx_channel_geometry = dmx_channel_split.next()?;
 
-                let logical_channel_name = initial_function_node.parts().get(1)?;
-                let logical_channel = self.logical_channel(logical_channel_name)?;
+                let lc_attribute = initial_function_node.parts().get(1)?;
+                let logical_channel =
+                    self.logical_channel(&AttributeName::from_str(lc_attribute.as_str()).unwrap())?;
 
-                let channel_function_name = initial_function_node.parts().get(2)?;
-                let channel_function = logical_channel.channel_function(channel_function_name)?;
+                let cf_name = initial_function_node.parts().get(2)?;
+                let channel_function = logical_channel.channel_function(&cf_name)?;
 
-                if dmx_channel_geometry != geometry_name.as_str() {
+                if dmx_channel_geometry != self.geometry_name().as_str() {
                     return None;
                 }
 
@@ -197,21 +296,20 @@ impl DmxChannel {
         self.highlight
     }
 
-    pub fn geometry_node(&self) -> &NodePath {
+    pub fn geometry_name(&self) -> &Name {
         &self.geometry
     }
 
     pub fn geometry<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Geometry> {
-        let geometry_name = self.geometry_node().parts().get(0)?;
-        gdtf.geometry(geometry_name)
+        gdtf.geometry(self.geometry_name())
     }
 
     pub fn logical_channels(&self) -> &[LogicalChannel] {
         &self.logical_channels
     }
 
-    pub fn logical_channel(&self, name: &Name) -> Option<&LogicalChannel> {
-        let ix = self.logical_channels_by_attribute.get(name)?;
+    pub fn logical_channel(&self, attribute_name: &AttributeName) -> Option<&LogicalChannel> {
+        let ix = self.logical_channels_by_attribute.get(attribute_name)?;
         Some(&self.logical_channels[*ix])
     }
 
@@ -220,7 +318,7 @@ impl DmxChannel {
     }
 }
 
-impl bundle::FromBundle for DmxChannel {
+impl<'src> bundle::FromBundle<'src> for DmxChannel {
     type Source = bundle::DmxChannel;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -233,20 +331,22 @@ impl bundle::FromBundle for DmxChannel {
             .iter()
             .enumerate()
             .filter_map(|(ix, lc)| {
-                lc.attribute_node().parts().get(0).map(|name| (name.clone(), ix))
+                lc.attribute_node()
+                    .parts()
+                    .get(0)
+                    .map(|name| (AttributeName::from_str(name.as_str()).unwrap(), ix))
             })
             .collect();
 
-        let geometry = NodePath::from_str(&source.geometry).unwrap();
+        let geometry = Name::new(&source.geometry);
 
         let name = {
-            let geometry_name = geometry.parts().get(0).expect("Missing geometry name").clone();
             let attribute_name = logical_channels
                 .first()
                 .and_then(|lc| lc.attribute_node().parts().get(0))
                 .expect("Missing attribute name")
                 .clone();
-            Name::new(&format!("{}_{}", geometry_name, attribute_name))
+            Name::new(&format!("{}_{}", geometry, attribute_name))
         };
 
         Self {
@@ -338,22 +438,41 @@ impl LogicalChannel {
         let ix = self.channel_functions_by_name.get(name)?;
         Some(&self.channel_functions[*ix])
     }
+
+    pub fn channel_set_for_value(&self, value: DmxValue) -> Option<&ChannelSet> {
+        let value = value.to_u16();
+
+        let mut channel_sets =
+            self.channel_functions().iter().flat_map(|cf| cf.channel_sets().iter()).peekable();
+        while let Some(current) = channel_sets.next() {
+            let matches = match channel_sets.peek() {
+                Some(next) => {
+                    current.dmx_from().to_u16() <= value && value < next.dmx_from().to_u16()
+                }
+                None => current.dmx_from().to_u16() <= value,
+            };
+
+            if matches {
+                return Some(current);
+            }
+        }
+
+        None
+    }
 }
 
-impl bundle::FromBundle for LogicalChannel {
+impl<'src> bundle::FromBundle<'src> for LogicalChannel {
     type Source = bundle::LogicalChannel;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
         let channel_functions = source
             .channel_functions
             .iter()
-            .map(|cf| ChannelFunction::from_bundle(cf, bundle))
-            .collect::<Vec<_>>();
-        let channel_functions_by_name = channel_functions
-            .iter()
             .enumerate()
-            .filter_map(|(ix, cf)| cf.name.as_ref().map(|name| (name.clone(), ix)))
-            .collect();
+            .map(|(ix, cf)| ChannelFunction::from_bundle(&(ix, cf.clone()), bundle))
+            .collect::<Vec<_>>();
+        let channel_functions_by_name =
+            channel_functions.iter().enumerate().map(|(ix, cf)| (cf.name().clone(), ix)).collect();
 
         Self {
             attribute: NodePath::from_str(&source.attribute).unwrap(),
@@ -378,7 +497,7 @@ pub enum Snap {
     On,
 }
 
-impl bundle::FromBundle for Snap {
+impl<'src> bundle::FromBundle<'src> for Snap {
     type Source = bundle::Snap;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -399,7 +518,7 @@ pub enum Master {
     Group,
 }
 
-impl bundle::FromBundle for Master {
+impl<'src> bundle::FromBundle<'src> for Master {
     type Source = bundle::Master;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -413,7 +532,7 @@ impl bundle::FromBundle for Master {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ChannelFunction {
-    name: Option<Name>,
+    name: Name,
     attribute: NodePath,
     original_attribute: Option<String>,
     dmx_from: DmxValue,
@@ -441,8 +560,8 @@ pub struct ChannelFunction {
 }
 
 impl ChannelFunction {
-    pub fn name(&self) -> Option<&Name> {
-        self.name.as_ref()
+    pub fn name(&self) -> &Name {
+        &self.name
     }
 
     pub fn attribute_node(&self) -> &NodePath {
@@ -572,12 +691,62 @@ impl ChannelFunction {
         let ix = self.sub_channel_sets_by_name.get(name)?;
         Some(&self.sub_channel_sets[*ix])
     }
+
+    pub fn path(
+        &self,
+        dmx_channel: &DmxChannel,
+        logical_channel: &LogicalChannel,
+    ) -> ChannelFunctionPath {
+        let node_path = NodePath::new(dmx_channel.name().clone())
+            .join_path(logical_channel.attribute_node().clone())
+            .join(self.name().clone());
+        ChannelFunctionPath::new(node_path).expect("Should have just created 3 parts")
+    }
 }
 
-impl bundle::FromBundle for ChannelFunction {
-    type Source = bundle::ChannelFunction;
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct ChannelFunctionPath(NodePath);
 
-    fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
+impl ChannelFunctionPath {
+    pub fn new(node_path: NodePath) -> anyhow::Result<Self> {
+        anyhow::ensure!(node_path.parts().len() == 3, "ChannelFunctionPath should have 3 parts");
+        Ok(Self(node_path))
+    }
+
+    pub fn dmx_channel_name(&self) -> &Name {
+        self.0.parts().get(0).expect("ChannelFunctionPath should have 3 parts")
+    }
+
+    pub fn attribute_name(&self) -> AttributeName {
+        let name = self.0.parts().get(1).expect("ChannelFunctionPath should have 3 parts");
+        AttributeName::from_str(name.as_str()).unwrap()
+    }
+
+    pub fn channel_function_name(&self) -> &Name {
+        self.0.parts().get(2).expect("ChannelFunctionPath should have 3 parts")
+    }
+
+    pub fn resolve<'a>(
+        &self,
+        dmx_mode: &'a DmxMode,
+    ) -> anyhow::Result<(&'a DmxChannel, &'a LogicalChannel, &'a ChannelFunction)> {
+        let mut parts = self.0.parts().iter();
+        let dc_name = parts.next().context("NodePath did not contain DMX channel name")?;
+        let lc_name = parts.next().context("NodePath did not contain logical channel name")?;
+        let lc_attr = AttributeName::from_str(lc_name.as_str()).unwrap();
+        let cf_name = parts.next().context("NodePath did not contain channel function name")?;
+        let dc = dmx_mode.dmx_channel(dc_name).context("Could not find DMX channel")?;
+        let lc = dc.logical_channel(&lc_attr).context("Could not find logical channel")?;
+        let cf = lc.channel_function(cf_name).context("Could not find channel function")?;
+        Ok((dc, lc, cf))
+    }
+}
+
+impl<'src> bundle::FromBundle<'src> for ChannelFunction {
+    type Source = (usize, bundle::ChannelFunction);
+
+    fn from_bundle((cf_ix, source): &Self::Source, bundle: &bundle::Bundle) -> Self {
         let channel_sets = source
             .channel_sets
             .iter()
@@ -600,7 +769,11 @@ impl bundle::FromBundle for ChannelFunction {
             .collect();
 
         Self {
-            name: source.name.as_ref().map(Name::new),
+            name: source
+                .name
+                .as_ref()
+                .map(Name::new)
+                .unwrap_or_else(|| Name::new(format!("{} {}", source.attribute, cf_ix + 1))),
             attribute: NodePath::from_str(&source.attribute).unwrap(),
             original_attribute: match source.original_attribute.as_str() {
                 "" => None,
@@ -648,15 +821,13 @@ impl ModeMaster {
     pub fn node<'a>(&self, dmx_mode: &'a DmxMode) -> Option<ModeMasterNode<'a>> {
         let parts = self.node.parts();
         let channel_name = parts.get(0)?;
-        let channel = dmx_mode
-            .dmx_channels()
-            .iter()
-            .find(|c| c.geometry_node().parts().get(0) == Some(channel_name))?;
+        let channel = dmx_mode.dmx_channels().iter().find(|c| c.geometry_name() == channel_name)?;
 
         match (parts.get(1), parts.get(2)) {
-            (Some(logical_channel_name), Some(function_name)) => {
-                let logical_channel = channel.logical_channel(logical_channel_name)?;
-                let function = logical_channel.channel_function(function_name)?;
+            (Some(lc_attribute), Some(cf_attribute)) => {
+                let logical_channel = channel
+                    .logical_channel(&AttributeName::from_str(lc_attribute.as_str()).unwrap())?;
+                let function = logical_channel.channel_function(&cf_attribute)?;
                 Some(ModeMasterNode::ChannelFunction(channel, logical_channel, function))
             }
             _ => Some(ModeMasterNode::DmxChannel(channel)),
@@ -689,7 +860,11 @@ pub struct ChannelSet {
 
 impl ChannelSet {
     pub fn name(&self) -> Option<&Name> {
-        self.name.as_ref()
+        match &self.name {
+            Some(name) if name.as_str().trim().is_empty() => None,
+            Some(name) => Some(name),
+            None => None,
+        }
     }
 
     pub fn dmx_from(&self) -> DmxValue {
@@ -709,7 +884,7 @@ impl ChannelSet {
     }
 }
 
-impl bundle::FromBundle for ChannelSet {
+impl<'src> bundle::FromBundle<'src> for ChannelSet {
     type Source = bundle::ChannelSet;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -770,7 +945,7 @@ impl SubChannelSet {
     }
 }
 
-impl bundle::FromBundle for SubChannelSet {
+impl<'src> bundle::FromBundle<'src> for SubChannelSet {
     type Source = bundle::SubChannelSet;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -805,26 +980,26 @@ impl Relation {
         &self.follower
     }
 
-    pub fn master<'s>(&self, dmx_mode: &'s DmxMode) -> Option<&'s DmxChannel> {
+    pub fn master<'a>(&self, dmx_mode: &'a DmxMode) -> Option<&'a DmxChannel> {
         let name = self.master.parts().get(0)?;
         dmx_mode.dmx_channels().iter().find(|c| c.name() == name)
     }
 
-    pub fn follower<'s>(
+    pub fn follower<'a>(
         &self,
-        dmx_mode: &'s DmxMode,
-    ) -> Option<(&'s DmxChannel, &'s LogicalChannel, &'s ChannelFunction)> {
+        dmx_mode: &'a DmxMode,
+    ) -> Option<(&'a DmxChannel, &'a LogicalChannel, &'a ChannelFunction)> {
         let parts = self.follower.parts();
         let channel_name = parts.get(0)?;
-        let channel = dmx_mode.dmx_channels().iter().find(|c| c.name() == channel_name)?;
+        let dc = dmx_mode.dmx_channels().iter().find(|c| c.name() == channel_name)?;
 
-        let logical_name = parts.get(1)?;
-        let logical = channel.logical_channel(logical_name)?;
+        let lc_attribute = parts.get(1)?;
+        let lc = dc.logical_channel(&AttributeName::from_str(lc_attribute.as_str()).unwrap())?;
 
-        let func_name = parts.get(2)?;
-        let func = logical.channel_function(func_name)?;
+        let cf_name = parts.get(2)?;
+        let cf = lc.channel_function(&cf_name)?;
 
-        Some((channel, logical, func))
+        Some((dc, lc, cf))
     }
 
     pub fn kind(&self) -> RelationKind {
@@ -832,7 +1007,7 @@ impl Relation {
     }
 }
 
-impl bundle::FromBundle for Relation {
+impl<'src> bundle::FromBundle<'src> for Relation {
     type Source = bundle::Relation;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -851,7 +1026,7 @@ pub enum RelationKind {
     Override,
 }
 
-impl bundle::FromBundle for RelationKind {
+impl<'src> bundle::FromBundle<'src> for RelationKind {
     type Source = bundle::RelationType;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -885,14 +1060,12 @@ impl FtMacro {
         let node = self.channel_function.as_ref()?;
         let parts = node.parts();
         let channel_name = parts.get(0)?;
-        let channel = dmx_mode
-            .dmx_channels()
-            .iter()
-            .find(|c| c.geometry_node().parts().get(0) == Some(channel_name))?;
-        let logical_channel_name = parts.get(1)?;
-        let logical_channel = channel.logical_channel(logical_channel_name)?;
-        let channel_function_name = parts.get(2)?;
-        let channel_function = logical_channel.channel_function(channel_function_name)?;
+        let channel = dmx_mode.dmx_channels().iter().find(|c| c.geometry_name() == channel_name)?;
+        let lc_attribute = parts.get(1)?;
+        let logical_channel =
+            channel.logical_channel(&AttributeName::from_str(lc_attribute.as_str()).unwrap())?;
+        let cf_attribute = parts.get(2)?;
+        let channel_function = logical_channel.channel_function(&cf_attribute)?;
         Some((channel, logical_channel, channel_function))
     }
 
@@ -901,7 +1074,7 @@ impl FtMacro {
     }
 }
 
-impl bundle::FromBundle for FtMacro {
+impl<'src> bundle::FromBundle<'src> for FtMacro {
     type Source = bundle::FtMacro;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -927,7 +1100,7 @@ impl MacroDmx {
     }
 }
 
-impl bundle::FromBundle for MacroDmx {
+impl<'src> bundle::FromBundle<'src> for MacroDmx {
     type Source = bundle::MacroDmx;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -957,7 +1130,7 @@ impl MacroDmxStep {
     }
 }
 
-impl bundle::FromBundle for MacroDmxStep {
+impl<'src> bundle::FromBundle<'src> for MacroDmxStep {
     type Source = bundle::MacroDmxStep;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -993,7 +1166,7 @@ impl MacroDmxValue {
     }
 }
 
-impl bundle::FromBundle for MacroDmxValue {
+impl<'src> bundle::FromBundle<'src> for MacroDmxValue {
     type Source = bundle::MacroDmxValue;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -1029,6 +1202,30 @@ impl DmxValue {
 
     pub fn from_u32(value: u32, shifting: bool) -> Self {
         DmxValue { value, bytes: 4, shifting }
+    }
+
+    pub fn to_u8(&self) -> u8 {
+        match self.bytes {
+            1 => self.value as u8,
+            2 => (self.value / 256) as u8,
+            3 => (self.value / 65536) as u8,
+            4 => (self.value / 16777216) as u8,
+            _ => todo!(),
+        }
+    }
+
+    pub fn to_u16(&self) -> u16 {
+        match self.bytes {
+            1 => self.value as u16,
+            2 => self.value as u16,
+            3 => (self.value / 256) as u16,
+            4 => (self.value / 65536) as u16,
+            _ => todo!(),
+        }
+    }
+
+    pub fn to_u32(&self) -> u32 {
+        self.value
     }
 
     pub fn value(&self) -> u32 {

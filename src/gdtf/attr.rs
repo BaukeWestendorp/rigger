@@ -38,7 +38,7 @@ impl ActivationGroup {
     }
 }
 
-impl bundle::FromBundle for ActivationGroup {
+impl<'src> bundle::FromBundle<'src> for ActivationGroup {
     type Source = bundle::ActivationGroup;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -148,6 +148,11 @@ impl Attribute {
         self.feature.as_ref()
     }
 
+    pub fn feature_group<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a FeatureGroup> {
+        let feature_group = self.feature_node()?.parts().get(0)?;
+        gdtf.feature_group(feature_group)
+    }
+
     pub fn feature<'a>(&self, gdtf: &'a Gdtf) -> Option<&'a Feature> {
         let feature_group = self.feature_node()?.parts().get(0)?;
         let feature = self.feature_node()?.parts().get(1)?;
@@ -181,7 +186,7 @@ impl Attribute {
     }
 }
 
-impl bundle::FromBundle for Attribute {
+impl<'src> bundle::FromBundle<'src> for Attribute {
     type Source = bundle::Attribute;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1556,7 +1561,7 @@ impl Feature {
     }
 }
 
-impl bundle::FromBundle for Feature {
+impl<'src> bundle::FromBundle<'src> for Feature {
     type Source = bundle::Feature;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
@@ -1592,7 +1597,7 @@ impl FeatureGroup {
     }
 }
 
-impl bundle::FromBundle for FeatureGroup {
+impl<'src> bundle::FromBundle<'src> for FeatureGroup {
     type Source = bundle::FeatureGroup;
 
     fn from_bundle(feature_group: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1669,6 +1674,50 @@ impl PhysicalUnit {
             PhysicalUnit::WaveLength => "nm",
             PhysicalUnit::ColorComponent => "",
         }
+    }
+
+    pub fn format_value(&self, value: f32) -> String {
+        let formatted = match self {
+            PhysicalUnit::Percent => {
+                format!("{:.0}", value)
+            }
+
+            PhysicalUnit::Length | PhysicalUnit::Area | PhysicalUnit::Volume => {
+                format!("{:.2}", value)
+            }
+
+            PhysicalUnit::WaveLength => {
+                format!("{:.1}", value)
+            }
+
+            PhysicalUnit::Angle
+            | PhysicalUnit::AngularSpeed
+            | PhysicalUnit::AngularAcceleration => {
+                format!("{:.1}", value)
+            }
+
+            PhysicalUnit::Mass
+            | PhysicalUnit::Time
+            | PhysicalUnit::Temperature
+            | PhysicalUnit::Force
+            | PhysicalUnit::Frequency
+            | PhysicalUnit::Current
+            | PhysicalUnit::Voltage
+            | PhysicalUnit::Power
+            | PhysicalUnit::Energy
+            | PhysicalUnit::Speed
+            | PhysicalUnit::Acceleration
+            | PhysicalUnit::LuminousIntensity
+            | PhysicalUnit::ColorComponent => {
+                format!("{:.2}", value)
+            }
+
+            PhysicalUnit::None => {
+                format!("{:.2}", value)
+            }
+        };
+
+        format!("{}{}", formatted, self.suffix())
     }
 }
 
@@ -1757,7 +1806,7 @@ impl SubPhysicalUnit {
     }
 }
 
-impl bundle::FromBundle for SubPhysicalUnit {
+impl<'src> bundle::FromBundle<'src> for SubPhysicalUnit {
     type Source = bundle::SubPhysicalUnit;
 
     fn from_bundle(source: &Self::Source, bundle: &bundle::Bundle) -> Self {
@@ -1808,7 +1857,7 @@ impl fmt::Display for SubPhysicalUnitType {
     }
 }
 
-impl bundle::FromBundle for SubPhysicalUnitType {
+impl<'src> bundle::FromBundle<'src> for SubPhysicalUnitType {
     type Source = bundle::SubPhysicalType;
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {

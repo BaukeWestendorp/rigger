@@ -6,7 +6,8 @@ authors = ["Bauke Westendorp <baukewestendorp@gmail.com>"]
 edition = "2024"
 
 [dependencies]
-glam = "0.32.1"
+anyhow = "1.0"
+log = "0.4.34"
 quick-xml = { version = "0.39.2", features = ["serialize"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_path_to_error = "0.1.20"

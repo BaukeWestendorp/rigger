@@ -2,19 +2,19 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     rc::Rc,
-    str,
+    str::{self, FromStr as _},
 };
 
 use crate::{
     gdtf::Gdtf,
+    math,
     mvr::{
         bundle::FromBundle,
         resource::{ModelResource, ResourceKey, Resources, TextureResource},
     },
-    util,
 };
 
-pub mod bundle;
+mod bundle;
 
 pub mod aux;
 pub mod geo;
@@ -110,6 +110,25 @@ impl Mvr {
 
     pub fn layer(&self, id: &NodeId<layer::Layer>) -> Option<&layer::Layer> {
         self.layers.get(id).map(|v| v.as_ref())
+    }
+}
+
+impl Default for Mvr {
+    fn default() -> Self {
+        Self {
+            version: Version { major: 1, minor: 6 },
+            provider: Provider {
+                name: env!("CARGO_PKG_NAME").to_string(),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+            },
+            path: None,
+            resources: Resources::default(),
+            symdefs: HashMap::default(),
+            classes: HashMap::default(),
+            mapping_definitions: HashMap::default(),
+            positions: HashMap::default(),
+            layers: HashMap::default(),
+        }
     }
 }
 
@@ -247,7 +266,7 @@ fn build_geometries(
     };
 
     for symbol in symbols {
-        let symbol_transform = util::parse_affine3a_or_identity(symbol.matrix.as_deref());
+        let symbol_transform = math::parse_transform_or_identity(symbol.matrix.as_deref());
         let symdef = aux_data.symdef.iter().find(|s| s.uuid == symbol.symdef).unwrap();
         let nested_symdef = aux::Symdef::from_bundle(&symdef, bundle);
         for mut geo in nested_symdef.geometries().to_owned() {
@@ -257,4 +276,12 @@ fn build_geometries(
     }
 
     geometries
+}
+
+impl bundle::FromBundle for super::DmxAddress {
+    type Source = bundle::Address;
+
+    fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
+        super::DmxAddress::from_str(&source.content).unwrap()
+    }
 }

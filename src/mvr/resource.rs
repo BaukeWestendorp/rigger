@@ -40,6 +40,12 @@ impl Resources {
     }
 }
 
+impl Default for Resources {
+    fn default() -> Self {
+        Self { gdtfs: HashMap::default(), models: HashMap::default(), textures: HashMap::default() }
+    }
+}
+
 impl fmt::Debug for Resources {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Resources")

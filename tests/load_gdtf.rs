@@ -363,9 +363,9 @@ fn test_gdtf_gobo_wheel_animation_slot() {
     let WheelSlotContent::AnimationSystem(sys) = anim.content().unwrap() else {
         panic!("expected AnimationSystem content");
     };
-    assert_eq!(sys.p1(), rigger::glam::Vec2::new(-0.5, 0.0));
-    assert_eq!(sys.p2(), rigger::glam::Vec2::new(0.0, 0.5));
-    assert_eq!(sys.p3(), rigger::glam::Vec2::new(0.5, 0.0));
+    assert_eq!(sys.p1(), rigger::Vec2::new(-0.5, 0.0));
+    assert_eq!(sys.p2(), rigger::Vec2::new(0.0, 0.5));
+    assert_eq!(sys.p3(), rigger::Vec2::new(0.5, 0.0));
     assert_eq!(sys.radius(), 0.3);
 }
 
