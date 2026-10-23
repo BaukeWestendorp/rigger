@@ -266,7 +266,7 @@ fn build_geometries(
     };
 
     for symbol in symbols {
-        let symbol_transform = math::parse_transform_or_identity(symbol.matrix.as_deref());
+        let symbol_transform = math::parse_mat4_or_identity(symbol.matrix.as_deref());
         let symdef = aux_data.symdef.iter().find(|s| s.uuid == symbol.symdef).unwrap();
         let nested_symdef = aux::Symdef::from_bundle(&symdef, bundle);
         for mut geo in nested_symdef.geometries().to_owned() {

@@ -1,17 +1,17 @@
 use crate::{
-    math::{self, Transform},
+    math::{self, Mat4},
     mvr::{ResourceKey, bundle},
 };
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Geometry {
-    pub(in crate::mvr) local_transform: Transform,
+    pub(in crate::mvr) local_transform: Mat4,
 
     pub(in crate::mvr) model: ResourceKey,
 }
 
 impl Geometry {
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -25,7 +25,7 @@ impl bundle::FromBundle for Geometry {
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Geometry {
-            local_transform: math::parse_transform_or_identity(source.matrix.as_deref()),
+            local_transform: math::parse_mat4_or_identity(source.matrix.as_deref()),
             model: ResourceKey::new(&source.file_name),
         }
     }

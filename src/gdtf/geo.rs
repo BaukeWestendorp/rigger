@@ -3,7 +3,7 @@ use std::{collections::HashMap, str::FromStr as _};
 use crate::{
     DmxAddress,
     gdtf::{Gdtf, Name, NodePath, bundle, model::Model, phys::Emitter},
-    math::{self, Transform, Vec3},
+    math::{self, Mat4, Vec3},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -98,7 +98,7 @@ impl Geometry {
         }
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         match self {
             Geometry::Basic(v) => v.local_transform,
             Geometry::Axis(v) => v.local_transform,
@@ -225,7 +225,7 @@ impl<'src> bundle::FromBundle<'src> for Geometry {
 pub struct BasicGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -244,7 +244,7 @@ impl BasicGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -270,7 +270,7 @@ impl<'src> bundle::FromBundle<'src> for BasicGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -281,7 +281,7 @@ impl<'src> bundle::FromBundle<'src> for BasicGeometry {
 pub struct AxisGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -300,7 +300,7 @@ impl AxisGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -326,7 +326,7 @@ impl<'src> bundle::FromBundle<'src> for AxisGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -337,7 +337,7 @@ impl<'src> bundle::FromBundle<'src> for AxisGeometry {
 pub struct FilterBeamGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -356,7 +356,7 @@ impl FilterBeamGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -382,7 +382,7 @@ impl<'src> bundle::FromBundle<'src> for FilterBeamGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -393,7 +393,7 @@ impl<'src> bundle::FromBundle<'src> for FilterBeamGeometry {
 pub struct FilterColorGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -412,7 +412,7 @@ impl FilterColorGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -438,7 +438,7 @@ impl<'src> bundle::FromBundle<'src> for FilterColorGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -449,7 +449,7 @@ impl<'src> bundle::FromBundle<'src> for FilterColorGeometry {
 pub struct FilterGoboGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -468,7 +468,7 @@ impl FilterGoboGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -494,7 +494,7 @@ impl<'src> bundle::FromBundle<'src> for FilterGoboGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -505,7 +505,7 @@ impl<'src> bundle::FromBundle<'src> for FilterGoboGeometry {
 pub struct FilterShaperGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -524,7 +524,7 @@ impl FilterShaperGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -550,7 +550,7 @@ impl<'src> bundle::FromBundle<'src> for FilterShaperGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -561,7 +561,7 @@ impl<'src> bundle::FromBundle<'src> for FilterShaperGeometry {
 pub struct BeamGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     lamp_type: LampType,
     power_consumption: f32,
     luminous_flux: f32,
@@ -592,7 +592,7 @@ impl BeamGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -671,7 +671,7 @@ impl<'src> bundle::FromBundle<'src> for BeamGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             lamp_type: source
                 .lamp_type
                 .as_ref()
@@ -750,7 +750,7 @@ impl<'src> bundle::FromBundle<'src> for BeamType {
 pub struct MediaServerLayerGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -769,7 +769,7 @@ impl MediaServerLayerGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -795,7 +795,7 @@ impl<'src> bundle::FromBundle<'src> for MediaServerLayerGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -806,7 +806,7 @@ impl<'src> bundle::FromBundle<'src> for MediaServerLayerGeometry {
 pub struct MediaServerCameraGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -825,7 +825,7 @@ impl MediaServerCameraGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -851,7 +851,7 @@ impl<'src> bundle::FromBundle<'src> for MediaServerCameraGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -862,7 +862,7 @@ impl<'src> bundle::FromBundle<'src> for MediaServerCameraGeometry {
 pub struct MediaServerMasterGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -881,7 +881,7 @@ impl MediaServerMasterGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -907,7 +907,7 @@ impl<'src> bundle::FromBundle<'src> for MediaServerMasterGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }
@@ -918,7 +918,7 @@ impl<'src> bundle::FromBundle<'src> for MediaServerMasterGeometry {
 pub struct DisplayGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     texture: String,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -938,7 +938,7 @@ impl DisplayGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -968,7 +968,7 @@ impl<'src> bundle::FromBundle<'src> for DisplayGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             texture: source.texture.clone().unwrap(),
             children,
             children_by_name,
@@ -980,7 +980,7 @@ impl<'src> bundle::FromBundle<'src> for DisplayGeometry {
 pub struct ReferenceGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     geometry: NodePath,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -1002,7 +1002,7 @@ impl ReferenceGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -1041,7 +1041,7 @@ impl<'src> bundle::FromBundle<'src> for ReferenceGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             geometry: match &source.geometry {
                 Some(name) => NodePath::from_str(name).unwrap(),
                 None => {
@@ -1071,7 +1071,7 @@ impl<'src> bundle::FromBundle<'src> for ReferenceGeometry {
 pub struct LaserGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     color_type: LaserColorType,
     output_strength: f32,
     emitter: Option<NodePath>,
@@ -1101,7 +1101,7 @@ impl LaserGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -1172,7 +1172,7 @@ impl<'src> bundle::FromBundle<'src> for LaserGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             color_type: match source.color_type {
                 bundle::LaserColorType::Rgb => LaserColorType::Rgb,
                 bundle::LaserColorType::SingleWaveLength => {
@@ -1220,7 +1220,7 @@ pub struct WiringObjectGeometry {
     name: Name,
     model: Option<Name>,
     connector_type: Name,
-    local_transform: Transform,
+    local_transform: Mat4,
     component_type: WiringComponentType,
     details: WiringObjectDetails,
     signal_layer: i32,
@@ -1252,7 +1252,7 @@ impl WiringObjectGeometry {
         &self.connector_type
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -1362,7 +1362,7 @@ impl<'src> bundle::FromBundle<'src> for WiringObjectGeometry {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
             connector_type: Name::new(source.connector_type.as_ref().unwrap()),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             component_type,
             details,
             signal_layer: source.signal_layer.unwrap_or_default().max(0),
@@ -1527,7 +1527,7 @@ impl<'src> bundle::FromBundle<'src> for PinPatch {
 pub struct InventoryGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     count: u32,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
@@ -1547,7 +1547,7 @@ impl InventoryGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -1577,7 +1577,7 @@ impl<'src> bundle::FromBundle<'src> for InventoryGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             count: source.count.unwrap_or(0),
             children,
             children_by_name,
@@ -1589,7 +1589,7 @@ impl<'src> bundle::FromBundle<'src> for InventoryGeometry {
 pub struct StructureGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     linked_geometry: Name,
     structure_type: StructureType,
     cross_section_type: CrossSectionType,
@@ -1611,7 +1611,7 @@ impl StructureGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -1653,7 +1653,7 @@ impl<'src> bundle::FromBundle<'src> for StructureGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             linked_geometry: Name::new(source.linked_geometry.as_ref().unwrap()),
             structure_type: source
                 .structure_type
@@ -1706,7 +1706,7 @@ pub enum CrossSectionType {
 pub struct SupportGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     support_type: SupportType,
     capacity_force: Vec3,
     capacity_moment: Vec3,
@@ -1728,7 +1728,7 @@ impl SupportGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -1766,7 +1766,7 @@ impl<'src> bundle::FromBundle<'src> for SupportGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             support_type: match source.support_type {
                 bundle::SupportType::Rope => SupportType::Rope {
                     cross_section: source.rope_cross_section.clone().unwrap(),
@@ -1811,7 +1811,7 @@ pub enum SupportType {
 pub struct MagnetGeometry {
     name: Name,
     model: Option<Name>,
-    local_transform: Transform,
+    local_transform: Mat4,
     children: Vec<Geometry>,
     children_by_name: HashMap<Name, usize>,
 }
@@ -1830,7 +1830,7 @@ impl MagnetGeometry {
         gdtf.model(model_name)
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -1856,7 +1856,7 @@ impl<'src> bundle::FromBundle<'src> for MagnetGeometry {
         Self {
             name: Name::new(&source.name),
             model: source.model.as_ref().map(Name::new),
-            local_transform: math::parse_transform_from_mat4(&source.position),
+            local_transform: math::parse_mat4(&source.position),
             children,
             children_by_name,
         }

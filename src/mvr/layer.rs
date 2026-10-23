@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::{
     CieColor, DmxAddress, gdtf,
-    math::{self, Transform, Vec3},
+    math::{self, Mat4, Vec3},
     mvr::{
         self, NodeId, ResourceKey,
         aux::{Class, MappingDefinition, Position},
@@ -22,7 +22,7 @@ use crate::{
 pub struct Layer {
     id: mvr::NodeId<Layer>,
     name: String,
-    local_transform: Transform,
+    local_transform: Mat4,
 
     objects: Vec<Object>,
 }
@@ -36,7 +36,7 @@ impl Layer {
         &self.name
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -59,7 +59,7 @@ impl bundle::FromBundle for Layer {
         Layer {
             id: uuid.into(),
             name: source.name.clone(),
-            local_transform: math::parse_transform_or_identity(source.matrix.as_deref()),
+            local_transform: math::parse_mat4_or_identity(source.matrix.as_deref()),
             objects,
         }
     }
@@ -70,7 +70,7 @@ pub struct Object {
     id: mvr::NodeId<Object>,
     name: String,
     class: Option<mvr::NodeId<Class>>,
-    local_transform: Transform,
+    local_transform: Mat4,
 
     kind: ObjectKind,
 }
@@ -88,7 +88,7 @@ impl Object {
         self.class
     }
 
-    pub fn local_transform(&self) -> Transform {
+    pub fn local_transform(&self) -> Mat4 {
         self.local_transform
     }
 
@@ -1669,7 +1669,7 @@ fn build_object(child: &bundle::ChildListContent, bundle: &bundle::Bundle) -> Ob
         id: Uuid::from_str(uuid_str).unwrap().into(),
         name: name.to_string(),
         class: classing.map(|classing| NodeId::new(Uuid::from_str(classing).unwrap())),
-        local_transform: math::parse_transform_or_identity(matrix),
+        local_transform: math::parse_mat4_or_identity(matrix),
         kind,
     }
 }

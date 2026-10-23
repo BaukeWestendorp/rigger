@@ -5,7 +5,7 @@ use std::{
 };
 
 use rigger::{
-    Transform, Vec3,
+    Mat4, Vec3,
     mvr::{
         Mvr, NodeId,
         layer::{
@@ -123,7 +123,7 @@ fn test_empty_layer_has_no_objects() {
 fn test_layer_without_matrix_has_identity_transform() {
     let mvr = load_complete_mvr();
     let layer = layer_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000001");
-    assert_eq!(layer.local_transform(), Transform::IDENTITY);
+    assert_eq!(layer.local_transform(), Mat4::IDENTITY);
 }
 
 #[test]
@@ -245,7 +245,7 @@ fn test_object_without_class_has_none() {
 fn test_object_local_transform_identity_when_no_matrix() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000003");
-    assert_eq!(obj.local_transform(), Transform::IDENTITY);
+    assert_eq!(obj.local_transform(), Mat4::IDENTITY);
 }
 
 #[test]
