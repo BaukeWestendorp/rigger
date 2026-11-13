@@ -59,7 +59,7 @@ impl bundle::FromBundle for Layer {
         Layer {
             id: uuid.into(),
             name: source.name.clone(),
-            local_transform: math::parse_mat4_or_identity(source.matrix.as_deref()),
+            local_transform: math::parse_mvr_matrix_or_identity(source.matrix.as_deref()),
             objects,
         }
     }
@@ -1669,7 +1669,7 @@ fn build_object(child: &bundle::ChildListContent, bundle: &bundle::Bundle) -> Ob
         id: Uuid::from_str(uuid_str).unwrap().into(),
         name: name.to_string(),
         class: classing.map(|classing| NodeId::new(Uuid::from_str(classing).unwrap())),
-        local_transform: math::parse_mat4_or_identity(matrix),
+        local_transform: math::parse_mvr_matrix_or_identity(matrix),
         kind,
     }
 }
