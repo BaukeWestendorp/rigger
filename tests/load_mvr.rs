@@ -252,7 +252,7 @@ fn test_object_local_transform_identity_when_no_matrix() {
 fn test_object_local_transform_translation_divided_by_1000() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000005");
-    let t = obj.local_transform().translation;
+    let t = obj.local_transform().cols[3];
     assert!((t.x - 1.0).abs() < 1e-5);
     assert!(t.y.abs() < 1e-5);
     assert!(t.z.abs() < 1e-5);
@@ -536,7 +536,7 @@ fn test_geometry_local_transform_from_geometry3d_matrix() {
     let mvr = load_complete_mvr();
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000005");
     let geos = obj.geometries().unwrap();
-    let t = geos[0].local_transform().translation;
+    let t = geos[0].local_transform().cols[3];
     assert!((t.x - 0.1).abs() < 1e-5);
     assert!(t.y.abs() < 1e-5);
 }
@@ -547,7 +547,7 @@ fn test_geometry_from_symbol_with_matrix_composes_transforms() {
     let obj = object_by_uuid(&mvr, "deadbeef-0000-0000-0000-000000000008");
     let geos = obj.geometries().unwrap();
     assert_eq!(geos.len(), 1);
-    let t = geos[0].local_transform().translation;
+    let t = geos[0].local_transform().cols[3];
     assert!((t.x - 0.3).abs() < 1e-5);
     assert!(t.y.abs() < 1e-5);
 }

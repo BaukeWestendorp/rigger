@@ -295,9 +295,31 @@ pub(crate) fn parse_mat4(s: &str) -> Mat4 {
     s.parse().expect("failed to parse Mat4 from mat4")
 }
 
-pub(crate) fn parse_mat4_or_identity(s: Option<&str>) -> Mat4 {
+/// Parses an MVR `Matrix` (`{u}{v}{w}{o}`, translation in millimeters) into a [Mat4]
+/// with `u`, `v`, `w` and `o` as its columns and the translation in meters.
+pub(crate) fn parse_mvr_matrix(s: &str) -> Mat4 {
+    let v = parse_floats(s);
+    assert!(
+        v.len() == 12,
+        "failed to parse MVR Matrix: expected 12 floats, got {}: {:?}",
+        v.len(),
+        s
+    );
+
+    #[rustfmt::skip]
+    let cols = [
+        v[0], v[1], v[2], 0.0,
+        v[3], v[4], v[5], 0.0,
+        v[6], v[7], v[8], 0.0,
+        v[9] / 1000.0, v[10] / 1000.0, v[11] / 1000.0, 1.0,
+    ];
+
+    Mat4::from_cols_array(&cols)
+}
+
+pub(crate) fn parse_mvr_matrix_or_identity(s: Option<&str>) -> Mat4 {
     match s {
-        Some(s) => parse_mat4(s),
+        Some(s) => parse_mvr_matrix(s),
         None => Mat4::IDENTITY,
     }
 }
@@ -350,5 +372,34 @@ mod tests {
         assert_eq!(mat.cols[1], Vec4::new(0.0, 1.0, 0.0, 0.0));
         assert_eq!(mat.cols[2], Vec4::new(0.0, 0.0, 1.0, 0.0));
         assert_eq!(mat.cols[3], Vec4::new(0.0, 0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn test_mat4_parsing_row_major_translation() {
+        let input = "{1, 2, 3, 4} {5, 6, 7, 8} {9, 10, 11, 12} {0, 0, 0, 1}";
+        let mat: Mat4 = input.parse().unwrap();
+        assert_eq!(mat.cols[0], Vec4::new(1.0, 5.0, 9.0, 0.0));
+        assert_eq!(mat.cols[1], Vec4::new(2.0, 6.0, 10.0, 0.0));
+        assert_eq!(mat.cols[2], Vec4::new(3.0, 7.0, 11.0, 0.0));
+        assert_eq!(mat.cols[3], Vec4::new(4.0, 8.0, 12.0, 1.0));
+        assert!(input.replace("{0, 0, 0, 1}", "").parse::<Mat4>().is_err());
+    }
+
+    #[test]
+    fn test_mvr_matrix_parsing() {
+        let mat = parse_mvr_matrix("{1,0,0}{0,1,0}{0,0,1}{0,0,0}");
+        assert_eq!(mat, Mat4::IDENTITY);
+
+        let mat = parse_mvr_matrix("{0,1,0}{-1,0,0}{0,0,1}{1000,-500,2500}");
+        assert_eq!(mat.cols[0], Vec4::new(0.0, 1.0, 0.0, 0.0));
+        assert_eq!(mat.cols[1], Vec4::new(-1.0, 0.0, 0.0, 0.0));
+        assert_eq!(mat.cols[2], Vec4::new(0.0, 0.0, 1.0, 0.0));
+        assert_eq!(mat.cols[3], Vec4::new(1.0, -0.5, 2.5, 1.0));
+    }
+
+    #[test]
+    #[should_panic(expected = "expected 12 floats")]
+    fn test_mvr_matrix_parsing_rejects_mat4() {
+        parse_mvr_matrix("{1, 0, 0, 0} {0, 1, 0, 0} {0, 0, 1, 0} {0, 0, 0, 1}");
     }
 }

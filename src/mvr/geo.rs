@@ -25,7 +25,7 @@ impl bundle::FromBundle for Geometry {
 
     fn from_bundle(source: &Self::Source, _bundle: &bundle::Bundle) -> Self {
         Geometry {
-            local_transform: math::parse_mat4_or_identity(source.matrix.as_deref()),
+            local_transform: math::parse_mvr_matrix_or_identity(source.matrix.as_deref()),
             model: ResourceKey::new(&source.file_name),
         }
     }
