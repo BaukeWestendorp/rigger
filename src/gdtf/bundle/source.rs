@@ -77,8 +77,7 @@ impl SourceLoader for ArchiveSource {
         let mut resources = HashMap::new();
         for i in 0..zip.len() {
             let mut file = zip.by_index(i).unwrap();
-            let name = file.name();
-            if name == DESCRIPTION_FILE_NAME {
+            if file.name().is_ok_and(|name| name == DESCRIPTION_FILE_NAME) {
                 continue;
             }
             let mut bytes = Vec::new();
@@ -113,8 +112,7 @@ impl SourceLoader for ArchiveBytesSource<'_> {
         let mut resources = HashMap::new();
         for i in 0..zip.len() {
             let mut file = zip.by_index(i).unwrap();
-            let name = file.name();
-            if name == DESCRIPTION_FILE_NAME {
+            if file.name().is_ok_and(|name| name == DESCRIPTION_FILE_NAME) {
                 continue;
             }
             let mut bytes = Vec::new();
