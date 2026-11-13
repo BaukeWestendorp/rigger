@@ -12,6 +12,9 @@ scripts/fetch-real-world-mvrs.sh
 cargo test --test load_real_world_mvr -- --ignored
 ```
 
+CI runs the same steps in the `test-real-world-mvrs` job of `.github/workflows/rust.yml` and
+caches the downloads until `manifest.tsv` changes.
+
 The test checks that every file loads, that the fixture count matches the manifest, and that every
 fixture's `GDTFSpec` resolves to a GDTF in the archive, except for the ones the manifest lists as
 unresolved.

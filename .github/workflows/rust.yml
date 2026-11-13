@@ -5,6 +5,7 @@ on:
     branches: ["main"]
   pull_request:
     branches: ["main"]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -21,3 +22,19 @@ jobs:
         run: cargo build --verbose
       - name: Run tests
         run: cargo test --verbose
+
+  test-real-world-mvrs:
+    name: Test real-world MVRs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache real-world MVR files
+        uses: actions/cache@v4
+        with:
+          path: tests/data/mvr/real-world/*.mvr
+          key: real-world-mvrs-${{ hashFiles('tests/data/mvr/real-world/manifest.tsv') }}
+      - name: Fetch real-world MVR files
+        run: scripts/fetch-real-world-mvrs.sh
+      - name: Run real-world MVR tests
+        run: cargo test --verbose --test load_real_world_mvr -- --ignored
