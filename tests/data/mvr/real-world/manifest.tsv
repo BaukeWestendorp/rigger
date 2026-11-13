@@ -1,0 +1,16 @@
+# Real-world MVR files used by `tests/load_real_world_mvr.rs`. See SOURCES.md for provenance.
+# Columns (tab separated): file, sha256, fixture count, unresolved GDTF specs (comma separated or -), url
+Small_Bar.mvr	3238a843f8ea928368f08c006999e5fa49d3ce08f15cefe1a15cbae679035f81	2	-	https://static.spaceage.tv/lighting/mvr/Small_Bar.mvr
+Medium_Club.mvr	e9d2e75bdd8499d60ed4fb9e9de8b0c485fd7d2a5eae8bfee397b32d5dc22bb0	9	-	https://static.spaceage.tv/lighting/mvr/Medium_Club.mvr
+Large_Theatre.mvr	d7fc78c649feaaaa3ef4887c27328737ba0e5043bd2111e7281ddd181523b1e9	36	-	https://static.spaceage.tv/lighting/mvr/Large_Theatre.mvr
+Arena.mvr	dfaaec372ff8c6ba8dd22771b44cfa92550eee7acbc601d55fd268ca97e232d4	96	-	https://static.spaceage.tv/lighting/mvr/Arena.mvr
+Circle_Stage.mvr	46431c402e1a18cfc607c54d6dc7f0958662f3e614f28913a45294b7cc479acd	74	-	https://www.gdtf.eu/mvr_files/Circle_Stage.mvr
+Messy_Patch.mvr	4663c617c5f8a52cbd52231c0224420fb98af46f81f70aefcb31d8a4f8782d69	135	-	https://www.gdtf.eu/mvr_files/Messy_Patch.mvr
+Basic_Festival.mvr	71e03bf2c13626944809e297c6b27e3791e0fb1147786507fa96dd992bad4b56	146	Cluster S2.gdtf	https://www.gdtf.eu/mvr_files/Basic_Festival.mvr
+Midsize_w_GP.mvr	05c4ecc492239ef407a2357f6055fdbe4505708712d53ccb7efd31a62b1a3dab	76	-	https://www.gdtf.eu/mvr_files/Midsize_w_GP.mvr
+Key_Arena_Remake_MVR.mvr	15773e47807766ac5d7aeb2db85231546e5685b3513d38225f83d5a04534a388	168	-	https://www.gdtf.eu/mvr_files/Key_Arena_Remake_MVR.mvr
+Template_Stage1.mvr	786304c0fa86256e97e26efeb33f06e37c4007fa98fee56599187d0b1be198aa	118	-	https://www.gdtf.eu/mvr_files/Template_Stage1.mvr
+Demoshow_grandMA3.mvr	258ba505ac3362f790bf72368004fb514cd8382bbe2472bc640e2d7b1a942c6d	176	-	https://www.gdtf.eu/mvr_files/Demoshow_grandMA3.mvr
+Demostage_MVR.mvr	517f077790b616c11a17e7b481b39b3f6dda8defae26da802cefdb05edffd0a8	119	-	https://www.gdtf.eu/mvr_files/Demostage_MVR.mvr
+Simple_Show.mvr	5c6f68b415946fa6fb2426150a5df4183c35d6fa4afd7156785a41ab0dbf4f13	10	-	https://www.gdtf.eu/mvr_files/Simple_Show.mvr
+Capture_Demo.mvr	53b9e2baae20290362c2b40cadf65eed5d7004483c678f90aea21d67125ee3bd	76	-	https://www.gdtf.eu/mvr_files/Capture_Demo.mvr
