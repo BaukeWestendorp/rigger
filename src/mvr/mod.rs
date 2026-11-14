@@ -16,6 +16,7 @@ use crate::{
 
 mod bundle;
 
+#[path = "auxiliary.rs"]
 pub mod aux;
 pub mod geo;
 pub mod layer;
